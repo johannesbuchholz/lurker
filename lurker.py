@@ -7,14 +7,14 @@ import numpy as np
 import sounddevice as sd
 from deepspeech import Model
 
-from logging import LOG
+from log import logger
 from utils import BackgroundExitCondition
 
-HOT_WORDS_AND_BOOST = [("hey", 9), ("listen", 8), ("now", 4)]
+HOT_WORDS_AND_BOOST = [("hey", 8.5), ("listen", 8), ("now", 4)]
 
 
 def fill_queue_callback(queue: deque) -> Callable[[np.array, int, Any, sd.CallbackFlags], None]:
-    return lambda indata, frames, time, status: queue.extend(indata[:, 0])
+    return lambda indata, frames, t, status: queue.extend(indata[:, 0])
 
 
 class SpeechToTextListener:
@@ -25,7 +25,7 @@ class SpeechToTextListener:
                  sample_rate: int = 16_000,
                  bit_depth: np.dtype = np.dtype(np.int16)
                  ):
-        self.exit_condition = BackgroundExitCondition();
+        self.exit_condition = BackgroundExitCondition()
         self.model = Model(model_path)
         if scorer_path:
             self.model.enableExternalScorer(scorer_path)
@@ -39,17 +39,17 @@ class SpeechToTextListener:
         self.instruction_queue = deque(maxlen=int(3 * byte_count_per_second))
 
     def begin_recording(self, key_word: str) -> None:
-        LOG.info("Start recording using keyword '%s'", key_word)
+        logger.info("Start recording using keyword '%s'", key_word)
         for word, boost in HOT_WORDS_AND_BOOST:
             self.model.addHotWord(word, boost)
 
         self.exit_condition.start_evaluating_in_background()
         while not self.exit_condition.is_met():
             self._wait_for_keyword(key_word)
-            words = self._get_instruction_words(timeout_ms=5000)
-            LOG.info("Received instruction words: %s", words)
+            words = self._get_instruction_words(timeout_ms=3000)
+            logger.info("Received instruction words: %s", words)
             self._clear_queues()
-        LOG.info("Closing SpeechToTextListener")
+        logger.info("Closing SpeechToTextListener")
 
     def _start_new_audio_stream(self,
                                 callback: Callable[[np.ndarray, int, Any, sd.CallbackFlags], None]) -> sd.InputStream:
@@ -61,10 +61,10 @@ class SpeechToTextListener:
             intermediate_decode = ""
             while (not self.exit_condition.is_met() and
                    key_word not in intermediate_decode):
-                LOG.debug("Did not find keyword '%s' in '%s'", key_word, intermediate_decode)
+                logger.debug("Did not find keyword '%s' in '%s'", key_word, intermediate_decode)
                 intermediate_decode = self.model.stt(np.array(self.keyword_queue, dtype=self.bit_depth))
                 sleep(0.2)
-            LOG.debug("Found keyword '%s' in '%s'", key_word, intermediate_decode)
+            logger.info("Found keyword '%s' in '%s'", key_word, intermediate_decode)
             return
 
     def _get_instruction_words(self, timeout_ms: int) -> str:
@@ -73,7 +73,7 @@ class SpeechToTextListener:
             while (not self.exit_condition.is_met() and
                    len(self.instruction_queue) < self.instruction_queue.maxlen and
                    time.time_ns() < start + timeout_ms * 10**8):
-                LOG.debug("Waiting for instruction queue to be filled: %s", int(len(self.instruction_queue) / self.instruction_queue.maxlen * 100))
+                logger.debug("Waiting for instruction queue to be filled: %s", int(len(self.instruction_queue) / self.instruction_queue.maxlen * 100))
                 time.sleep(0.2)
             return self.model.stt(np.array(self.instruction_queue, dtype=np.int16))
 

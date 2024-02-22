@@ -1,8 +1,8 @@
 import logging
 
 # create logger
-LOG = logging.getLogger("Lurker")
-LOG.setLevel(logging.DEBUG)
+logger = logging.getLogger("Lurker")
+logger.setLevel(logging.DEBUG)
 
 # create console handler and set level to debug
 ch = logging.StreamHandler()
@@ -15,4 +15,4 @@ formatter = logging.Formatter('[%(levelname)8s] %(name)s: %(message)s')
 ch.setFormatter(formatter)
 
 # add ch to logger
-LOG.addHandler(ch)
+logger.addHandler(ch)
