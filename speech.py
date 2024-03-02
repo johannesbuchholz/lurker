@@ -43,14 +43,15 @@ class SpeechToTextListener:
         logger.lights_info("Start recording using keyword '%s'", key_word)
         for word, boost in HOT_WORDS_AND_BOOST:
             self.model.addHotWord(word, boost)
+        Thread(target=self._start_listen_loop, name="lurker-listen-loop", args=[key_word], daemon=True).start()
 
-        self.exit_condition.start_evaluating_in_background()
-        while not self.exit_condition.is_met():
+    def _start_listen_loop(self, key_word: str):
+        while True:
             self._wait_for_keyword(key_word)
-            words = self._get_instruction_words(timeout_ms=3000)
-            logger.info("Received instruction words: %s", words)
+            instruction = self._record_instruction(timeout_ms=3000)
+            logger.lights_info("Extracted instruction: %s", instruction)
             self._clear_queues()
-        logger.info("Closing SpeechToTextListener")
+            self.callback(instruction)
 
     def _start_new_audio_stream(self,
                                 callback: Callable[[np.ndarray, int, Any, sd.CallbackFlags], None]) -> sd.InputStream:
