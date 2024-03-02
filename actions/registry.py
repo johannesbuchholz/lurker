@@ -1,6 +1,6 @@
-from typing import List, Iterable, Optional
+from typing import List, Iterable, Optional, Tuple
 
-from client import HueClient, LightPutRequest
+from client import HueClient, LightPutRequest, LightSelector
 from log import logger
 
 
@@ -19,7 +19,8 @@ class Action:
     Intended to map speech-to-text translated snippets to some predefined instructions.
     """
 
-    def __init__(self, key_paragraphs: List[str], light_action: Optional[LightPutRequest]):
+    def __init__(self, key_paragraphs: List[str],
+                 light_action: Optional[Tuple[LightSelector, LightPutRequest]]):
         self.key_paragraph_lists = {[word.lower().strip() for word in p.split()] for p in key_paragraphs}
         self.light_action = light_action
 
@@ -40,9 +41,9 @@ class HueActionRegistry:
     def act(self, instruction: str) -> None:
         matching_action = next((a for a in self.actions if a.is_matching(instruction)), None)
         if matching_action:
-            logger.info("Found action %s for instruction '%s'", matching_action.key_paragraph_lists, instruction)
-            self.client.send(matching_action.light_action)
+            logger.lights_info("Found action %s for instruction '%s'", matching_action.key_paragraph_lists, instruction)
+            self.client.light(matching_action.light_action)
         else:
-            logger.info("Could not find action for instruction '%s'", instruction)
+            logger.lights_info("Could not find action for instruction '%s'", instruction)
 
 

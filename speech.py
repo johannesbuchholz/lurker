@@ -40,7 +40,7 @@ class SpeechToTextListener:
         self.instruction_queue = deque(maxlen=int(3 * byte_count_per_second))
 
     def start_recording_in_background(self, key_word: str) -> None:
-        logger.info("Start recording using keyword '%s'", key_word)
+        logger.lights_info("Start recording using keyword '%s'", key_word)
         for word, boost in HOT_WORDS_AND_BOOST:
             self.model.addHotWord(word, boost)
 
@@ -64,7 +64,7 @@ class SpeechToTextListener:
                 logger.debug("Did not find keyword '%s' in '%s'", key_word, intermediate_decode)
                 intermediate_decode = self.model.stt(np.array(self.keyword_queue, dtype=self.bit_depth))
                 sleep(0.2)
-            logger.info("Found keyword '%s' in '%s'", key_word, intermediate_decode)
+            logger.lights_info("Found keyword '%s' in '%s'", key_word, intermediate_decode)
             return
 
     def _record_instruction(self, timeout_ms: int) -> str:
