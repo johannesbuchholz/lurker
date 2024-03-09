@@ -35,7 +35,7 @@ class LightPutRequest:
         self.keyvalues = {"on": on, "sat": sat, "bri": bri, "hue": hue}
 
     def to_http_request(self, host: str, user: str, light_id: int) -> Request:
-        url = "http://{}/api/{}/lights_info/{}/state".format(host, user, light_id)
+        url = "http://{}/api/{}/lights/{}/state".format(host, user, light_id)
         data = json.dumps({k: v for k, v in self.keyvalues.items() if v}).encode("ascii")
         return Request(url, method="PUT", data=data)
 
@@ -47,7 +47,7 @@ class HueClient:
 
     def __init__(self):
         self._load_config()
-        # self._retrieve_lights_info() # TODO: Comment in when config is correctly set
+        # self._retrieve_lights() # TODO: Comment in when config is correctly set
 
     def _load_config(self) -> None:
         with open("config.json") as cfg_file_handle:
@@ -58,13 +58,13 @@ class HueClient:
         self.host = cfg[HOST]
         self.user = cfg[USER]
 
-    def _retrieve_lights_info(self) -> None:
+    def _retrieve_lights(self) -> None:
         url = "http://%s/api/%s/lights".format(self.host, self.user)
         response: HTTPResponse = json.loads(urlopen(url))
         if response.status != 200:
             raise IOError("Could not initialize: response={}".format(response.read()))
-        self.lights_info: dict = json.loads(response.read())
-        self.light_ids = self.lights_info.keys()
+        self.lights: dict = json.loads(response.read())
+        self.light_ids = self.lights.keys()
 
     def light(self, light_action: Tuple[LightSelector, LightPutRequest]):
         logger.debug("Sending request: %s", light_action)

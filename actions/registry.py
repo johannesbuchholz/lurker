@@ -41,9 +41,9 @@ class HueActionRegistry:
     def act(self, instruction: str) -> None:
         matching_action = next((a for a in self.actions if a.is_matching(instruction)), None)
         if matching_action:
-            logger.lights_info("Found action %s for instruction '%s'", matching_action.key_paragraph_lists, instruction)
+            logger.info("Found action %s for instruction '%s'", matching_action.key_paragraph_lists, instruction)
             self.client.light(matching_action.light_action)
         else:
-            logger.lights_info("Could not find action for instruction '%s'", instruction)
+            logger.info("Could not find action for instruction '%s'", instruction)
 
 
