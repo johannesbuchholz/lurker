@@ -1,4 +1,3 @@
-sounddevice==0.4.6
-deepspeech==0.10.0a3
-numpy==1.26.3
-language-tool-python==2.7.1
+sounddevice
+numpy
+openai-whisper
