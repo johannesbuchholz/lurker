@@ -26,7 +26,7 @@ class Action:
         self.light_action = light_action
 
     def is_matching(self, snippet: str) -> bool:
-        words = snippet.lower().strip().split()
+        words = ''.join([c for c in snippet.lower().strip() if c.isalnum() or c.isspace()]).split()
         for lst in self.key_paragraph_lists:
             if _are_items_contained_in_order(lst, words):
                 return True
@@ -55,7 +55,9 @@ class HueActionRegistry:
 
 ALL: LightSelector = LightSelector(lambda ids: ids)
 
-ALL_LIGHTS_OUT = Action(key_paragraphs=["all lights out", "all lights off", "make it dark", "the lights off"],
+ALL_LIGHTS_OUT = Action(key_paragraphs=["all lights out", "all lights off", "make it dark", "the lights off", "licht aus"],
                         light_action=(ALL, LightPutRequest(on=False)))
-ALL_LIGHTS_ON = Action(key_paragraphs=["all lights on", "the lights on", "make it bright"],
+ALL_LIGHTS_ON = Action(key_paragraphs=["all lights on", "the lights on", "make it bright", "licht an"],
                        light_action=(ALL, LightPutRequest(on=True)))
+ALL_LIGHTS_BLUE = Action(key_paragraphs=["alles blau"],
+                       light_action=(ALL, LightPutRequest(on=True, sat=89, bri=48, hue=192)))

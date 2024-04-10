@@ -44,7 +44,7 @@ class LightPutRequest:
 
     def to_http_request(self, host: str, user: str, light_id: int) -> Request:
         url = "http://{}/api/{}/lights/{}/state".format(host, user, light_id)
-        data = json.dumps({k: v for k, v in self.keyvalues.items() if v}).encode("ascii")
+        data = json.dumps({k: v for k, v in self.keyvalues.items() if v is not None}).encode("ascii")
         return Request(url, method="PUT", data=data)
 
     def __str__(self):
@@ -67,7 +67,7 @@ class HueClient:
         self.user = cfg[USER]
 
     def _retrieve_lights(self) -> None:
-        url = "http://%s/api/%s/lights".format(self.host, self.user)
+        url = "http://{}/api/{}/lights".format(self.host, self.user)
         try:
             response: HTTPResponse = urlopen(url)
             if response.status != 200:
@@ -89,5 +89,4 @@ class HueClient:
             return
         for light_id in selected_ids:
             response = urlopen(request.to_http_request(self.host, self.user, light_id))
-            if response.info != 200:
-                LOGGER.error("Failed request: " + response.read())
+            LOGGER.info("Request response: " + str(response.read()))
