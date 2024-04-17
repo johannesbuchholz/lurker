@@ -16,10 +16,7 @@ if __name__ == "__main__":
     registry = HueActionRegistry(hue_client)
 
     LOGGER.info("Start listening...")
-    listener = SpeechToTextListener(
-        model_path="resources/models/output_graph.pbmm",
-        scorer_path="resources/models/kenlm.scorer",
-        instruction_callback=lambda instruction: registry.act(instruction))
+    listener = SpeechToTextListener(instruction_callback=lambda instruction: registry.act(instruction))
     listener.start_listening(key_word=KEYWORD)
 
     input()

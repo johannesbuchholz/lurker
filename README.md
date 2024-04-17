@@ -1,26 +1,21 @@
 # Lurker
+An offline home assistant tool for operating HueBridge smart home things by spoken words.
 
-Ein besserer Name kommt bestimmt noch.
+Currently, only light requests are supported.
 
-## Quellen zum weiteren Vertiefen
-- Mozilla DeepSpeech: https://deepspeech.readthedocs.io/en/r0.9/index.html
-  - GitHub: https://github.com/mozilla/DeepSpeech
-  - Pre-Trained Models: https://deepspeech.readthedocs.io/en/r0.9/USING.html#getting-the-pre-trained-model
-  - 
+Uses offline speech recognition provided by [openai-whisper](https://github.com/openai/whisper).
 
 ## Requirements
-- Lade deepspeech models:
-  - https://deepspeech.readthedocs.io/en/r0.9/USING.html#getting-the-pre-trained-model
-    - Größe "Model" etwa 180MB, Größe "Scorer" etwa 900MB
-      - ```commandline
-        wget https://github.com/mozilla/DeepSpeech/releases/download/v0.9.3/deepspeech-0.9.3-models.pbmm
-        wget https://github.com/mozilla/DeepSpeech/releases/download/v0.9.3/deepspeech-0.9.3-models.scorer
-        ```
-- Installiere Abhängigkeiten 
-  - In virtual environment: `pip3 install --require-virtualenv -r requirements.txt`
+- Python packages
+  - Create a virtual environment and run `pip3 install --require-virtualenv -r requirements.txt`
+- Hardware
+  - This project has been tested to run fine on a headless RaspberryPi 2 using `Raspberry Pi OS Lite (March 15th 2024)`
+  - An active microphone visible as "default" device to the system running this application.
 
-## Ausführen
-Verzeichnis ausführen mittels
+## Run
+Running this project for the first time does need an internet connection in order to download the "tiny" model of by openai-whisper. 
+
+To run this programm
 ```commandline
 python3 lurker
 ```

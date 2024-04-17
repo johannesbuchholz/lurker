@@ -2,7 +2,7 @@ import time
 from collections import deque
 from threading import Thread
 from time import sleep
-from typing import Optional, Callable, Any
+from typing import Callable, Any
 
 import numpy as np
 import sounddevice as sd
@@ -20,22 +20,16 @@ def fill_queue_callback(queue: deque) -> Callable[[np.array, int, Any, sd.Callba
 class SpeechToTextListener:
 
     def __init__(self,
-                 model_path: str,
-                 scorer_path: Optional[str] = None,
                  sample_rate: int = 16_000,
                  bit_depth: np.dtype = np.dtype(np.int16),
                  instruction_callback: Callable[[str], bool] = lambda s: False
                  ):
-        self.model: Whisper = whisper.load_model("tiny")
+        self.model: whisper.Whisper = whisper.load_model("tiny")
         self.decoding_options = {"language": "de", "suppress_blank": False, "fp16": False}
 
-        # if scorer_path:
-        #     self.model.enableExternalScorer(utils.get_abs_path(scorer_path))
         self.sample_rate = sample_rate
         self.bit_depth = bit_depth
         self.callback = instruction_callback
-        # TODO: Experiment with this grammar tool. Most of the time, this does nothing. Maybe replace with
-        #  a proper language machine learning model.
 
         #  seconds * samples_per_second * bits_per_sample / 8 = bytes required to store seconds of data
         #  For example: 3 seconds at 16_000 Hz at 16 bit require 96000 bytes (96 kb)
@@ -48,8 +42,6 @@ class SpeechToTextListener:
         if self.is_listening:
             return
         LOGGER.info("Start recording using keyword '%s'", key_word)
-        # for word, boost in HOT_WORDS_AND_BOOST:
-        #     self.model.addHotWord(word, boost)
         Thread(target=self._start_listen_loop, name="lurker-listen-loop", args=[key_word], daemon=True).start()
 
     def stop_listening(self):
