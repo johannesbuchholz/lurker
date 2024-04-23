@@ -2,6 +2,7 @@ from typing import List, Iterable, Tuple
 
 from src import log
 from src.client import HueClient, LightPutRequest, LightSelector
+from src.utils import filter_non_alnum
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__))
 
@@ -26,7 +27,7 @@ class Action:
         self.light_action = light_action
 
     def is_matching(self, snippet: str) -> bool:
-        words = ''.join([c for c in snippet.lower().strip() if c.isalnum() or c.isspace()]).split()
+        words = filter_non_alnum(snippet).split()
         for lst in self.key_paragraph_lists:
             if _are_items_contained_in_order(lst, words):
                 return True

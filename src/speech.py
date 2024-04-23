@@ -3,6 +3,7 @@ from collections import deque
 from threading import Thread
 from time import sleep
 from typing import Callable, Any
+from src.utils import filter_non_alnum
 
 import numpy as np
 import sounddevice as sd
@@ -34,7 +35,7 @@ class SpeechToTextListener:
         #  seconds * samples_per_second * bits_per_sample / 8 = bytes required to store seconds of data
         #  For example: 3 seconds at 16_000 Hz at 16 bit require 96000 bytes (96 kb)
         byte_count_per_second = int(self.sample_rate * np.iinfo(self.bit_depth).bits / 8)
-        self.keyword_queue = deque(maxlen=int(1.2 * byte_count_per_second))
+        self.keyword_queue = deque(maxlen=int(0.8 * byte_count_per_second))
         self.instruction_queue = deque(maxlen=int(3 * byte_count_per_second))
         self.is_listening = False
 
@@ -72,7 +73,7 @@ class SpeechToTextListener:
             intermediate_decode = ""
             while self.is_listening and key_word not in intermediate_decode:
                 LOGGER.debug("Did not find keyword '%s' in '%s'", key_word, intermediate_decode)
-                intermediate_decode = self._transcribe(self.keyword_queue)
+                intermediate_decode = filter_non_alnum(self._transcribe(self.keyword_queue))
                 sleep(0.2)
             if key_word in intermediate_decode:
                 LOGGER.info("Found keyword '%s' in '%s'", key_word, intermediate_decode)

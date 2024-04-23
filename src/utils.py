@@ -28,3 +28,7 @@ def play_no():
 def _execute_command_in_background(command: str) -> None:
     LOGGER.debug("Executing command: '{}'".format(command))
     Thread(target=lambda: os.system("{} 1>/dev/null 2>/dev/null".format(command)), daemon=True).start()
+
+
+def filter_non_alnum(snippet) -> str:
+    return ''.join([c for c in snippet.lower().strip() if c.isalnum() or c.isspace()])
