@@ -1,6 +1,6 @@
 import json
 from http.client import HTTPResponse
-from typing import Optional, Union, Tuple, List, Callable, Collection
+from typing import Optional, Union, Tuple, Collection
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
@@ -17,20 +17,19 @@ LOGGER = log.new_logger("Lurker ({})".format(__name__))
 
 class LightSelector:
 
-    def __init__(self, id_selector: Union[int, Callable[[Collection[int]], List[int]]]):
-        """
-        :param id_selector: Either the id-integer of the light to select or a method taking a list of id-integers and
-        returning the selected ids.
-        """
-        self.id_selector = id_selector
+    ALL = "ALL"
 
-    def select(self, available_ids: Collection[int]) -> List[int]:
-        if isinstance(self.id_selector, int):
-            if self.id_selector in available_ids:
-                return [self.id_selector]
-            else:
-                return []
-        return self.id_selector(available_ids)
+    def __init__(self, ids: Union[str, Collection[str]]):
+        self.ids = ids
+
+    def select(self, available_ids: Collection[str]) -> Collection[str]:
+        if self.ids == LightSelector.ALL:
+            return available_ids
+
+        return self.ids
+
+    def __str__(self):
+        return str(self.ids)
 
 
 class LightPutRequest:
@@ -42,13 +41,13 @@ class LightPutRequest:
                  hue: Optional[int] = None):
         self.keyvalues = {"on": on, "sat": sat, "bri": bri, "hue": hue}
 
-    def to_http_request(self, host: str, user: str, light_id: int) -> Request:
+    def to_http_request(self, host: str, user: str, light_id: str) -> Request:
         url = "http://{}/api/{}/lights/{}/state".format(host, user, light_id)
         data = json.dumps({k: v for k, v in self.keyvalues.items() if v is not None}).encode("ascii")
         return Request(url, method="PUT", data=data)
 
     def __str__(self):
-        return "LightPutRequest{keyvalues={}}".format(self.keyvalues)
+        return "LightPutRequest[{}]".format(self.keyvalues)
 
 
 class HueClient:

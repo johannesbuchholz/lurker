@@ -11,7 +11,7 @@ LOGGER = log.new_logger("Lurker ({})".format(__name__))
 
 def get_abs_path(relative_path_to_this: str) -> str:
     p = str(Path(__file__).parent.joinpath(relative_path_to_this))
-    LOGGER.debug("Resolved path {} to {}".format(relative_path_to_this, p))
+    LOGGER.log(level=1, msg="Resolved path {} to {}".format(relative_path_to_this, p))
     return p
 
 

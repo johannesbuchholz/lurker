@@ -12,7 +12,7 @@ def new_logger(name: str) -> Logger:
     logger.propagate = False
 
     # create formatter
-    formatter = logging.Formatter('[%(levelname)8s] %(name)-24s: %(message)s')
+    formatter = logging.Formatter('[%(levelname)8s] %(name)s: %(message)s')
 
     ch = logging.StreamHandler()
     ch.setLevel(logger.level)

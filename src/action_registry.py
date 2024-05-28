@@ -1,6 +1,8 @@
+import json
+import os
 from typing import List, Iterable, Tuple
 
-from src import log
+from src import log, utils
 from src.client import HueClient, LightPutRequest, LightSelector
 from src.utils import filter_non_alnum
 
@@ -23,7 +25,7 @@ class Action:
     """
 
     def __init__(self, key_paragraphs: List[str], light_action: Tuple[LightSelector, LightPutRequest]):
-        self.key_paragraph_lists = [[word.lower().strip() for word in p.split()] for p in key_paragraphs]
+        self.keys = [[word.lower().strip() for word in p.split()] for p in key_paragraphs]
         self.light_action = light_action
 
     def is_matching(self, snippet: str) -> bool:
@@ -33,32 +35,38 @@ class Action:
                 return True
         return False
 
+    def __str__(self):
+        return ("Action[keys: {}, light_action: ({}, {})]"
+                .format(self.keys, self.light_action[0], self.light_action[1]))
+
+
+def load_actions() -> List[Action]:
+    actions_path = utils.get_abs_path("resources/actions")
+    actions = []
+    for action_path in os.scandir(actions_path):
+        with open(utils.get_abs_path(action_path.path)) as action_file_handle:
+            action_dict: dict = json.load(action_file_handle)
+            action = Action(
+                key_paragraphs=action_dict["keys"],
+                light_action=(LightSelector(action_dict["lights"]), LightPutRequest(**action_dict["request"])))
+            LOGGER.info("Loaded action: %s", action)
+            actions.append(action)
+    return actions
+
 
 class HueActionRegistry:
 
     def __init__(self, client: HueClient):
         self.client = client
-        self.actions: List[Action] = [x for x in globals().values() if isinstance(x, Action)]
+        self.actions: List[Action] = load_actions()
         LOGGER.info("Loaded %s light actions", len(self.actions))
 
     def act(self, instruction: str) -> bool:
         matching_action = next((action for action in self.actions if action.is_matching(instruction)), None)
         if matching_action:
-            LOGGER.info("Found action %s for instruction '%s'", matching_action.key_paragraph_lists, instruction)
+            LOGGER.info("Found action %s for instruction '%s'", matching_action.keys, instruction)
             self.client.light(matching_action.light_action)
             return True
         else:
             LOGGER.info("Could not find action for instruction '%s'", instruction)
             return False
-
-
-# ---------- ADDITIONAL ACTIONS ARE PUT HERE
-
-ALL: LightSelector = LightSelector(lambda ids: ids)
-
-ALL_LIGHTS_OUT = Action(key_paragraphs=["all lights out", "all lights off", "make it dark", "the lights off", "licht aus"],
-                        light_action=(ALL, LightPutRequest(on=False)))
-ALL_LIGHTS_ON = Action(key_paragraphs=["all lights on", "the lights on", "make it bright", "licht an"],
-                       light_action=(ALL, LightPutRequest(on=True)))
-ALL_LIGHTS_BLUE = Action(key_paragraphs=["alles blau"],
-                       light_action=(ALL, LightPutRequest(on=True, sat=89, bri=48, hue=192)))
