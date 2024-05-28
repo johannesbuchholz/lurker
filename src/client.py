@@ -75,6 +75,9 @@ class HueClient:
         except URLError as e:
             LOGGER.error("Could not retrieve lights info", exc_info=e)
             return
+        except Exception as e:
+            LOGGER.error("Unexpected exception", exc_info=e)
+            return
 
         self.lights: dict = json.loads(response.read())
         self.light_ids = self.lights.keys()
