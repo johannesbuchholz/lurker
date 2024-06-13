@@ -1,3 +1,4 @@
+import os
 import time
 from collections import deque
 from threading import Thread
@@ -13,6 +14,11 @@ from src import log, utils
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__))
 
+KEYWORD_QUEUE_LENGTH_SECONDS = float(os.environ["LURKER_KEYWORD_QUEUE_LENGTH_SECONDS"]) \
+    if "LURKER_KEYWORD_QUEUE_LENGTH_SECONDS" in os.environ else 0.8
+INSTRUCTION_QUEUE_LENGTH_SECONDS = float(os.environ["LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS"]) \
+    if "LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS" in os.environ else 3
+
 
 def fill_queue_callback(queue: deque) -> Callable[[np.array, int, Any, sd.CallbackFlags], None]:
     return lambda indata, frames, t, status: queue.extend(indata[:, 0])
@@ -26,7 +32,6 @@ class SpeechToTextListener:
                  instruction_callback: Callable[[str], bool] = lambda s: False
                  ):
         self.model: whisper.Whisper = whisper.load_model("tiny")
-        self.decoding_options = {"language": "de", "suppress_blank": False, "fp16": False}
 
         self.sample_rate = sample_rate
         self.bit_depth = bit_depth
@@ -35,8 +40,8 @@ class SpeechToTextListener:
         #  seconds * samples_per_second * bits_per_sample / 8 = bytes required to store seconds of data
         #  For example: 3 seconds at 16_000 Hz at 16 bit require 96000 bytes (96 kb)
         byte_count_per_second = int(self.sample_rate * np.iinfo(self.bit_depth).bits / 8)
-        self.keyword_queue = deque(maxlen=int(0.8 * byte_count_per_second))
-        self.instruction_queue = deque(maxlen=int(3 * byte_count_per_second))
+        self.keyword_queue = deque(maxlen=int(KEYWORD_QUEUE_LENGTH_SECONDS * byte_count_per_second))
+        self.instruction_queue = deque(maxlen=int(INSTRUCTION_QUEUE_LENGTH_SECONDS * byte_count_per_second))
         self.is_listening = False
 
     def start_listening(self, key_word: str) -> None:
@@ -90,7 +95,8 @@ class SpeechToTextListener:
                                          time.time_ns() < start + timeout_ms * (10**6)):
                 sleep(0.2)
             recorded_instruction: str = self._transcribe(self.instruction_queue)
-            LOGGER.debug("Recorded instruction: sample_count={}, text={}".format(len(self.instruction_queue), recorded_instruction))
+            LOGGER.debug("Recorded instruction: sample_count={}, text={}"
+                         .format(len(self.instruction_queue), recorded_instruction))
             return recorded_instruction
 
     def _clear_queues(self) -> None:
@@ -112,8 +118,10 @@ class SpeechToTextListener:
         result = self.model.transcribe(audio,
                                        no_speech_threshold=0.4,
                                        condition_on_previous_text=False,
+                                       prepend_punctuations="",
+                                       append_punctuations="",
                                        without_timestamps=True,
-                                       language="de",
-                                       suppress_blank=True,
-                                       fp16=False)
+                                       fp16=False,
+                                       language="de"
+                                       )
         return result["text"].strip().lower()
