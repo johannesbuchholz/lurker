@@ -1,9 +1,11 @@
 import json
 import os
+from pathlib import Path
 from typing import List, Iterable, Tuple
 
-from src import log, utils
+from src import log
 from src.client import HueClient, LightPutRequest, LightSelector
+from src.utils import Constants
 from src.utils import filter_non_alnum
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__))
@@ -41,16 +43,23 @@ class Action:
 
 
 def load_actions() -> List[Action]:
-    actions_path = utils.get_abs_path("resources/actions")
+    actions_path = Constants.LURKER_HOME + "/actions"
     actions = []
+    if not os.path.exists(actions_path):
+        LOGGER.warning("No actions defined at " + actions_path)
+        return []
     for action_path in os.scandir(actions_path):
-        with open(utils.get_abs_path(action_path.path)) as action_file_handle:
+        abs_path: Path = Path(actions_path).joinpath(action_path.path)
+        with open(abs_path) as action_file_handle:
             action_dict: dict = json.load(action_file_handle)
-            action = Action(
-                key_paragraphs=action_dict["keys"],
-                light_action=(LightSelector(action_dict["lights"]), LightPutRequest(**action_dict["request"])))
-            LOGGER.info("Loaded action: %s", action)
-            actions.append(action)
+            try:
+                action = Action(
+                    key_paragraphs=action_dict["keys"],
+                    light_action=(LightSelector(action_dict["lights"]), LightPutRequest(**action_dict["request"])))
+                LOGGER.debug("Loaded action: %s", action)
+                actions.append(action)
+            except Exception as e:
+                LOGGER.warning("Could not load action from %s: " + str(e))
     return actions
 
 

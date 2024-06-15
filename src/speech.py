@@ -1,4 +1,3 @@
-import os
 import time
 from collections import deque
 from threading import Thread
@@ -11,13 +10,9 @@ import sounddevice as sd
 import whisper
 
 from src import log, utils
+from src.utils import Constants
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__))
-
-KEYWORD_QUEUE_LENGTH_SECONDS = float(os.environ["LURKER_KEYWORD_QUEUE_LENGTH_SECONDS"]) \
-    if "LURKER_KEYWORD_QUEUE_LENGTH_SECONDS" in os.environ else 0.8
-INSTRUCTION_QUEUE_LENGTH_SECONDS = float(os.environ["LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS"]) \
-    if "LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS" in os.environ else 3
 
 
 def fill_queue_callback(queue: deque) -> Callable[[np.array, int, Any, sd.CallbackFlags], None]:
@@ -40,8 +35,8 @@ class SpeechToTextListener:
         #  seconds * samples_per_second * bits_per_sample / 8 = bytes required to store seconds of data
         #  For example: 3 seconds at 16_000 Hz at 16 bit require 96000 bytes (96 kb)
         byte_count_per_second = int(self.sample_rate * np.iinfo(self.bit_depth).bits / 8)
-        self.keyword_queue = deque(maxlen=int(KEYWORD_QUEUE_LENGTH_SECONDS * byte_count_per_second))
-        self.instruction_queue = deque(maxlen=int(INSTRUCTION_QUEUE_LENGTH_SECONDS * byte_count_per_second))
+        self.keyword_queue = deque(maxlen=int(Constants.KEYWORD_QUEUE_LENGTH_SECONDS * byte_count_per_second))
+        self.instruction_queue = deque(maxlen=int(Constants.INSTRUCTION_QUEUE_LENGTH_SECONDS * byte_count_per_second))
         self.is_listening = False
 
     def start_listening(self, key_word: str) -> None:
@@ -58,7 +53,7 @@ class SpeechToTextListener:
         while self.is_listening:
             if self._wait_for_keyword(key_word):
                 utils.play_blib()
-                instruction = self._record_instruction(timeout_ms=5000)
+                instruction = self._record_instruction()
                 LOGGER.info("Extracted instruction: %s", instruction)
                 self._clear_queues()
 
@@ -85,14 +80,13 @@ class SpeechToTextListener:
                 return True
             return False
 
-    def _record_instruction(self, timeout_ms: int) -> str:
+    def _record_instruction(self) -> str:
         with (self._start_new_audio_stream(fill_queue_callback(queue=self.instruction_queue))):
             start = time.time_ns()
             # TODO: Maybe replace waiting for full queue by a more dynamic approach like waiting fo a longer pause.
-            LOGGER.debug("Waiting for action queue to be filled: queue_length={}, timeout_ms={}"
-                         .format(self.instruction_queue.maxlen, timeout_ms))
-            while self.is_listening and (len(self.instruction_queue) < self.instruction_queue.maxlen and
-                                         time.time_ns() < start + timeout_ms * (10**6)):
+            LOGGER.debug("Waiting for action queue to be filled: queue_length_byte={}"
+                         .format(self.instruction_queue.maxlen))
+            while self.is_listening and (len(self.instruction_queue) < self.instruction_queue.maxlen):
                 sleep(0.2)
             recorded_instruction: str = self._transcribe(self.instruction_queue)
             LOGGER.debug("Recorded instruction: sample_count={}, text={}"

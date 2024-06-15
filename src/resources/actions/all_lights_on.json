@@ -1,7 +1,0 @@
-{
-  "keys": ["all lights on", "the lights on", "make it bright", "licht an"],
-  "lights": "ALL",
-  "request": {
-    "on": true
-  }
-}

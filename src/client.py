@@ -5,12 +5,11 @@ from urllib.error import URLError
 from urllib.request import urlopen, Request
 
 from src import log
-from src import utils
+from src.utils import Constants
 
 HOST = "host"
 USER = "user"
 REQUIRED_CONFIG_VALUES = {"host", "user"}
-
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__))
 
@@ -57,11 +56,17 @@ class HueClient:
         self._retrieve_lights()
 
     def _load_config(self) -> None:
-        with open(utils.get_abs_path("../config.json")) as cfg_file_handle:
-            cfg: dict = json.load(cfg_file_handle)
+        try:
+            with open(Constants.LURKER_HOME + "/config.json") as cfg_file_handle:
+                cfg: dict = json.load(cfg_file_handle)
+            if not REQUIRED_CONFIG_VALUES.issubset(cfg.keys()):
+                raise ValueError("Could not find required config values: " + str(REQUIRED_CONFIG_VALUES))
+        except Exception as e:
+            LOGGER.warning("Could not load configuration for HueClient: " + str(e))
+            self.host = None
+            self.user = None
+            return
 
-        if not REQUIRED_CONFIG_VALUES.issubset(cfg.keys()):
-            raise ValueError("Could not find required config values: " + str(REQUIRED_CONFIG_VALUES))
         self.host = cfg[HOST]
         self.user = cfg[USER]
 
@@ -71,11 +76,8 @@ class HueClient:
             response: HTTPResponse = urlopen(url)
             if response.status != 200:
                 raise URLError("response status was not OK (200): response={}".format(response.read()))
-        except URLError as e:
-            LOGGER.error("Could not retrieve lights info", exc_info=e)
-            return
         except Exception as e:
-            LOGGER.error("Unexpected exception", exc_info=e)
+            LOGGER.error("Could not retrieve lights from %s: %s", url, str(e))
             return
 
         self.lights: dict = json.loads(response.read())
