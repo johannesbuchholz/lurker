@@ -59,6 +59,7 @@ Add one json-file per action in the following form:
 
 ### Environment variables
 There are a couple of environment variables available for configuring lurkers behaviour.
+- `LURKER_LOG_LEVEL`: String. Denotes the log level used when running lurker.
 - `LURKER_HOME`: String. Denotes the path where lurker loads configuration and actions from. Default: `~/lurker`.
 - `LURKER_ENABLE_DYNAMIC_CONFIGURATION`: Boolean. If set to "True", lurker will set the application home path to the first attached storage mounted on `/media/<user>/<first_found_device>/lurker`. If no such device could be found, the default LURKER_HOME path is chosen. his is useful when loading configuration from an usb-drive or similar. Default: `False`.
 - `LURKER_KEYWORD`: String. Denotes the key word lurker will react to in order to obtain further instructions. Default: `""`.
