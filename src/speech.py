@@ -1,9 +1,7 @@
-import time
 from collections import deque
 from threading import Thread
 from time import sleep
 from typing import Callable, Any
-from src.utils import filter_non_alnum
 
 import numpy as np
 import sounddevice as sd
@@ -11,6 +9,7 @@ import whisper
 
 from src import log, utils
 from src.utils import Constants
+from src.utils import filter_non_alnum
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__))
 
@@ -39,19 +38,23 @@ class SpeechToTextListener:
         self.instruction_queue = deque(maxlen=int(Constants.INSTRUCTION_QUEUE_LENGTH_SECONDS * byte_count_per_second))
         self.is_listening = False
 
-    def start_listening(self, key_word: str) -> None:
-        if self.is_listening:
+    def start_listening(self, keyword: str) -> None:
+        if not keyword:
+            LOGGER.warning("No keyword given.")
             return
-        LOGGER.info("Start recording using keyword '%s'", key_word)
-        Thread(target=self._start_listen_loop, name="lurker-listen-loop", args=[key_word], daemon=True).start()
+        if self.is_listening:
+            LOGGER.debug("Already listening.")
+            return
+        LOGGER.info("Start recording using keyword '%s'", keyword)
+        Thread(target=self._start_listen_loop, name="lurker-listen-loop", args=[keyword], daemon=True).start()
 
     def stop_listening(self):
         self.is_listening = False
 
-    def _start_listen_loop(self, key_word: str):
+    def _start_listen_loop(self, keyword: str):
         self.is_listening = True
         while self.is_listening:
-            if self._wait_for_keyword(key_word):
+            if self._wait_for_keyword(keyword):
                 utils.play_blib()
                 instruction = self._record_instruction()
                 LOGGER.info("Extracted instruction: %s", instruction)
@@ -68,21 +71,20 @@ class SpeechToTextListener:
         return sd.InputStream(device=None,
                               channels=1, dtype=self.bit_depth.str, callback=callback, samplerate=self.sample_rate)
 
-    def _wait_for_keyword(self, key_word: str) -> bool:
+    def _wait_for_keyword(self, keyword: str) -> bool:
         with self._start_new_audio_stream(fill_queue_callback(queue=self.keyword_queue)):
-            intermediate_decode = ""
-            while self.is_listening and key_word not in intermediate_decode:
-                LOGGER.debug("Did not find keyword '%s' in '%s'", key_word, intermediate_decode)
+            intermediate_decode: str = ""
+            while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
+                LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
                 intermediate_decode = filter_non_alnum(self._transcribe(self.keyword_queue))
-                sleep(0.2)
-            if key_word in intermediate_decode:
-                LOGGER.info("Found keyword '%s' in '%s'", key_word, intermediate_decode)
+                sleep(0.3333)
+            if keyword in intermediate_decode:
+                LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
                 return True
             return False
 
     def _record_instruction(self) -> str:
         with (self._start_new_audio_stream(fill_queue_callback(queue=self.instruction_queue))):
-            start = time.time_ns()
             # TODO: Maybe replace waiting for full queue by a more dynamic approach like waiting fo a longer pause.
             LOGGER.debug("Waiting for action queue to be filled: queue_length_byte={}"
                          .format(self.instruction_queue.maxlen))

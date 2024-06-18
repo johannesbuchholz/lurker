@@ -1,14 +1,13 @@
 import logging
-import os
 from logging import Logger
 
-GLOBAL_LOG_LEVEL = os.environ["LURKER_LOG_LEVEL"].upper() if "LURKER_LOG_LEVEL" in os.environ else "DEBUG"
+from src.utils import Constants
 
 
 def new_logger(name: str) -> Logger:
     logger: Logger = logging.getLogger(name)
 
-    logger.setLevel(GLOBAL_LOG_LEVEL)
+    logger.setLevel(Constants.LURKER_LOG_LEVEL)
     logger.propagate = False
 
     # create formatter

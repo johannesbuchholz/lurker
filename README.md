@@ -9,7 +9,7 @@ Uses offline speech recognition provided by [openai-whisper](https://github.com/
 - Python packages
   - Create a virtual environment and run `pip3 install --require-virtualenv -r requirements.txt`
 - Hardware
-  - This project has been tested to run fine on a headless RaspberryPi 2 using `Raspberry Pi OS Lite (March 15th 2024)`
+  - This project has been tested to run fine on a headless RaspberryPi 3B using `Raspberry Pi OS Lite (March 15th 2024)`
   - An active microphone visible as "default" device to the system running this application.
 
 ## Run
@@ -27,8 +27,10 @@ Configuration is loaded from `~/lurker/config.json` and expect the following fil
 ```json
 {
   "host": "<host of hue bridge>",
-  "user": "<registered user name>"
+  "user": "<registered user name>",
+  "keyword": "hey bob"
 }
+
 ```
 
 ### Actions
@@ -54,3 +56,13 @@ Add one json-file per action in the following form:
     - `"bri"`: Brightness setting.
     - `"hue"`: Heu setting.
     - `"sat"`: Saturation setting.
+
+### Environment variables
+There are a couple of environment variables available for configuring lurkers behaviour.
+- `LURKER_HOME`: String. Denotes the path where lurker loads configuration and actions from. Default: `~/lurker`.
+- `LURKER_ENABLE_DYNAMIC_CONFIGURATION`: Boolean. If set to "True", lurker will set the application home path to the first attached storage mounted on `/media/<user>/<first_found_device>/lurker`. If no such device could be found, the default LURKER_HOME path is chosen. his is useful when loading configuration from an usb-drive or similar. Default: `False`.
+- `LURKER_KEYWORD`: String. Denotes the key word lurker will react to in order to obtain further instructions. Default: `""`.
+- `LURKER_SOUND_TOOL`: String. Denotes the sound tool lurker will use when playing sounds. Default: `/usr/bin/aplay`.
+- `LURKER_SOUND_TOOL`: String. Denotes the sound tool lurker will use when playing sounds. Default: `/usr/bin/aplay`.
+- `KEYWORD_QUEUE_LENGTH_SECONDS`: Float. The number of seconds lurker will buffer input when waiting for the keyword. Higher values increase cpu load.
+- `INSTRUCTION_QUEUE_LENGTH_SECONDS`: Float. The number of seconds lurker will buffer input when waiting for an instruction. Higher values increase cpu load.
