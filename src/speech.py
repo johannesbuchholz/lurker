@@ -8,10 +8,10 @@ import sounddevice as sd
 import whisper
 
 from src import log, utils
-from src.utils import Constants
+from src.config import CONFIG
 from src.utils import filter_non_alnum
 
-LOGGER = log.new_logger("Lurker ({})".format(__name__))
+LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
 
 
 def fill_queue_callback(queue: deque) -> Callable[[np.array, int, Any, sd.CallbackFlags], None]:
@@ -25,7 +25,8 @@ class SpeechToTextListener:
                  bit_depth: np.dtype = np.dtype(np.int16),
                  instruction_callback: Callable[[str], bool] = lambda s: False
                  ):
-        self.model: whisper.Whisper = whisper.load_model("tiny")
+        self.model: whisper.Whisper = whisper.load_model(
+            CONFIG.model(), in_memory=True)
 
         self.sample_rate = sample_rate
         self.bit_depth = bit_depth
@@ -34,8 +35,8 @@ class SpeechToTextListener:
         #  seconds * samples_per_second * bits_per_sample / 8 = bytes required to store seconds of data
         #  For example: 3 seconds at 16_000 Hz at 16 bit require 96000 bytes (96 kb)
         byte_count_per_second = int(self.sample_rate * np.iinfo(self.bit_depth).bits / 8)
-        self.keyword_queue = deque(maxlen=int(Constants.KEYWORD_QUEUE_LENGTH_SECONDS * byte_count_per_second))
-        self.instruction_queue = deque(maxlen=int(Constants.INSTRUCTION_QUEUE_LENGTH_SECONDS * byte_count_per_second))
+        self.keyword_queue = deque(maxlen=int(CONFIG.keyword_queue_length_seconds() * byte_count_per_second))
+        self.instruction_queue = deque(maxlen=int(CONFIG.instruction_queue_length_seconds() * byte_count_per_second))
         self.is_listening = False
 
     def start_listening(self, keyword: str) -> None:
@@ -77,7 +78,7 @@ class SpeechToTextListener:
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
                 LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
                 intermediate_decode = filter_non_alnum(self._transcribe(self.keyword_queue))
-                sleep(0.3333)
+                sleep(0.5)
             if keyword in intermediate_decode:
                 LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
                 return True

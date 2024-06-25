@@ -1,13 +1,11 @@
 import logging
 from logging import Logger
 
-from src.utils import Constants
 
-
-def new_logger(name: str) -> Logger:
+def new_logger(name: str, level: str = "INFO") -> Logger:
     logger: Logger = logging.getLogger(name)
 
-    logger.setLevel(Constants.LURKER_LOG_LEVEL)
+    logger.setLevel(level)
     logger.propagate = False
 
     # create formatter

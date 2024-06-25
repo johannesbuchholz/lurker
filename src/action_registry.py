@@ -6,9 +6,9 @@ from typing import List, Iterable, Tuple
 from src import log
 from src import utils
 from src.client import HueClient, LightPutRequest, LightSelector
-from src.utils import Constants
+from src.config import CONFIG
 
-LOGGER = log.new_logger("Lurker ({})".format(__name__))
+LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
 
 
 def _are_items_contained_in_order(items: List, container: Iterable) -> bool:
@@ -43,7 +43,7 @@ class Action:
 
 
 def load_actions() -> List[Action]:
-    actions_path = Constants.LURKER_HOME + "/actions"
+    actions_path = CONFIG.home() + "/actions"
     actions = []
     if not os.path.exists(actions_path):
         LOGGER.warning("No actions defined at " + actions_path)

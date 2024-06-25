@@ -5,8 +5,9 @@ from urllib.error import URLError
 from urllib.request import urlopen, Request
 
 from src import log
+from src.config import CONFIG
 
-LOGGER = log.new_logger("Lurker ({})".format(__name__))
+LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
 
 
 class LightSelector:
@@ -65,7 +66,7 @@ class HueClient:
         self.light_ids = self.lights.keys()
 
     def light(self, light_action: Tuple[LightSelector, LightPutRequest]):
-        LOGGER.debug("Sending request: %s", light_action)
+        LOGGER.debug("Sending request: selected_lights=%s, request=%S", light_action[0], light_action[1])
         light_selector, request = light_action
         try:
             selected_ids = light_selector.select(self.light_ids)
