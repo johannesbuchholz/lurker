@@ -14,10 +14,6 @@ from src.utils import filter_non_alnum
 LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
 
 
-def fill_queue_callback(queue: deque) -> Callable[[np.array, int, Any, sd.CallbackFlags], None]:
-    return lambda indata, frames, t, status: queue.extend(indata[:, 0])
-
-
 class SpeechToTextListener:
 
     def __init__(self,
@@ -72,12 +68,22 @@ class SpeechToTextListener:
         return sd.InputStream(device=None,
                               channels=1, dtype=self.bit_depth.str, callback=callback, samplerate=self.sample_rate)
 
+    def _fill_keyword_queue(self, indata: np.ndarray, frames: int, t: Any, status: sd.CallbackFlags) -> None:
+        return self.keyword_queue.extend(indata[:, 0])
+
+    def _fill_instruction_queue(self, indata: np.ndarray, frames: int, t: Any, status: sd.CallbackFlags) -> None:
+        return self.instruction_queue.extend(indata[:, 0])
+
     def _wait_for_keyword(self, keyword: str) -> bool:
-        with self._start_new_audio_stream(fill_queue_callback(queue=self.keyword_queue)):
+        with self._start_new_audio_stream(self._fill_keyword_queue):
             intermediate_decode: str = ""
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
                 LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
-                intermediate_decode = filter_non_alnum(self._transcribe(self.keyword_queue))
+                # TODO: Onöy transcribe if the queue has meaningful data ("is loud") since transcribing is expensive
+                transcription = self._transcribe(self.keyword_queue)
+                intermediate_decode = filter_non_alnum(transcription)
+                if len(intermediate_decode) > 120:
+                    self.keyword_queue.clear()
                 sleep(0.5)
             if keyword in intermediate_decode:
                 LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
@@ -85,7 +91,7 @@ class SpeechToTextListener:
             return False
 
     def _record_instruction(self) -> str:
-        with (self._start_new_audio_stream(fill_queue_callback(queue=self.instruction_queue))):
+        with (self._start_new_audio_stream(self._fill_instruction_queue)):
             # TODO: Maybe replace waiting for full queue by a more dynamic approach like waiting fo a longer pause.
             LOGGER.debug("Waiting for action queue to be filled: queue_length_byte={}"
                          .format(self.instruction_queue.maxlen))
@@ -113,7 +119,6 @@ class SpeechToTextListener:
 
         # decode the audio
         result = self.model.transcribe(audio,
-                                       no_speech_threshold=0.4,
                                        condition_on_previous_text=False,
                                        prepend_punctuations="",
                                        append_punctuations="",
