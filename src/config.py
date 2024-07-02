@@ -1,6 +1,5 @@
 import json
 import os
-from pathlib import Path
 from typing import Dict
 
 from src import log
@@ -20,7 +19,7 @@ LOGGER = log.new_logger("Lurker ({})".format(__name__))
 
 def _get_defaults() -> Dict[str, str]:
     return {
-        LURKER_HOME: str(Path().home()) + "/lurker",
+        LURKER_HOME: os.getcwd(),
         LURKER_HOST: "",
         LURKER_USER: "",
         LURKER_LOG_LEVEL: "INFO",

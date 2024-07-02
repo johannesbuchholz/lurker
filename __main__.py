@@ -15,8 +15,8 @@ if __name__ == "__main__":
 
     LOGGER.info("Start listening...")
     listener = SpeechToTextListener(instruction_callback=lambda instruction: registry.act(instruction))
-    listener.start_listening(keyword=CONFIG.keyword())
+    listening_thread = listener.get_listening_thread(keyword=CONFIG.keyword())
+    listening_thread.start()
+    listening_thread.join()
 
-    LOGGER.info("Press any key to quit.")
-    input()
     LOGGER.info("Quitting lurker...")

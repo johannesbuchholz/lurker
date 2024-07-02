@@ -7,35 +7,57 @@ Uses offline speech recognition provided by [openai-whisper](https://github.com/
 
 ## Requirements
 - Python packages
-  - Create a virtual environment and run `pip3 install --require-virtualenv -r requirements.txt`
+  - Create a virtual environment and run `pip install --require-virtualenv -r requirements.txt`
 - Hardware
-  - This project has been tested to run fine on a headless RaspberryPi 3B using `Raspberry Pi OS Lite (March 15th 2024)`
   - An active microphone visible as "default" device to the system running this application.
 
-## Run
-Running this project for the first time does need an internet connection in order to download the "tiny" model of by openai-whisper. 
-
-To run this programm
+## How to run it
+### Run locally
+Install the required dependencies from `requirements.txt`.
 ```commandline
-python3 lurker
+pip install -r requirements.txt
+```
+
+Run this programm.
+```sh
+python lurker
+```
+
+### Run as docker container
+Build the docker image
+```sh
+docker build . --tag lurker:local
+```
+
+Run the container. You will need to expose a sound device and probably want to mount proper configuration and actions.
+- Sound device: Use option `--device` to expose hardware from the host machine to the docker container.
+- Configuration: Use option `-v` or `--mount` to mount a set of configuration files to the container. L
+Lurker expects the configuration at `$LURKER_HOME/config.json`.
+```sh
+docker run \
+    --device /dev/snd \
+    -v /path/to/cfg/config.json:/lurker/home/:ro  \
+    -v /path/to/actions:/lurker/home/:ro \
+    lurker:local
 ```
 
 ## Configuration
 
-### Hue Bridge
-Configuration is loaded from `~/lurker/config.json` and expect the following file
+Configuration is loaded from `LURKER_HOME` and expects a .json-File containing key value-pairs of the form `"<lurker env variable>": "<string-value>"`
+Example:
 ```json
 {
-  "host": "<host of hue bridge>",
-  "user": "<registered user name>",
-  "keyword": "hey bob"
+  "LURKER_HOST": "<host of hue bridge>",
+  "LURKER_USER": "<registered user name>",
+  "LURKER_KEYWORD": "hey john",
+  "LURKER_LOG_LEVEL": "DEBUG"
 }
-
 ```
 
 ### Actions
-Actions sent to a Hue Bridge instructed by key paragraphs may be configured as separate files at `~/lurker/actions`.
-Add one json-file per action in the following form:
+Actions sent to a Hue Bridge instructed by key paragraphs may be configured as separate files under `$LURKER_HOME/actions/`.
+Add one json-file per action. All fields under "request" are optional and only set fields are sent to the Hue Bridge.
+Example:
 ```json
 {
   "keys": ["make it bright", "entertain me"],
@@ -59,11 +81,10 @@ Add one json-file per action in the following form:
 
 ### Environment variables
 There are a couple of environment variables available for configuring lurkers behaviour.
-- `LURKER_LOG_LEVEL`: String. Denotes the log level used when running lurker.
-- `LURKER_HOME`: String. Denotes the path where lurker loads configuration and actions from. Default: `~/lurker`.
-- `LURKER_ENABLE_DYNAMIC_CONFIGURATION`: Boolean. If set to "True", lurker will set the application home path to the first attached storage mounted on `/media/<user>/<first_found_device>/lurker`. If no such device could be found, the default LURKER_HOME path is chosen. his is useful when loading configuration from an usb-drive or similar. Default: `False`.
-- `LURKER_KEYWORD`: String. Denotes the key word lurker will react to in order to obtain further instructions. Default: `""`.
-- `LURKER_SOUND_TOOL`: String. Denotes the sound tool lurker will use when playing sounds. Default: `/usr/bin/aplay`.
-- `LURKER_SOUND_TOOL`: String. Denotes the sound tool lurker will use when playing sounds. Default: `/usr/bin/aplay`.
-- `KEYWORD_QUEUE_LENGTH_SECONDS`: Float. The number of seconds lurker will buffer input when waiting for the keyword. Higher values increase cpu load.
-- `INSTRUCTION_QUEUE_LENGTH_SECONDS`: Float. The number of seconds lurker will buffer input when waiting for an instruction. Higher values increase cpu load.
+These are the most important ones:
+- `LURKER_HOME`: Denotes the path where lurker loads configuration and actions from. Default: `~/lurker`.
+- `LURKER_KEYWORD`: Denotes the key word lurker will react to in order to obtain further instructions. Default: `""`.
+- `LURKER_HOST`: Denotes the host of the hue bridge to send instructions to.
+- `LURKER_USER`: Denotes the user that is registered user to communicate with. 
+- `LURKER_SOUND_TOOL`: Denotes the sound tool lurker will use when playing sounds. Default: `/usr/bin/aplay`.
+- `LURKER_LOG_LEVEL`: Denotes the log level used when running lurker.

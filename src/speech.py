@@ -1,7 +1,7 @@
 from collections import deque
 from threading import Thread
 from time import sleep
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 import numpy as np
 import sounddevice as sd
@@ -16,16 +16,16 @@ LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level()
 
 class SpeechToTextListener:
 
-    def __init__(self,
-                 sample_rate: int = 16_000,
-                 bit_depth: np.dtype = np.dtype(np.int16),
-                 instruction_callback: Callable[[str], bool] = lambda s: False
-                 ):
+    def __init__(self, instruction_callback: Callable[[str], bool] = lambda s: False):
+        """
+        :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
+        acting on the instruction has been successful.
+        """
         self.model: whisper.Whisper = whisper.load_model(
             CONFIG.model(), in_memory=True)
 
-        self.sample_rate = sample_rate
-        self.bit_depth = bit_depth
+        self.sample_rate = 16_000
+        self.bit_depth = np.dtype(np.int16)
         self.callback = instruction_callback
 
         #  seconds * samples_per_second * bits_per_sample / 8 = bytes required to store seconds of data
@@ -35,15 +35,15 @@ class SpeechToTextListener:
         self.instruction_queue = deque(maxlen=int(CONFIG.instruction_queue_length_seconds() * byte_count_per_second))
         self.is_listening = False
 
-    def start_listening(self, keyword: str) -> None:
+    def get_listening_thread(self, keyword: str) -> Optional[Thread]:
         if not keyword:
             LOGGER.warning("No keyword given.")
-            return
+            return Thread()
         if self.is_listening:
             LOGGER.debug("Already listening.")
-            return
+            return Thread()
         LOGGER.info("Start recording using keyword '%s'", keyword)
-        Thread(target=self._start_listen_loop, name="lurker-listen-loop", args=[keyword], daemon=True).start()
+        return Thread(target=self._start_listen_loop, name="lurker-listen-loop", args=[keyword], daemon=True)
 
     def stop_listening(self):
         self.is_listening = False
@@ -65,8 +65,12 @@ class SpeechToTextListener:
 
     def _start_new_audio_stream(self,
                                 callback: Callable[[np.ndarray, int, Any, sd.CallbackFlags], None]) -> sd.InputStream:
-        return sd.InputStream(device=None,
-                              channels=1, dtype=self.bit_depth.str, callback=callback, samplerate=self.sample_rate)
+        try:
+            return sd.InputStream(device=None,
+                                  channels=1, dtype=self.bit_depth.str, callback=callback, samplerate=self.sample_rate)
+        except Exception as e:
+            LOGGER.error("Could not create input stream: %s", str(e), exc_info=e)
+            raise IOError("Could not create input stream: " + str(e))
 
     def _fill_keyword_queue(self, indata: np.ndarray, frames: int, t: Any, status: sd.CallbackFlags) -> None:
         return self.keyword_queue.extend(indata[:, 0])
@@ -79,11 +83,9 @@ class SpeechToTextListener:
             intermediate_decode: str = ""
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
                 LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
-                # TODO: Onöy transcribe if the queue has meaningful data ("is loud") since transcribing is expensive
+                # TODO: Only transcribe if the queue has meaningful data ("is loud") since transcribing is expensive
                 transcription = self._transcribe(self.keyword_queue)
                 intermediate_decode = filter_non_alnum(transcription)
-                if len(intermediate_decode) > 120:
-                    self.keyword_queue.clear()
                 sleep(0.5)
             if keyword in intermediate_decode:
                 LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
