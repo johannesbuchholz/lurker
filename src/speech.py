@@ -21,8 +21,7 @@ class SpeechToTextListener:
         :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
         acting on the instruction has been successful.
         """
-        self.model: whisper.Whisper = whisper.load_model(
-            CONFIG.model(), in_memory=True)
+        self.model: whisper.Whisper = whisper.load_model(CONFIG.model(), in_memory=True)
 
         self.sample_rate = 16_000
         self.bit_depth = np.dtype(np.int16)

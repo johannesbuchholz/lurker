@@ -19,6 +19,11 @@ COPY --chown=lurker:lurker --chmod=rx __main__.py ./
 # add speech recognition model
 RUN mkdir "models"
 COPY --chown=lurker:lurker --chmod=r misc/models/tiny.pt ./models/
+ENV LURKER_MODEL=/lurker/models/tiny.pt
+
+# add empty dir to mount configuration into
+RUN mkdir "home"
+ENV LURKER_HOME=/lurker/home
 
 # without this, sounddevice can not load library PortAudio
 RUN apt-get update && apt-get install -y libportaudio2

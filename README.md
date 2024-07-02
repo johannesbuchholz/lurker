@@ -24,9 +24,10 @@ python lurker
 ```
 
 ### Run as docker container
-Build the docker image
+Requirement: Download teh "tiny" openai whisper model to `misc/models`. See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
+Build the docker image (currently takes roughly 5 GB of disc space).
 ```sh
-docker build . --tag lurker:local
+docker build . --tag lurker:latest
 ```
 
 Run the container. You will need to expose a sound device and probably want to mount proper configuration and actions.
@@ -36,9 +37,8 @@ Lurker expects the configuration at `$LURKER_HOME/config.json`.
 ```sh
 docker run \
     --device /dev/snd \
-    -v /path/to/cfg/config.json:/lurker/home/:ro  \
-    -v /path/to/actions:/lurker/home/:ro \
-    lurker:local
+    --mount type=bind,source="$(pwd)"/cfg,target=/lurker/home,readonly \
+    lurker:latest
 ```
 
 ## Configuration
