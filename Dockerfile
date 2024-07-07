@@ -1,3 +1,4 @@
+# whisper module seems to be only installable on a "full" debian distribution.
 FROM python:3.9.19-bookworm as base
 
 WORKDIR /lurker
@@ -8,8 +9,7 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
 # add lurker user
-RUN addgroup lurker
-RUN adduser --system --no-create-home --ingroup lurker --disabled-password lurker
+RUN adduser --system --no-create-home --ingroup audio --disabled-password lurker
 
 # copy source files
 RUN mkdir "src"
@@ -25,8 +25,7 @@ ENV LURKER_MODEL=/lurker/models/tiny.pt
 RUN mkdir "home"
 ENV LURKER_HOME=/lurker/home
 
-# without this, sounddevice can not load library PortAudio
-RUN apt-get update && apt-get install -y libportaudio2
-
+# without this, sounddevice can not load library PortAudio or query sound devices
+RUN apt-get update && apt-get install -y libportaudio2 alsa-utils
 USER lurker
 ENTRYPOINT ["python", "__main__.py"]
