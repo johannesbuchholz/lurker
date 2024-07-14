@@ -1,7 +1,6 @@
 from collections import deque
-from threading import Thread
 from time import sleep
-from typing import Callable, Any, Optional
+from typing import Callable, Any
 
 import numpy as np
 import sounddevice as sd
@@ -34,15 +33,16 @@ class SpeechToTextListener:
         self.instruction_queue = deque(maxlen=int(CONFIG.instruction_queue_length_seconds() * byte_count_per_second))
         self.is_listening = False
 
-    def get_listening_thread(self, keyword: str) -> Optional[Thread]:
+    def start_listening(self):
+        keyword = CONFIG.keyword()
         if not keyword:
             LOGGER.warning("No keyword given.")
-            return Thread()
+            return
         if self.is_listening:
             LOGGER.debug("Already listening.")
-            return Thread()
+            return
         LOGGER.info("Start recording using keyword '%s'", keyword)
-        return Thread(target=self._start_listen_loop, name="lurker-listen-loop", args=[keyword], daemon=True)
+        self._start_listen_loop(keyword)
 
     def stop_listening(self):
         self.is_listening = False
@@ -65,7 +65,7 @@ class SpeechToTextListener:
     def _start_new_audio_stream(self,
                                 callback: Callable[[np.ndarray, int, Any, sd.CallbackFlags], None]) -> sd.InputStream:
         try:
-            return sd.InputStream(device=None,
+            return sd.InputStream(device=CONFIG.input_device(),
                                   channels=1, dtype=self.bit_depth.str, callback=callback, samplerate=self.sample_rate)
         except Exception as e:
             LOGGER.error("Could not create input stream: %s", str(e), exc_info=e)

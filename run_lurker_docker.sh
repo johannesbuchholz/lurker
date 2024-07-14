@@ -10,7 +10,7 @@ get_first_media_device_on_host() {
 }
 
 get_lurker_home_path_on_host() {
-  # only us efirst encountered media device if LURKER_HOST_USE_MEDIA is set and not null
+  # only use first encountered media device if LURKER_HOST_USE_MEDIA is set and not null
   first_media_device="${LURKER_HOST_USE_MEDIA:+$(get_first_media_device_on_host)}"
   echo "${first_media_device:-${HOME}}/lurker"
 }

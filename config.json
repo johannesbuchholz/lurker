@@ -2,6 +2,8 @@
   "LURKER_HOST": "<host of hue bridge>",
   "LURKER_USER": "<registered user name>",
   "LURKER_KEYWORD": "hey john",
-  "LURKER_LOG_LEVEL": "DEBUG"
+  "LURKER_LOG_LEVEL": "DEBUG",
+  "LURKER_INPUT_DEVICE": "Logitech",
+  "LURKER_OUTPUT_DEVICE": "pulse"
 }
 

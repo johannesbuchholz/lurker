@@ -37,7 +37,7 @@ Lurker expects the configuration at `$LURKER_HOME/config.json`.
 ```sh
 docker run \
     --device /dev/snd \
-    --mount type=bind,source="$(pwd)"/cfg,target=/lurker/home,readonly \
+    --mount type=bind,source=/path/to/host/cfg,target=/lurker/home,readonly \
     lurker:latest
 ```
 
@@ -50,7 +50,9 @@ Example:
   "LURKER_HOST": "<host of hue bridge>",
   "LURKER_USER": "<registered user name>",
   "LURKER_KEYWORD": "hey john",
-  "LURKER_LOG_LEVEL": "DEBUG"
+  "LURKER_LOG_LEVEL": "DEBUG",
+  "LURKER_INPUT_DEVICE": "Logitech",
+  "LURKER_OUTPUT_DEVICE": "pulse"
 }
 ```
 
@@ -86,5 +88,6 @@ These are the most important ones:
 - `LURKER_KEYWORD`: Denotes the key word lurker will react to in order to obtain further instructions. Default: `""`.
 - `LURKER_HOST`: Denotes the host of the hue bridge to send instructions to.
 - `LURKER_USER`: Denotes the user that is registered user to communicate with. 
-- `LURKER_SOUND_TOOL`: Denotes the sound tool lurker will use when playing sounds. Default: `/usr/bin/aplay`.
 - `LURKER_LOG_LEVEL`: Denotes the log level used when running lurker.
+- `LURKER_INPUT_DEVICE`: Denotes the device name or substring lurker will use to record sound.
+- `LURKER_OUTPUT_DEVICE`: Denotes the device name or substring lurker will use when playing sounds.
