@@ -24,7 +24,7 @@ def _get_defaults() -> Dict[str, str]:
         LURKER_HOST: "",
         LURKER_USER: "",
         LURKER_LOG_LEVEL: "INFO",
-        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "0.8",
+        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "1.2",
         LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS: "3",
         LURKER_MODEL: "tiny",
         LURKER_KEYWORD: "",

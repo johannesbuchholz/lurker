@@ -83,8 +83,11 @@ class SpeechToTextListener:
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
                 LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
                 # TODO: Only transcribe if the queue has meaningful data ("is loud") since transcribing is expensive
-                transcription = self._transcribe(self.keyword_queue)
-                intermediate_decode = filter_non_alnum(transcription)
+                if _is_queue_relevant(self.keyword_queue):
+                    transcription = self._transcribe(self.keyword_queue)
+                    intermediate_decode = filter_non_alnum(transcription)
+                else:
+                    intermediate_decode = ""
                 sleep(0.5)
             if keyword in intermediate_decode:
                 LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
@@ -116,9 +119,6 @@ class SpeechToTextListener:
         #   Convert data from 16 bit wide integers to floating point with a width of 32 bits.
         #   Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
         audio = np.array(data, dtype=self.bit_depth).astype(np.float32) / 32768.
-        audio = whisper.pad_or_trim(audio)
-
-        # decode the audio
         result = self.model.transcribe(audio,
                                        condition_on_previous_text=False,
                                        prepend_punctuations="",
@@ -128,3 +128,27 @@ class SpeechToTextListener:
                                        language="de"
                                        )
         return result["text"].strip().lower()
+
+
+def _is_queue_relevant(queue: deque, bucket_count: int = 100, threshold: int = 4000) -> int:
+    length = len(queue)
+    max_length = queue.maxlen
+    if length < max_length/3:
+        LOGGER.log(1, "Queue is shorter that 1/3 of max length: %s/%s", length, max_length)
+        return False
+
+    arr = np.array(queue)
+    interval_length = int(max_length / bucket_count)
+    max_bucket_mean = 0
+    for i in range(bucket_count):
+        lower = i * interval_length
+        upper = (i + 1) * interval_length
+        if upper < len(arr):
+            bucket_mean = np.abs(arr[lower: upper]).mean()
+            if bucket_mean > max_bucket_mean:
+                max_bucket_mean = bucket_mean
+        else:
+            break
+    is_relevant = max_bucket_mean > threshold
+    LOGGER.log(1, "Queue is relevant: %s (max_bucket_mean: %s, threshold: %s)", is_relevant, max_bucket_mean, threshold)
+    return is_relevant

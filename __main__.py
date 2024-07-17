@@ -12,6 +12,6 @@ if __name__ == "__main__":
     hue_client = HueClient(CONFIG.host(), CONFIG.user())
     registry = HueActionRegistry(hue_client)
 
-    LOGGER.info("Start listening...")
     listener = SpeechToTextListener(instruction_callback=lambda instruction: registry.act(instruction))
+    LOGGER.info("Start listening...")
     listener.start_listening()
