@@ -8,7 +8,6 @@ LOGGER = log.new_logger("Lurker ({})".format(__name__))
 
 
 if __name__ == "__main__":
-    LOGGER.info("Loaded configuration:\n%s", CONFIG)
     LOGGER.info("Setting up connection to hue bridge")
     hue_client = HueClient(CONFIG.host(), CONFIG.user())
     registry = HueActionRegistry(hue_client)

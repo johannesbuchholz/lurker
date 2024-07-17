@@ -103,4 +103,6 @@ class _LurkerConfig:
             ["{}={}".format(name, value) for name, value in (self._config | {LURKER_USER: "***"}).items()])
 
 
+LOGGER.info("Loading configuration")
 CONFIG = _LurkerConfig()
+LOGGER.info("Loaded configuration:\n%s", CONFIG)

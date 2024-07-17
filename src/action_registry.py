@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, Iterable, Tuple
 
 from src import log
-from src import utils
+from src import text
 from src.client import HueClient, LightPutRequest, LightSelector
 from src.config import CONFIG
 
@@ -31,7 +31,7 @@ class Action:
         self.light_action = light_action
 
     def is_matching(self, snippet: str) -> bool:
-        words = utils.filter_non_alnum(snippet).split()
+        words = text.filter_non_alnum(snippet).split()
         for lst in self.keys:
             if _are_items_contained_in_order(lst, words):
                 return True
@@ -42,7 +42,23 @@ class Action:
                 .format(self.keys, self.light_action[0], self.light_action[1]))
 
 
-def load_actions() -> List[Action]:
+class HueActionRegistry:
+
+    def __init__(self, client: HueClient):
+        self.client = client
+
+    def act(self, instruction: str) -> bool:
+        matching_action = next((action for action in _ACTIONS if action.is_matching(instruction)), None)
+        if matching_action:
+            LOGGER.info("Found action %s for instruction '%s'", matching_action.keys, instruction)
+            self.client.light(matching_action.light_action)
+            return True
+        else:
+            LOGGER.info("Could not find action for instruction '%s'", instruction)
+            return False
+
+
+def _load_actions() -> List[Action]:
     actions_path = CONFIG.home() + "/actions"
     actions = []
     if not os.path.exists(actions_path):
@@ -63,19 +79,5 @@ def load_actions() -> List[Action]:
     return actions
 
 
-class HueActionRegistry:
-
-    def __init__(self, client: HueClient):
-        self.client = client
-        self.actions: List[Action] = load_actions()
-        LOGGER.info("Loaded %s light actions", len(self.actions))
-
-    def act(self, instruction: str) -> bool:
-        matching_action = next((action for action in self.actions if action.is_matching(instruction)), None)
-        if matching_action:
-            LOGGER.info("Found action %s for instruction '%s'", matching_action.keys, instruction)
-            self.client.light(matching_action.light_action)
-            return True
-        else:
-            LOGGER.info("Could not find action for instruction '%s'", instruction)
-            return False
+LOGGER.info("Loading actions")
+_ACTIONS: List[Action] = _load_actions()

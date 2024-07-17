@@ -6,9 +6,9 @@ import numpy as np
 import sounddevice as sd
 import whisper
 
-from src import log, utils
+from src import log, sound
 from src.config import CONFIG
-from src.utils import filter_non_alnum
+from src.text import filter_non_alnum
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
 
@@ -51,7 +51,7 @@ class SpeechToTextListener:
         self.is_listening = True
         while self.is_listening:
             if self._wait_for_keyword(keyword):
-                utils.play_blib()
+                sound.play_positive()
                 instruction = self._record_instruction()
                 LOGGER.info("Extracted instruction: %s", instruction)
                 self._clear_queues()
@@ -60,7 +60,7 @@ class SpeechToTextListener:
                     LOGGER.info("Successfully acted on instruction: {}".format(instruction))
                 else:
                     LOGGER.info("Could not act on instruction: {}".format(instruction))
-                    utils.play_no()
+                    sound.play_negative()
 
     def _start_new_audio_stream(self,
                                 callback: Callable[[np.ndarray, int, Any, sd.CallbackFlags], None]) -> sd.InputStream:
