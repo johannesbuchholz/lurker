@@ -6,8 +6,9 @@ Currently, only light requests are supported.
 Uses offline speech recognition provided by [openai-whisper](https://github.com/openai/whisper).
 
 ## Requirements
-- Python packages
-  - Create a virtual environment and run `pip install --require-virtualenv -r requirements.txt`
+- Python
+  - Tested with python 3.9
+  - Install the required dependencies by running `pip install --require-virtualenv -r requirements.txt`
 - Hardware
   - An active microphone visible as "default" device to the system running this application.
 
@@ -15,7 +16,7 @@ Uses offline speech recognition provided by [openai-whisper](https://github.com/
 ### Run locally
 Install the required dependencies from `requirements.txt`.
 ```commandline
-pip install -r requirements.txt
+pip install --require-virtualenv -r requirements.txt
 ```
 
 Run this programm.
@@ -30,20 +31,18 @@ Build the docker image (currently takes roughly 5 GB of disc space).
 docker build . --tag lurker:latest
 ```
 
-Run the container. You will need to expose a sound device and probably want to mount proper configuration and actions.
+Run the container with `docker run johannesbuchholz/lurker:docker`. You will need to expose a sound device and probably want to mount proper configuration and actions.
 - Sound device: Use option `--device` to expose hardware from the host machine to the docker container.
-- Configuration: Use option `-v` or `--mount` to mount a set of configuration files to the container. L
-Lurker expects the configuration at `$LURKER_HOME/config.json`.
+- Configuration: Use option `-v` or `--mount` to mount a set of configuration files to the container.
+
+Use the shell-script `run_lurker_docker.sh` to conveniently start the docker container with the possibility to read configuration form removable media.
 ```sh
-docker run \
-    --device /dev/snd \
-    --mount type=bind,source=/path/to/host/cfg,target=/lurker/home,readonly \
-    lurker:latest
+sh run_lurker.docker.sh
 ```
 
 ## Configuration
 
-Configuration is loaded from `LURKER_HOME` and expects a .json-File containing key value-pairs of the form `"<lurker env variable>": "<string-value>"`
+Configuration is loaded from environment variable `LURKER_HOME` and expects a .json-File containing key value-pairs of the form `"<lurker env variable>": "<string-value>"`
 Example:
 ```json
 {
@@ -57,15 +56,15 @@ Example:
 ```
 
 ### Actions
-Actions sent to a Hue Bridge instructed by key paragraphs may be configured as separate files under `$LURKER_HOME/actions/`.
-Add one json-file per action. All fields under "request" are optional and only set fields are sent to the Hue Bridge.
+Actions are pairs of key paragraphs and a request sent to the Hue Bridge. Such actions may be configured file wise under `${LURKER_HOME}/actions/`.
+Add one json-file per action. All fields withing "request" are optional and missing field are not send the Hue Bridge.
 Example:
 ```json
 {
   "keys": ["make it bright", "entertain me"],
   "lights": ["ALL"],
   "request": {
-    "on": false,
+    "on": true,
     "bri": 123,
     "hue": 123,
     "sat": 123
@@ -74,20 +73,20 @@ Example:
 ```
 
 - `"keys"`: An array of instruction paragraphs that are associated with this request.
-- `"lights"`: An array of light ids as strings, typically numbers starting from "1". "ALL" will target all available lights.
+- `"lights"`: An array of light ids as strings, typically numbers starting from `"1"`. The special id `"ALL"` targets all available lights.
 - `"request"`: The actual light request to be sent to the selected lights.
     - `"on"`: If true, turns the light on else off.
     - `"bri"`: Brightness setting.
-    - `"hue"`: Heu setting.
+    - `"hue"`: Hue setting.
     - `"sat"`: Saturation setting.
 
 ### Environment variables
-There are a couple of environment variables available for configuring lurkers behaviour.
-These are the most important ones:
+There are a couple of environment variables available for configuring lurkers behaviour. For details see `src/config.py`
+These are the most important variables:
 - `LURKER_HOME`: Denotes the path where lurker loads configuration and actions from. Default: `~/lurker`.
 - `LURKER_KEYWORD`: Denotes the key word lurker will react to in order to obtain further instructions. Default: `""`.
-- `LURKER_HOST`: Denotes the host of the hue bridge to send instructions to.
-- `LURKER_USER`: Denotes the user that is registered user to communicate with. 
+- `LURKER_HOST`: Denotes the host of the Hue Bridge to send instructions to.
+- `LURKER_USER`: Denotes the already registered Hue Bridge user. 
 - `LURKER_LOG_LEVEL`: Denotes the log level used when running lurker.
 - `LURKER_INPUT_DEVICE`: Denotes the device name or substring lurker will use to record sound.
 - `LURKER_OUTPUT_DEVICE`: Denotes the device name or substring lurker will use when playing sounds.
