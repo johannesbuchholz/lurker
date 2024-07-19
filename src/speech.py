@@ -51,13 +51,14 @@ class SpeechToTextListener:
         self.is_listening = True
         while self.is_listening:
             if self._wait_for_keyword(keyword):
-                sound.play_positive()
+                sound.play_keyword_found()
                 instruction = self._record_instruction()
                 LOGGER.info("Extracted instruction: %s", instruction)
                 self._clear_queues()
 
                 if self.callback(instruction):
                     LOGGER.info("Successfully acted on instruction: %s", instruction)
+                    sound.play_positive()
                 else:
                     LOGGER.info("Could not act on instruction: %s", instruction)
                     sound.play_negative()

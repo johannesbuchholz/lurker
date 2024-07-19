@@ -10,14 +10,21 @@ from src.config import CONFIG
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
 
+
+def play_keyword_found() -> None:
+    entry = _SOUNDS.get("blib.wav")
+    if entry:
+        _play_sound(*entry)
+
+
 def play_positive() -> None:
-    entry = _SOUNDS.get("blib-sound.wav")
+    entry = _SOUNDS.get("positive.wav")
     if entry:
         _play_sound(*entry)
 
 
 def play_negative():
-    entry = _SOUNDS.get("no-sound.wav")
+    entry = _SOUNDS.get("negative.wav")
     if entry:
         _play_sound(*entry)
 
