@@ -13,6 +13,10 @@ Uses offline speech recognition provided by [openai-whisper](https://github.com/
   - An active microphone visible as "default" device to the system running this application.
 
 ## How to run it
+Lurker requires a recording device available to the host. On debian systems, check available devices with `ls -lh /dev/snd`.
+Optionally, download the "tiny" openai whisper model and provide the absolute path to the model via environment variable `LURKER_MODEL`. See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
+If no model is provided this way, teh whisper application will download a model.
+
 ### Run locally
 Install the required dependencies from `requirements.txt`.
 ```commandline
@@ -25,15 +29,16 @@ python lurker
 ```
 
 ### Run as docker container
-Requirement: Download the "tiny" openai whisper model to `misc/models`. See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
-Build the docker image (currently takes roughly 8 GB of disc space).
+The Dockerfile expects the "tiny" model at `misc/models`.
+Build the docker image (~8 GB in size).
 ```sh
-docker build . --tag lurker:latest
+docker build . --tag johannesbuchholz/lurker:latest
 ```
 
-Run the container with `docker run johannesbuchholz/lurker:docker`. You will need to expose a sound device and probably want to mount proper configuration and actions.
-- Sound device: Use option `--device` to expose hardware from the host machine to the docker container.
-- Configuration: Use option `-v` or `--mount` to mount a set of configuration files to the container.
+Run the container with `docker run johannesbuchholz/lurker:docker`. 
+You will need to expose a sound device of your host machine. Additionally, you probably want to mount proper configuration and actions.
+- Sound device: Use [docker option `--device`](https://docs.docker.com/reference/cli/docker/container/run/#device) to expose hardware from the host machine to the docker container.
+- Configuration: Use [docker option `-v` or `--mount`](https://docs.docker.com/reference/cli/docker/container/run/#mount) to mount a set of configuration files to the container. Mount configuration to `/lurker/home` inside the container.
 
 Use the shell-script `run_lurker_docker.sh` to conveniently start the docker container with the possibility to read configuration form removable media.
 ```sh
@@ -88,5 +93,6 @@ These are the most important variables:
 - `LURKER_HOST`: Denotes the host of the Hue Bridge to send instructions to.
 - `LURKER_USER`: Denotes the already registered Hue Bridge user. 
 - `LURKER_LOG_LEVEL`: Denotes the log level used when running lurker.
+- `LURKER_MODEL`: Denotes the absolute path to an open-ai whisper model that lurker should use instead of downloading one.
 - `LURKER_INPUT_DEVICE`: Denotes the device name or substring lurker will use to record sound.
 - `LURKER_OUTPUT_DEVICE`: Denotes the device name or substring lurker will use when playing sounds.
