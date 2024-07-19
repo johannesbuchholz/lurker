@@ -25,8 +25,8 @@ python lurker
 ```
 
 ### Run as docker container
-Requirement: Download teh "tiny" openai whisper model to `misc/models`. See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
-Build the docker image (currently takes roughly 5 GB of disc space).
+Requirement: Download the "tiny" openai whisper model to `misc/models`. See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
+Build the docker image (currently takes roughly 8 GB of disc space).
 ```sh
 docker build . --tag lurker:latest
 ```

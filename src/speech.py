@@ -57,9 +57,9 @@ class SpeechToTextListener:
                 self._clear_queues()
 
                 if self.callback(instruction):
-                    LOGGER.info("Successfully acted on instruction: {}".format(instruction))
+                    LOGGER.info("Successfully acted on instruction: %s", instruction)
                 else:
-                    LOGGER.info("Could not act on instruction: {}".format(instruction))
+                    LOGGER.info("Could not act on instruction: %s", instruction)
                     sound.play_negative()
 
     def _start_new_audio_stream(self,
@@ -82,25 +82,25 @@ class SpeechToTextListener:
             intermediate_decode: str = ""
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
                 LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
-                # TODO: Only transcribe if the queue has meaningful data ("is loud") since transcribing is expensive
                 if _is_queue_relevant(self.keyword_queue):
                     transcription = self._transcribe(self.keyword_queue)
                     intermediate_decode = filter_non_alnum(transcription)
                 else:
                     intermediate_decode = ""
-                sleep(0.5)
+                sleep(0.4)
             if keyword in intermediate_decode:
                 LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
                 return True
             return False
 
     def _record_instruction(self) -> str:
-        with (self._start_new_audio_stream(self._fill_instruction_queue)):
-            # TODO: Maybe replace waiting for full queue by a more dynamic approach like waiting fo a longer pause.
+        with ((self._start_new_audio_stream(self._fill_instruction_queue))):
             LOGGER.debug("Waiting for action queue to be filled: queue_length_byte={}"
                          .format(self.instruction_queue.maxlen))
-            while self.is_listening and (len(self.instruction_queue) < self.instruction_queue.maxlen):
-                sleep(0.2)
+            while (self.is_listening
+                   and not _has_queue_speech_followed_by_silence(self.instruction_queue)
+                   and (len(self.instruction_queue) < self.instruction_queue.maxlen)):
+                sleep(0.1)
             recorded_instruction: str = self._transcribe(self.instruction_queue)
             LOGGER.debug("Recorded instruction: sample_count={}, text={}"
                          .format(len(self.instruction_queue), recorded_instruction))
@@ -130,25 +130,69 @@ class SpeechToTextListener:
         return result["text"].strip().lower()
 
 
-def _is_queue_relevant(queue: deque, bucket_count: int = 100, threshold: int = 4000) -> int:
+def _is_queue_relevant(
+        queue: deque, bucket_count: int = 100, threshold: int = 4000, required_bucket_ratio: float = 0.05) -> bool:
+    """
+    Relevant means that at least in one bucket the average abs amplitude is above the threshold.
+    threshold: 50
+    mean    12          77          155          11        18         55         51          19
+        |##########|##########|##########|##########|##########|##########|##########|##########|          |          |
+        0          1          2          3          4          5          6          7          8          9
+                   |---above--|---above--|                     |---above--|---above--|
+    """
     length = len(queue)
     max_length = queue.maxlen
-    if length < max_length/3:
-        LOGGER.log(1, "Queue is shorter that 1/3 of max length: %s/%s", length, max_length)
+    if length < max_length / 3:
         return False
 
     arr = np.array(queue)
     interval_length = int(max_length / bucket_count)
-    max_bucket_mean = 0
+    threshold_breaking_buckets = 0
     for i in range(bucket_count):
         lower = i * interval_length
         upper = (i + 1) * interval_length
-        if upper < len(arr):
-            bucket_mean = np.abs(arr[lower: upper]).mean()
-            if bucket_mean > max_bucket_mean:
-                max_bucket_mean = bucket_mean
-        else:
+        if not upper < len(arr):
             break
-    is_relevant = max_bucket_mean > threshold
-    LOGGER.log(1, "Queue is relevant: %s (max_bucket_mean: %s, threshold: %s)", is_relevant, max_bucket_mean, threshold)
-    return is_relevant
+        bucket_mean = np.abs(arr[lower: upper]).mean()
+        if bucket_mean > threshold:
+            threshold_breaking_buckets += 1
+    return threshold_breaking_buckets > bucket_count * required_bucket_ratio
+
+
+def _has_queue_speech_followed_by_silence(
+        queue: deque, bucket_count: int = 100, threshold: int = 4000, required_silent_bucket_ratio: float = 0.2) -> bool:
+    """
+    The instruction is deemed to be spoken if some sound has been recorded followed by enough silence.
+
+    threshold: 60
+    mean     12         25         78         77         65         51          13        32         28
+        |##########|##########|##########|##########|##########|##########|##########|##########|##########|          |
+        0          1          2          3          4          5          6          7          8          9
+                              |---------over threshold---------|--------------under threshold -------------|
+    """
+    length = len(queue)
+    max_length = queue.maxlen
+    if length < max_length / 3:
+        return False
+
+    required_silent_buckets = bucket_count * required_silent_bucket_ratio
+    arr = np.array(queue)
+    interval_length = int(max_length / bucket_count)
+    last_bucket_with_speech = -1
+    last_silent_bucket = 0
+    for i in range(bucket_count):
+        lower = i * interval_length
+        upper = (i + 1) * interval_length
+        if not upper < len(arr):
+            break
+        bucket_mean = np.abs(arr[lower: upper]).mean()
+        if bucket_mean > threshold:
+            last_bucket_with_speech = i
+        else:
+            last_silent_bucket = i
+        if last_bucket_with_speech > 0:
+            # length may be negative
+            silence_length = last_silent_bucket - last_bucket_with_speech
+            if silence_length > required_silent_buckets:
+                return True
+    return False
