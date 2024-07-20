@@ -4,7 +4,7 @@ from src.client import HueClient
 from src.config import CONFIG
 from src.speech import SpeechToTextListener
 
-LOGGER = log.new_logger("Lurker ({})".format(__name__))
+LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
 
 
 if __name__ == "__main__":

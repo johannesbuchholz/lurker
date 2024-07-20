@@ -12,6 +12,8 @@ from src.text import filter_non_alnum
 
 LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
 
+_SILENCE_THRESHOLD: int = 1200
+
 
 class SpeechToTextListener:
 
@@ -88,7 +90,7 @@ class SpeechToTextListener:
                     intermediate_decode = filter_non_alnum(transcription)
                 else:
                     intermediate_decode = ""
-                sleep(0.4)
+                sleep(0.25)
             if keyword in intermediate_decode:
                 LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
                 return True
@@ -132,9 +134,12 @@ class SpeechToTextListener:
 
 
 def _is_queue_relevant(
-        queue: deque, bucket_count: int = 100, threshold: int = 4000, required_bucket_ratio: float = 0.05) -> bool:
+        queue: deque, bucket_count: int = 100,
+        threshold: int = _SILENCE_THRESHOLD,
+        required_bucket_ratio: float = 0.05) -> bool:
     """
-    Relevant means that at least in one bucket the average abs amplitude is above the threshold.
+    Relevant means that at least in an appropriate amount of bucket the average absolute amplitude is above the
+    threshold.
     threshold: 50
     mean    12          77          155          11        18         55         51          19
         |##########|##########|##########|##########|##########|##########|##########|##########|          |          |
@@ -161,7 +166,9 @@ def _is_queue_relevant(
 
 
 def _has_queue_speech_followed_by_silence(
-        queue: deque, bucket_count: int = 100, threshold: int = 4000, required_silent_bucket_ratio: float = 0.2) -> bool:
+        queue: deque, bucket_count: int = 100,
+        threshold: int = _SILENCE_THRESHOLD,
+        required_silent_bucket_ratio: float = 0.2) -> bool:
     """
     The instruction is deemed to be spoken if some sound has been recorded followed by enough silence.
 
