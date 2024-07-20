@@ -14,4 +14,8 @@ if __name__ == "__main__":
 
     listener = SpeechToTextListener(instruction_callback=registry.act)
     LOGGER.info("Start listening...")
-    listener.start_listening()
+    try:
+        listener.start_listening()
+    except Exception as e:
+        LOGGER.error("Fatal error: %s", str(e))
+        exit(1)

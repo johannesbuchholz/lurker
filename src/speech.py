@@ -70,9 +70,8 @@ class SpeechToTextListener:
         try:
             return sd.InputStream(device=CONFIG.input_device(),
                                   channels=1, dtype=self.bit_depth.str, callback=callback, samplerate=self.sample_rate)
-        except Exception as e:
-            LOGGER.error("Could not create input stream: %s", str(e), exc_info=e)
-            raise IOError("Could not create input stream: " + str(e))
+        except ValueError as e:
+            raise IOError("Could not create input stream", e)
 
     def _fill_keyword_queue(self, indata: np.ndarray, frames: int, t: Any, status: sd.CallbackFlags) -> None:
         return self.keyword_queue.extend(indata[:, 0])
