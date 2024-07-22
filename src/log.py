@@ -1,20 +1,29 @@
 import logging
 from logging import Logger
+from typing import List
+
+_LOGGERS: List[Logger] = []
 
 
-def new_logger(name: str, level: str = "INFO") -> Logger:
-    logger: Logger = logging.getLogger(name)
+def new_logger(name: str) -> Logger:
+    logger: Logger = logging.getLogger("Lurker ({})".format(name))
 
-    logger.setLevel(level)
+    logger.setLevel("INFO")
     logger.propagate = False
 
-    # create formatter
+    handler = logging.StreamHandler()
+    handler.setLevel(logger.level)
     formatter = logging.Formatter('[%(levelname)8s] %(name)s: %(message)s')
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logger.level)
-    ch.setFormatter(formatter)
+    handler.setFormatter(formatter)
 
     # make logger only use this one handler
-    logger.handlers = [ch]
+    logger.handlers = [handler]
+    _LOGGERS.append(logger)
     return logger
+
+
+def set_all_levels(level: str) -> None:
+    for logger in _LOGGERS:
+        logger.setLevel(level)
+        for handler in logger.handlers:
+            handler.setLevel(level)

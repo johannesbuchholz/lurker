@@ -6,9 +6,8 @@ from typing import List, Iterable, Tuple
 from src import log
 from src import text
 from src.client import HueClient, LightPutRequest, LightSelector
-from src.config import CONFIG
 
-LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
+LOGGER = log.new_logger(__name__)
 
 
 def _are_items_contained_in_order(items: List, container: Iterable) -> bool:
@@ -44,11 +43,12 @@ class Action:
 
 class HueActionRegistry:
 
-    def __init__(self, client: HueClient):
+    def __init__(self, client: HueClient, actions: List[Action]):
         self.client = client
+        self.actions = actions
 
     def act(self, instruction: str) -> bool:
-        matching_action = next((action for action in _ACTIONS if action.is_matching(instruction)), None)
+        matching_action = next((action for action in self.actions if action.is_matching(instruction)), None)
         if matching_action:
             LOGGER.info("Found action %s for instruction '%s'", matching_action.keys, instruction)
             self.client.light(matching_action.light_action)
@@ -58,8 +58,7 @@ class HueActionRegistry:
             return False
 
 
-def _load_actions() -> List[Action]:
-    actions_path = CONFIG.home() + "/actions"
+def load_actions(actions_path: str) -> List[Action]:
     actions = []
     if not os.path.exists(actions_path):
         LOGGER.warning("No actions defined at " + actions_path)
@@ -72,12 +71,7 @@ def _load_actions() -> List[Action]:
                 action = Action(
                     key_paragraphs=action_dict["keys"],
                     light_action=(LightSelector(action_dict["lights"]), LightPutRequest(**action_dict["request"])))
-                LOGGER.debug("Loaded action: %s", action)
                 actions.append(action)
             except Exception as e:
                 LOGGER.warning("Could not load action from %s: " + str(e))
     return actions
-
-
-LOGGER.info("Loading actions")
-_ACTIONS: List[Action] = _load_actions()

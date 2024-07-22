@@ -5,9 +5,8 @@ from urllib.error import URLError
 from urllib.request import urlopen, Request
 
 from src import log
-from src.config import CONFIG
 
-LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
+LOGGER = log.new_logger(__name__)
 
 
 class LightSelector:

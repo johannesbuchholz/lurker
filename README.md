@@ -3,17 +3,17 @@ An offline home assistant tool for operating HueBridge smart home things by spok
 
 Currently, only light requests are supported.
 
-Uses offline speech recognition provided by [openai-whisper](https://github.com/openai/whisper).
-
 ## Requirements
 - Python
   - Tested with python 3.9
   - Install the required dependencies by running `pip install --require-virtualenv -r requirements.txt`
 - Hardware
-  - An active microphone visible as "default" device to the system running this application.
+  - Lurker requires a recording device available to the host machine. On debian systems, check available devices with `ls -lh /dev/snd`.
+  - Optionally: A speaker for playing sounds as feedback to speech inputs.
+- Third party
+  - Lurker calls the transcription engine [openai-whisper](https://github.com/openai/whisper) for speech-to-text tasks. By default, lurker uses the "tiny" model provided by openai-whisper. More models can be found here: `.venv/lib/python3.9/site-packages/whisper/__init__.py:17`. If the requested model is not present on the machine, openai-whisper will download the respective model. To avoid that, you may also [configure](#configuration-parameters) lurker to use an already downloaded model.
 
-## How to run it
-Lurker requires a recording device available to the host. On debian systems, check available devices with `ls -lh /dev/snd`.
+## How to run
 Optionally, download the "tiny" openai whisper model and provide the absolute path to the model via environment variable `LURKER_MODEL`. See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
 If no model is provided this way, teh whisper application will download a model.
 
@@ -27,6 +27,8 @@ Run this programm.
 ```sh
 python lurker
 ```
+
+You may also pass the option `--lurker-home <path>` to let lurker load configuration and actions from the provided [home path](#lurker-home). Otherwise, lurkers assumes its home at `~/lurker`. 
 
 ### Run as docker container
 The Dockerfile expects the "tiny" model at `misc/models`.
@@ -45,24 +47,31 @@ Use the shell-script `run_lurker_docker.sh` to conveniently start the docker con
 sh run_lurker.docker.sh
 ```
 
-## Configuration
+## Lurker Home
+The lurker home path may contain a configuration file and actions that link key-paragraphs to requests sent to a Hue Bridge.
+Per default, the lurker home path is set to `~/lurker` unsless specified via command line option `--lurker-home <path>`.
 
-Configuration is loaded from environment variable `LURKER_HOME` and expects a .json-File containing key value-pairs of the form `"<lurker env variable>": "<string-value>"`
-Example:
+### Configuration file
+Lurker may be configured through a config file at `<lurker-home>/config.json`. That [configuration](#configuration-parameters) may be overridden by environment variables.
+The configuration file may look like this:
 ```json
 {
   "LURKER_HOST": "<host of hue bridge>",
   "LURKER_USER": "<registered user name>",
   "LURKER_KEYWORD": "hey john",
   "LURKER_LOG_LEVEL": "DEBUG",
-  "LURKER_INPUT_DEVICE": "Logitech",
-  "LURKER_OUTPUT_DEVICE": "pulse"
+  "LURKER_INPUT_DEVICE": "jabra",
+  "LURKER_OUTPUT_DEVICE": "jabra"
 }
 ```
 
+### Environment variables
+Every available configuration may also be provided via environment variables on the host machine running lurker. 
+
 ### Actions
-Actions are pairs of key paragraphs and a request sent to the Hue Bridge. Such actions may be configured file wise under `${LURKER_HOME}/actions/`.
-Add one json-file per action. All fields withing "request" are optional and missing field are not send the Hue Bridge.
+Actions are pairs of key paragraphs and a request sent to the Hue Bridge. Such actions may be configured file wise under `<lurker-home>/actions`.
+Add one json-file per action. File names do not matter. 
+
 Example:
 ```json
 {
@@ -76,7 +85,6 @@ Example:
   }
 }
 ```
-
 - `"keys"`: An array of instruction paragraphs that are associated with this request.
 - `"lights"`: An array of light ids as strings, typically numbers starting from `"1"`. The special id `"ALL"` targets all available lights.
 - `"request"`: The actual light request to be sent to the selected lights.
@@ -85,14 +93,15 @@ Example:
     - `"hue"`: Hue setting.
     - `"sat"`: Saturation setting.
 
-### Environment variables
-There are a couple of environment variables available for configuring lurkers behaviour. For details see `src/config.py`
+All fields withing `request` are optional and missing field are not send the Hue Bridge.
+
+### Configuration parameters
+All available configuration parameters are defined here: `src/config.py`
+
 These are the most important variables:
-- `LURKER_HOME`: Denotes the path where lurker loads configuration and actions from. Default: `~/lurker`.
-- `LURKER_KEYWORD`: Denotes the key word lurker will react to in order to obtain further instructions. Default: `""`.
+- `LURKER_KEYWORD`: Denotes the key word lurker will react to in order to obtain further instructions.
 - `LURKER_HOST`: Denotes the host of the Hue Bridge to send instructions to.
 - `LURKER_USER`: Denotes the already registered Hue Bridge user. 
-- `LURKER_LOG_LEVEL`: Denotes the log level used when running lurker.
 - `LURKER_MODEL`: Denotes the absolute path to an open-ai whisper model that lurker should use instead of downloading one.
 - `LURKER_INPUT_DEVICE`: Denotes the device name or substring lurker will use to record sound.
 - `LURKER_OUTPUT_DEVICE`: Denotes the device name or substring lurker will use when playing sounds.

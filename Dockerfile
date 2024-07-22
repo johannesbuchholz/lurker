@@ -23,9 +23,9 @@ ENV LURKER_MODEL=/lurker/models/tiny.pt
 
 # add empty dir to mount configuration into
 RUN mkdir "home"
-ENV LURKER_HOME=/lurker/home
 
 # without this, sounddevice can not load library PortAudio or query sound devices
 RUN apt-get update && apt-get install -y libportaudio2 alsa-utils
 USER lurker
 ENTRYPOINT ["python", "__main__.py"]
+CMD ["--lurker-home", "/lurker/home"]

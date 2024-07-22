@@ -1,45 +1,49 @@
 from collections import deque
 from time import sleep
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 import numpy as np
 import sounddevice as sd
 import whisper
 
 from src import log, sound
-from src.config import CONFIG
 from src.text import filter_non_alnum
 
-LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
-
-_SILENCE_THRESHOLD: int = 1200
+LOGGER = log.new_logger(__name__)
 
 
 class SpeechToTextListener:
-
-    def __init__(self, instruction_callback: Callable[[str], bool] = lambda s: False):
+    def __init__(self,
+                 instruction_callback: Callable[[str], bool] = lambda x: {},
+                 model: str = "tiny",
+                 keyword_queue_length_seconds: float = 1.2,
+                 instruction_queue_length_seconds: float = 3.,
+                 silence_threshold: int = 1800,
+                 input_device_name: Optional[str] = None,
+                 output_device_name: Optional[str] = None,
+                 ):
         """
         :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
         acting on the instruction has been successful.
         """
-        self.model: whisper.Whisper = whisper.load_model(CONFIG.model(), in_memory=True)
+        self.model: whisper.Whisper = whisper.load_model(model, in_memory=True)
 
         self.sample_rate = 16_000
         self.bit_depth = np.dtype(np.int16)
+
         self.callback = instruction_callback
+        self.silence_threshold = silence_threshold
+        self.input_device_name = input_device_name
+        self.output_device_name = output_device_name
 
         #  seconds * samples_per_second * bits_per_sample / 8 = bytes required to store seconds of data
         #  For example: 3 seconds at 16_000 Hz at 16 bit require 96000 bytes (96 kb)
         byte_count_per_second = int(self.sample_rate * np.iinfo(self.bit_depth).bits / 8)
-        self.keyword_queue = deque(maxlen=int(CONFIG.keyword_queue_length_seconds() * byte_count_per_second))
-        self.instruction_queue = deque(maxlen=int(CONFIG.instruction_queue_length_seconds() * byte_count_per_second))
+        self.keyword_queue = deque(maxlen=int(keyword_queue_length_seconds * byte_count_per_second))
+        self.instruction_queue = deque(maxlen=int(instruction_queue_length_seconds * byte_count_per_second))
         self.is_listening = False
 
-    def start_listening(self):
-        keyword = CONFIG.keyword()
-        if not keyword:
-            LOGGER.warning("No keyword given.")
-            return
+    def start_listening(self, keyword: str):
         if self.is_listening:
             LOGGER.debug("Already listening.")
             return
@@ -53,22 +57,22 @@ class SpeechToTextListener:
         self.is_listening = True
         while self.is_listening:
             if self._wait_for_keyword(keyword):
-                sound.play_keyword_found()
+                sound.play_ready(self.output_device_name)
                 instruction = self._record_instruction()
                 LOGGER.info("Extracted instruction: %s", instruction)
                 self._clear_queues()
 
                 if self.callback(instruction):
                     LOGGER.info("Successfully acted on instruction: %s", instruction)
-                    sound.play_positive()
+                    sound.play_positive(self.output_device_name)
                 else:
                     LOGGER.info("Could not act on instruction: %s", instruction)
-                    sound.play_negative()
+                    sound.play_negative(self.output_device_name)
 
     def _start_new_audio_stream(self,
                                 callback: Callable[[np.ndarray, int, Any, sd.CallbackFlags], None]) -> sd.InputStream:
         try:
-            return sd.InputStream(device=CONFIG.input_device(),
+            return sd.InputStream(device=self.input_device_name,
                                   channels=1, dtype=self.bit_depth.str, callback=callback, samplerate=self.sample_rate)
         except ValueError as e:
             raise IOError("Could not create input stream", e)
@@ -84,7 +88,7 @@ class SpeechToTextListener:
             intermediate_decode: str = ""
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
                 LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
-                if _is_queue_relevant(self.keyword_queue):
+                if self._is_keyword_queue_relevant():
                     transcription = self._transcribe(self.keyword_queue)
                     intermediate_decode = filter_non_alnum(transcription)
                 else:
@@ -100,7 +104,7 @@ class SpeechToTextListener:
             LOGGER.debug("Waiting for action queue to be filled: queue_length_byte={}"
                          .format(self.instruction_queue.maxlen))
             while (self.is_listening
-                   and not _has_queue_speech_followed_by_silence(self.instruction_queue)
+                   and not self._has_instruction_queue_speech_followed_by_silence()
                    and (len(self.instruction_queue) < self.instruction_queue.maxlen)):
                 sleep(0.1)
             recorded_instruction: str = self._transcribe(self.instruction_queue)
@@ -131,75 +135,72 @@ class SpeechToTextListener:
                                        )
         return result["text"].strip().lower()
 
+    def _is_keyword_queue_relevant(self, bucket_count: int = 100, required_bucket_ratio: float = 0.05) -> bool:
+        """
+        Relevant means that at least in an appropriate amount of bucket the average absolute amplitude is above the
+        threshold.
 
-def _is_queue_relevant(
-        queue: deque, bucket_count: int = 100,
-        threshold: int = _SILENCE_THRESHOLD,
-        required_bucket_ratio: float = 0.05) -> bool:
-    """
-    Relevant means that at least in an appropriate amount of bucket the average absolute amplitude is above the
-    threshold.
-    threshold: 50
-    mean    12          77          155          11        18         55         51          19
+        threshold: 50
+        means:
+            12          77          155          11        18         55         51          19
         |##########|##########|##########|##########|##########|##########|##########|##########|          |          |
         0          1          2          3          4          5          6          7          8          9
                    |---above--|---above--|                     |---above--|---above--|
-    """
-    length = len(queue)
-    max_length = queue.maxlen
-    if length < max_length / 3:
-        return False
+        """
+        length = len(self.keyword_queue)
+        max_length = self.keyword_queue.maxlen
+        if length < max_length / 3:
+            return False
 
-    arr = np.array(queue)
-    interval_length = int(max_length / bucket_count)
-    threshold_breaking_buckets = 0
-    for i in range(bucket_count):
-        lower = i * interval_length
-        upper = (i + 1) * interval_length
-        if not upper < len(arr):
-            break
-        bucket_mean = np.abs(arr[lower: upper]).mean()
-        if bucket_mean > threshold:
-            threshold_breaking_buckets += 1
-    return threshold_breaking_buckets > bucket_count * required_bucket_ratio
+        arr = np.array(self.keyword_queue)
+        interval_length = int(max_length / bucket_count)
+        threshold_breaking_buckets = 0
+        for i in range(bucket_count):
+            lower = i * interval_length
+            upper = (i + 1) * interval_length
+            if not upper < len(arr):
+                break
+            bucket_mean = np.abs(arr[lower: upper]).mean()
+            if bucket_mean > self.silence_threshold:
+                threshold_breaking_buckets += 1
+        return threshold_breaking_buckets > bucket_count * required_bucket_ratio
 
+    def _has_instruction_queue_speech_followed_by_silence(self,
+                                                          bucket_count: int = 100,
+                                                          required_silent_bucket_ratio: float = 0.25) -> bool:
+        """
+        The instruction is deemed to be spoken if some sound has been recorded followed by enough silence.
 
-def _has_queue_speech_followed_by_silence(
-        queue: deque, bucket_count: int = 100,
-        threshold: int = _SILENCE_THRESHOLD,
-        required_silent_bucket_ratio: float = 0.2) -> bool:
-    """
-    The instruction is deemed to be spoken if some sound has been recorded followed by enough silence.
-
-    threshold: 60
-    mean     12         25         78         77         65         51          13        32         28
+        threshold: 60
+        means:
+            12         25         78         77         65         51          13        32         28
         |##########|##########|##########|##########|##########|##########|##########|##########|##########|          |
         0          1          2          3          4          5          6          7          8          9
                               |---------over threshold---------|--------------under threshold -------------|
-    """
-    length = len(queue)
-    max_length = queue.maxlen
-    if length < max_length / 3:
-        return False
+        """
+        length = len(self.instruction_queue)
+        max_length = self.instruction_queue.maxlen
+        if length < max_length / 3:
+            return False
 
-    required_silent_buckets = bucket_count * required_silent_bucket_ratio
-    arr = np.array(queue)
-    interval_length = int(max_length / bucket_count)
-    last_bucket_with_speech = -1
-    last_silent_bucket = 0
-    for i in range(bucket_count):
-        lower = i * interval_length
-        upper = (i + 1) * interval_length
-        if not upper < len(arr):
-            break
-        bucket_mean = np.abs(arr[lower: upper]).mean()
-        if bucket_mean > threshold:
-            last_bucket_with_speech = i
-        else:
-            last_silent_bucket = i
-        if last_bucket_with_speech > 0:
-            # length may be negative
-            silence_length = last_silent_bucket - last_bucket_with_speech
-            if silence_length > required_silent_buckets:
-                return True
-    return False
+        required_silent_buckets = bucket_count * required_silent_bucket_ratio
+        arr = np.array(self.instruction_queue)
+        interval_length = int(max_length / bucket_count)
+        last_bucket_with_speech = -1
+        last_silent_bucket = 0
+        for i in range(bucket_count):
+            lower = i * interval_length
+            upper = (i + 1) * interval_length
+            if not upper < len(arr):
+                break
+            bucket_mean = np.abs(arr[lower: upper]).mean()
+            if bucket_mean > self.silence_threshold:
+                last_bucket_with_speech = i
+            else:
+                last_silent_bucket = i
+            if last_bucket_with_speech > 0:
+                # length may be negative
+                silence_length = last_silent_bucket - last_bucket_with_speech
+                if silence_length > required_silent_buckets:
+                    return True
+        return False

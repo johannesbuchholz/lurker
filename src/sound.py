@@ -5,35 +5,33 @@ from typing import Dict, Tuple
 import numpy as np
 import sounddevice as sd
 
-from src import log, config
-from src.config import CONFIG
+from src import log
 
-LOGGER = log.new_logger("Lurker ({})".format(__name__), level=CONFIG.log_level())
-
-
-def play_keyword_found() -> None:
-    entry = _SOUNDS.get("blib.wav")
-    if entry:
-        _play_sound(*entry)
+LOGGER = log.new_logger(__name__)
 
 
-def play_positive() -> None:
-    entry = _SOUNDS.get("positive.wav")
-    if entry:
-        _play_sound(*entry)
+def play_ready(output_device_name: str) -> None:
+    entry = _SOUNDS.get("ready.wav", ())
+    _play_sound(output_device_name, entry)
 
 
-def play_negative():
-    entry = _SOUNDS.get("negative.wav")
-    if entry:
-        _play_sound(*entry)
+def play_positive(output_device_name: str) -> None:
+    entry = _SOUNDS.get("positive.wav", ())
+    _play_sound(output_device_name, entry)
 
 
-def _play_sound(sound_data: np.ndarray, samplerate: int) -> None:
-    try:
-        sd.play(sound_data, device=config.CONFIG.output_device(), samplerate=samplerate)
-    except Exception as e:
-        LOGGER.warning("Could not play : %s", str(e))
+def play_negative(output_device_name: str):
+    entry = _SOUNDS.get("negative.wav", ())
+    _play_sound(output_device_name, entry)
+
+
+def _play_sound(output_device_name: str, data_and_samplerate: Tuple[np.ndarray, int]) -> None:
+    if data_and_samplerate:
+        try:
+            data, samplerate = data_and_samplerate
+            sd.play(data, device=output_device_name, samplerate=samplerate)
+        except Exception as e:
+            LOGGER.warning("Could not play : %s", str(e))
 
 
 def _load_sounds() -> Dict[str, Tuple[np.ndarray, int]]:

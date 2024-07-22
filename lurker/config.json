@@ -2,8 +2,7 @@
   "LURKER_HOST": "<host of hue bridge>",
   "LURKER_USER": "<registered user name>",
   "LURKER_KEYWORD": "hey john",
-  "LURKER_LOG_LEVEL": "INFO",
-  "LURKER_INPUT_DEVICE": "jabra",
-  "LURKER_OUTPUT_DEVICE": "jabra"
+  "LURKER_LOG_LEVEL": "DEBUG",
+  "LURKER_SILENCE_THRESHOLD": 1800
 }
 
