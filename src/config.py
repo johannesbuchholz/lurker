@@ -34,6 +34,21 @@ def _get_envs() -> Dict[str, str]:
     return {key: value for key, value in envs.items() if value is not None}
 
 
+def _get_defaults() -> Dict[str, Optional[str]]:
+    return {
+        LURKER_HOST: None,
+        LURKER_USER: None,
+        LURKER_LOG_LEVEL: "INFO",
+        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "1.2",
+        LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS: "3.",
+        LURKER_MODEL: "tiny",
+        LURKER_KEYWORD: None,
+        LURKER_SILENCE_THRESHOLD: "1800",
+        LURKER_INPUT_DEVICE: None,
+        LURKER_OUTPUT_DEVICE: None,
+    }
+
+
 def _load_config_file(path: str) -> Dict[str, str]:
     try:
         with open(path) as cfg_file_handle:
@@ -47,9 +62,7 @@ def _load_config_file(path: str) -> Dict[str, str]:
 class LurkerConfig:
 
     def __init__(self, config_path: str):
-        envs = _get_envs()
-        config = _load_config_file(config_path)
-        self._config = config | envs
+        self._config = _get_defaults() | _get_envs() | _load_config_file(config_path)
 
     def host(self) -> Optional[str]:
         return self._config.get(LURKER_HOST)
@@ -58,10 +71,10 @@ class LurkerConfig:
         return self._config.get(LURKER_USER)
 
     def log_level(self) -> str:
-        return self._config.get(LURKER_LOG_LEVEL, "INFO")
+        return self._config.get(LURKER_LOG_LEVEL)
 
     def silence_threshold(self) -> int:
-        return self._config.get(LURKER_SILENCE_THRESHOLD, 1800)
+        return int(self._config.get(LURKER_SILENCE_THRESHOLD))
 
     def input_device(self) -> Optional[str]:
         return self._config.get(LURKER_INPUT_DEVICE)
@@ -70,14 +83,14 @@ class LurkerConfig:
         return self._config.get(LURKER_OUTPUT_DEVICE)
 
     def keyword_queue_length_seconds(self) -> float:
-        return float(self._config.get(LURKER_KEYWORD_QUEUE_LENGTH_SECONDS, 1.2))
+        return float(self._config.get(LURKER_KEYWORD_QUEUE_LENGTH_SECONDS))
 
     def instruction_queue_length_seconds(self) -> float:
-        return float(self._config.get(LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS, 3.))
+        return float(self._config.get(LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS))
 
     def model(self) -> str:
-        return self._config.get(LURKER_MODEL, "tiny")
-    
+        return self._config.get(LURKER_MODEL)
+
     def keyword(self) -> Optional[str]:
         return self._config.get(LURKER_KEYWORD)
 
