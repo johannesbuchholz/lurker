@@ -5,6 +5,7 @@ from src import log
 from src.action_registry import HueActionRegistry
 from src.client import HueClient
 from src.config import LurkerConfig
+from src.sound import play_ready
 from src.speech import SpeechToTextListener
 
 LOGGER = log.new_logger(__name__)
@@ -49,6 +50,7 @@ if __name__ == "__main__":
         output_device_name=config.output_device(),
     )
     LOGGER.info("Start listening...")
+    play_ready(config.output_device())
     try:
         listener.start_listening(config.keyword())
     except Exception as e:
