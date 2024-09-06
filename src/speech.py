@@ -14,13 +14,13 @@ LOGGER = log.new_logger(__name__)
 
 class SpeechToTextListener:
     def __init__(self,
+                 model: str,
+                 keyword_queue_length_seconds: float,
+                 instruction_queue_length_seconds: float,
+                 silence_threshold: int,
+                 input_device_name: Optional[str],
+                 output_device_name: Optional[str],
                  instruction_callback: Callable[[str], bool] = lambda x: {},
-                 model: str = "tiny",
-                 keyword_queue_length_seconds: float = 1.2,
-                 instruction_queue_length_seconds: float = 3.,
-                 silence_threshold: int = 1800,
-                 input_device_name: Optional[str] = None,
-                 output_device_name: Optional[str] = None,
                  ):
         """
         :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
@@ -43,20 +43,20 @@ class SpeechToTextListener:
         self.instruction_queue = deque(maxlen=int(instruction_queue_length_seconds * byte_count_per_second))
         self.is_listening = False
 
-    def start_listening(self, keyword: str):
+    def start_listening(self, keyword: str, lurker_keyword_interval_seconds: float):
         if self.is_listening:
             LOGGER.debug("Already listening.")
             return
         LOGGER.info("Start recording using keyword '%s'", keyword)
-        self._start_listen_loop(keyword)
+        self._start_listen_loop(keyword, lurker_keyword_interval_seconds)
 
     def stop_listening(self):
         self.is_listening = False
 
-    def _start_listen_loop(self, keyword: str):
+    def _start_listen_loop(self, keyword: str, lurker_keyword_interval_seconds: float):
         self.is_listening = True
         while self.is_listening:
-            if self._wait_for_keyword(keyword):
+            if self._wait_for_keyword(keyword, lurker_keyword_interval_seconds):
                 sound.play_ready(self.output_device_name)
                 instruction = self._record_instruction()
                 LOGGER.info("Extracted instruction: %s", instruction)
@@ -83,7 +83,7 @@ class SpeechToTextListener:
     def _fill_instruction_queue(self, indata: np.ndarray, frames: int, t: Any, status: sd.CallbackFlags) -> None:
         return self.instruction_queue.extend(indata[:, 0])
 
-    def _wait_for_keyword(self, keyword: str) -> bool:
+    def _wait_for_keyword(self, keyword: str, lurker_keyword_interval_seconds: float) -> bool:
         with self._start_new_audio_stream(self._fill_keyword_queue):
             intermediate_decode: str = ""
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
@@ -93,7 +93,7 @@ class SpeechToTextListener:
                     intermediate_decode = filter_non_alnum(transcription)
                 else:
                     intermediate_decode = ""
-                sleep(0.25)
+                sleep(lurker_keyword_interval_seconds)
             if keyword in intermediate_decode:
                 LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
                 return True
@@ -137,7 +137,7 @@ class SpeechToTextListener:
 
     def _is_keyword_queue_relevant(self, bucket_count: int = 100, required_bucket_ratio: float = 0.05) -> bool:
         """
-        Relevant means that at least in an appropriate amount of bucket the average absolute amplitude is above the
+        Relevant means that at least in an appropriate amount of buckets the average absolute amplitude is above the
         threshold.
 
         threshold: 50

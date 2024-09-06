@@ -14,6 +14,7 @@ LURKER_HOST = "LURKER_HOST"
 LURKER_SILENCE_THRESHOLD = "LURKER_SILENCE_THRESHOLD"
 LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
 LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
+LURKER_KEYWORD_INTERVAL_SECONDS = "LURKER_KEYWORD_INTERVAL_SECONDS"
 
 LOGGER = log.new_logger(__name__)
 
@@ -30,6 +31,7 @@ def _get_envs() -> Dict[str, str]:
         LURKER_SILENCE_THRESHOLD: os.environ.get(LURKER_SILENCE_THRESHOLD),
         LURKER_INPUT_DEVICE: os.environ.get(LURKER_INPUT_DEVICE),
         LURKER_OUTPUT_DEVICE: os.environ.get(LURKER_OUTPUT_DEVICE),
+        LURKER_KEYWORD_INTERVAL_SECONDS: os.environ.get(LURKER_KEYWORD_INTERVAL_SECONDS),
     }
     return {key: value for key, value in envs.items() if value is not None}
 
@@ -37,10 +39,11 @@ def _get_envs() -> Dict[str, str]:
 def _get_defaults() -> Dict[str, Optional[str]]:
     return {
         LURKER_LOG_LEVEL: "INFO",
-        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "1.2",
+        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "1.",
         LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS: "3.",
         LURKER_MODEL: "tiny",
         LURKER_SILENCE_THRESHOLD: "1800",
+        LURKER_KEYWORD_INTERVAL_SECONDS: "0.5"
     }
 
 
@@ -88,6 +91,9 @@ class LurkerConfig:
 
     def keyword(self) -> Optional[str]:
         return self._config.get(LURKER_KEYWORD)
+    
+    def keyword_interval(self) -> float:
+        return float(self._config.get(LURKER_KEYWORD_INTERVAL_SECONDS))
 
     def __str__(self):
         return "\n".join(

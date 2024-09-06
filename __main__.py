@@ -41,18 +41,18 @@ if __name__ == "__main__":
     registry.load_actions()
 
     listener = SpeechToTextListener(
-        instruction_callback=registry.act,
         model=config.model(),
         keyword_queue_length_seconds=config.keyword_queue_length_seconds(),
         instruction_queue_length_seconds=config.instruction_queue_length_seconds(),
         silence_threshold=config.silence_threshold(),
         input_device_name=config.input_device(),
         output_device_name=config.output_device(),
+        instruction_callback=registry.act
     )
     LOGGER.info("Start listening...")
     play_ready(config.output_device())
     try:
-        listener.start_listening(config.keyword())
+        listener.start_listening(config.keyword(), config.keyword_interval())
     except Exception as e:
         LOGGER.error("Fatal error: %s", str(e))
         exit(1)
