@@ -36,16 +36,11 @@ def _get_envs() -> Dict[str, str]:
 
 def _get_defaults() -> Dict[str, Optional[str]]:
     return {
-        LURKER_HOST: None,
-        LURKER_USER: None,
         LURKER_LOG_LEVEL: "INFO",
         LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "1.2",
         LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS: "3.",
         LURKER_MODEL: "tiny",
-        LURKER_KEYWORD: None,
         LURKER_SILENCE_THRESHOLD: "1800",
-        LURKER_INPUT_DEVICE: None,
-        LURKER_OUTPUT_DEVICE: None,
     }
 
 
