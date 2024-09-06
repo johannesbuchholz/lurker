@@ -2,7 +2,7 @@ import os
 import sys
 
 from src import log
-from src.action_registry import HueActionRegistry, load_actions
+from src.action_registry import HueActionRegistry
 from src.client import HueClient
 from src.config import LurkerConfig
 from src.speech import SpeechToTextListener
@@ -34,10 +34,10 @@ if __name__ == "__main__":
     LOGGER.info("Setting up connection to hue bridge")
     hue_client = HueClient(config.host(), config.user())
 
-    LOGGER.info("Loading actions")
-    actions = load_actions(lurker_home_dir + "/actions")
-    LOGGER.info("Loaded actions: %s", len(actions))
-    registry = HueActionRegistry(hue_client, actions)
+    LOGGER.info("Setting up actions")
+    actions_path = lurker_home_dir + "/actions"
+    registry = HueActionRegistry(hue_client, actions_path)
+    registry.load_actions()
 
     listener = SpeechToTextListener(
         instruction_callback=registry.act,

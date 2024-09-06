@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import List, Iterable, Tuple
+from typing import List, Iterable, Tuple, Dict
 
 from src import log
 from src import text
@@ -43,12 +43,25 @@ class Action:
 
 class HueActionRegistry:
 
-    def __init__(self, client: HueClient, actions: List[Action]):
+    def __init__(self, client: HueClient, actions_path: str):
         self.client = client
-        self.actions = actions
+        self.actions_path = actions_path
+        self.actions = {}
+
+    def load_actions(self) -> Dict[str, Action]:
+        actions = {}
+        if not os.path.exists(self.actions_path):
+            LOGGER.warning("No actions defined at " + self.actions_path)
+            return {}
+        for action_path in os.scandir(self.actions_path):
+            abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
+            loaded_action = _load_action(str(abs_path))
+            actions[action_path.name] = loaded_action
+        LOGGER.info("Loaded actions: " + str(len(actions)))
+        return actions
 
     def act(self, instruction: str) -> bool:
-        matching_action = next((action for action in self.actions if action.is_matching(instruction)), None)
+        matching_action = next((action for action in self.actions.values() if action.is_matching(instruction)), None)
         if matching_action:
             LOGGER.info("Found action %s for instruction '%s'", matching_action.keys, instruction)
             self.client.light(matching_action.light_action)
@@ -58,20 +71,12 @@ class HueActionRegistry:
             return False
 
 
-def load_actions(actions_path: str) -> List[Action]:
-    actions = []
-    if not os.path.exists(actions_path):
-        LOGGER.warning("No actions defined at " + actions_path)
-        return []
-    for action_path in os.scandir(actions_path):
-        abs_path: Path = Path(actions_path).joinpath(action_path.path)
-        with open(abs_path) as action_file_handle:
-            action_dict: dict = json.load(action_file_handle)
-            try:
-                action = Action(
-                    key_paragraphs=action_dict["keys"],
-                    light_action=(LightSelector(action_dict["lights"]), LightPutRequest(**action_dict["request"])))
-                actions.append(action)
-            except Exception as e:
-                LOGGER.warning("Could not load action from %s: " + str(e))
-    return actions
+def _load_action(action_path: str) -> Action:
+    with open(action_path) as action_file_handle:
+        action_dict: dict = json.load(action_file_handle)
+        try:
+            return Action(
+                key_paragraphs=action_dict["keys"],
+                light_action=(LightSelector(action_dict["lights"]), LightPutRequest(**action_dict["request"])))
+        except Exception as e:
+            LOGGER.warning("Could not load action from %s: " + str(e))
