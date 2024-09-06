@@ -1,5 +1,5 @@
 # whisper module seems to be only installable on a "full" debian distribution.
-FROM python:3.9.19-bookworm as base
+FROM python:3.9.19-bookworm
 
 WORKDIR /lurker
 
@@ -9,7 +9,7 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
 # add lurker user
-RUN adduser --system --no-create-home --ingroup audio --disabled-password lurker
+RUN adduser --ingroup audio lurker
 
 # copy source files
 RUN mkdir "src"
