@@ -4,17 +4,17 @@ from typing import Callable, Any, Optional
 
 import numpy as np
 import sounddevice as sd
-import whisper
 
 from src import log, sound
 from src.text import filter_non_alnum
+from src.transcription import Transcriber
 
 LOGGER = log.new_logger(__name__)
 
 
 class SpeechToTextListener:
     def __init__(self,
-                 model: str,
+                 transcriber: Transcriber,
                  keyword_queue_length_seconds: float,
                  instruction_queue_length_seconds: float,
                  silence_threshold: int,
@@ -26,8 +26,7 @@ class SpeechToTextListener:
         :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
         acting on the instruction has been successful.
         """
-        self.model: whisper.Whisper = whisper.load_model(model, in_memory=True)
-
+        self.transcriber = transcriber
         self.sample_rate = 16_000
         self.bit_depth = np.dtype(np.int16)
 
@@ -89,7 +88,7 @@ class SpeechToTextListener:
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
                 LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
                 if self._is_keyword_queue_relevant():
-                    transcription = self._transcribe(self.keyword_queue)
+                    transcription = self.transcriber.transcribe(self.keyword_queue)
                     intermediate_decode = filter_non_alnum(transcription)
                 else:
                     intermediate_decode = ""
@@ -107,7 +106,7 @@ class SpeechToTextListener:
                    and not self._has_instruction_queue_speech_followed_by_silence()
                    and (len(self.instruction_queue) < self.instruction_queue.maxlen)):
                 sleep(0.1)
-            recorded_instruction: str = self._transcribe(self.instruction_queue)
+            recorded_instruction: str = self.transcriber.transcribe(self.instruction_queue)
             LOGGER.debug("Recorded instruction: sample_count={}, text={}"
                          .format(len(self.instruction_queue), recorded_instruction))
             return recorded_instruction
@@ -115,25 +114,6 @@ class SpeechToTextListener:
     def _clear_queues(self) -> None:
         self.keyword_queue.clear()
         self.instruction_queue.clear()
-
-    def _transcribe(self, data) -> str:
-        """
-        Taken from https://github.com/davabase/whisper_real_time/blob/master/transcribe_demo.py
-        """
-        # load audio and pad/trim it to fit 30 seconds. There it says:
-        #   Convert in-ram buffer to something the model can use directly without needing a temp file.
-        #   Convert data from 16 bit wide integers to floating point with a width of 32 bits.
-        #   Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
-        audio = np.array(data, dtype=self.bit_depth).astype(np.float32) / 32768.
-        result = self.model.transcribe(audio,
-                                       condition_on_previous_text=False,
-                                       prepend_punctuations="",
-                                       append_punctuations="",
-                                       without_timestamps=True,
-                                       fp16=False,
-                                       language="de"
-                                       )
-        return result["text"].strip().lower()
 
     def _is_keyword_queue_relevant(self, bucket_count: int = 100, required_bucket_ratio: float = 0.05) -> bool:
         """

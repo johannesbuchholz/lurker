@@ -7,6 +7,7 @@ from src.client import HueClient
 from src.config import LurkerConfig
 from src.sound import play_ready
 from src.speech import SpeechToTextListener
+from src.transcription import Transcriber
 
 LOGGER = log.new_logger(__name__)
 
@@ -40,8 +41,10 @@ if __name__ == "__main__":
     registry = HueActionRegistry(hue_client, actions_path)
     registry.load_actions()
 
+    transcriber = Transcriber(model_path=config.model())
+
     listener = SpeechToTextListener(
-        model=config.model(),
+        transcriber=transcriber,
         keyword_queue_length_seconds=config.keyword_queue_length_seconds(),
         instruction_queue_length_seconds=config.instruction_queue_length_seconds(),
         silence_threshold=config.silence_threshold(),
@@ -49,6 +52,7 @@ if __name__ == "__main__":
         output_device_name=config.output_device(),
         instruction_callback=registry.act
     )
+
     LOGGER.info("Start listening...")
     play_ready(config.output_device())
     try:
