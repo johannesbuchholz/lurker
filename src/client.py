@@ -65,7 +65,7 @@ class HueClient:
         self.light_ids = self.lights.keys()
 
     def light(self, light_action: Tuple[LightSelector, LightPutRequest]):
-        LOGGER.debug("Sending request: selected_lights=%s, request=%s", light_action[0], light_action[1])
+        LOGGER.info("Sending request: selected_lights=%s, request=%s", light_action[0], light_action[1])
         light_selector, request = light_action
         try:
             selected_ids = light_selector.select(self.light_ids)

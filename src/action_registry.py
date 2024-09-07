@@ -52,7 +52,7 @@ class HueActionRegistry:
         # matching_action = next((action for action in self.actions.values() if action.is_matching(instruction)), None)
         for action in self.actions.values():
             if action.is_matching(instruction.lower()):
-                LOGGER.info("Found action %s for instruction '%s'", action, instruction)
+                LOGGER.debug("Found action %s for instruction '%s'", action, instruction)
                 self.client.light(action.light_action)
                 return True
         LOGGER.info("Could not find action for instruction '%s'", instruction)
