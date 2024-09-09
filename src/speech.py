@@ -115,7 +115,7 @@ class SpeechToTextListener:
         self.keyword_queue.clear()
         self.instruction_queue.clear()
 
-    def _is_keyword_queue_relevant(self, bucket_count: int = 100, required_bucket_ratio: float = 0.05) -> bool:
+    def _is_keyword_queue_relevant(self, bucket_count: int = 100, required_bucket_ratio: float = 0.1) -> bool:
         """
         Relevant means that at least in an appropriate amount of buckets the average absolute amplitude is above the
         threshold.
@@ -147,7 +147,8 @@ class SpeechToTextListener:
 
     def _has_instruction_queue_speech_followed_by_silence(self,
                                                           bucket_count: int = 100,
-                                                          required_silent_bucket_ratio: float = 0.25) -> bool:
+                                                          required_buckets_with_speech_ratio: float = 0.05,
+                                                          required_silent_bucket_ratio: float = 0.2) -> bool:
         """
         The instruction is deemed to be spoken if some sound has been recorded followed by enough silence.
 
@@ -164,9 +165,11 @@ class SpeechToTextListener:
             return False
 
         required_silent_buckets = bucket_count * required_silent_bucket_ratio
+        required_buckets_with_speech = bucket_count * required_buckets_with_speech_ratio
         arr = np.array(self.instruction_queue)
         interval_length = int(max_length / bucket_count)
         last_bucket_with_speech = -1
+        buckets_with_speech = 0
         last_silent_bucket = 0
         for i in range(bucket_count):
             lower = i * interval_length
@@ -176,11 +179,13 @@ class SpeechToTextListener:
             bucket_mean = np.abs(arr[lower: upper]).mean()
             if bucket_mean > self.silence_threshold:
                 last_bucket_with_speech = i
+                buckets_with_speech += 1
             else:
                 last_silent_bucket = i
-            if last_bucket_with_speech > 0:
+            if last_bucket_with_speech > 0 and buckets_with_speech > required_buckets_with_speech:
                 # length may be negative
                 silence_length = last_silent_bucket - last_bucket_with_speech
                 if silence_length > required_silent_buckets:
+                    LOGGER.log(level=1, msg="Instruction queue is ready") # trace level like
                     return True
         return False
