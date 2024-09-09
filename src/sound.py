@@ -36,7 +36,8 @@ def _play_sound(output_device_name: str, data_and_samplerate: Tuple[np.ndarray, 
 
 def _load_sounds() -> Dict[str, Tuple[np.ndarray, int]]:
     sounds = {}
-    for p in os.scandir(os.path.abspath("src/resources")):
+    resources_dir = os.scandir(os.path.dirname(__file__) + "/resources")
+    for p in resources_dir:
         if p.name.endswith(".wav"):
             try:
                 with wave.open(p.path, "rb") as f:
@@ -52,7 +53,6 @@ def _load_sounds() -> Dict[str, Tuple[np.ndarray, int]]:
             except Exception as e:
                 LOGGER.warning("Could not load sound from %s: %s", p.path, str(e))
     return sounds
-
 
 LOGGER.info("Loading sounds")
 _SOUNDS = _load_sounds()

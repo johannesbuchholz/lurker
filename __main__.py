@@ -18,7 +18,7 @@ def _determine_lurker_home() -> str:
     except ValueError:
         i = None
     if i and i + 1 < len(sys.argv):
-        return sys.argv[i + 1]
+        return os.path.abspath(sys.argv[i + 1])
     else:
         return os.getcwd() + "/lurker"
 

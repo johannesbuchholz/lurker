@@ -9,7 +9,7 @@ from whispercpp import Whisper
 class Transcriber:
     """
     Abstraction of actual transcription engine in use.
-    Params:
+    Params example:
         strategy=WHISPER_SAMPLING_GREEDY
         greedy={best_of=1}
         language='de'
@@ -78,10 +78,9 @@ def _get_whispercpp_model_inputs(model_path: str) -> Dict[str, str]:
     The used whispercpp library can only take a model name like "tiny" or "base", not an absolute file name.
     It will only download that model unless a model with appropriate name is contained in "basedir".
     Hence, we split the model_path to simulate an already downloaded model.
+
+    We also enforce pointing to an existing model.
     """
-    if not os.path.isabs(model_path):
-        # No special treatment. Assume model_path is something linke "tiny" or "base.en".
-        return {"model_name": model_path}
     if not os.path.isfile(model_path):
         raise ValueError("Path to model must point to a file: " + model_path)
     # If here, we assume a model path like "/path/to/model/ggml-<modelname>.bin"
