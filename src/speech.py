@@ -186,6 +186,6 @@ class SpeechToTextListener:
                 # length may be negative
                 silence_length = last_silent_bucket - last_bucket_with_speech
                 if silence_length > required_silent_buckets:
-                    LOGGER.log(level=1, msg="Instruction queue is ready") # trace level like
+                    LOGGER.debug("Instruction queue is ready")
                     return True
         return False

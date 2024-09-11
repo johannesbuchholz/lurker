@@ -9,7 +9,8 @@ PARAMS = {
     "print_progress": False,
     "language": "de",
     "suppress_non_speech_tokens": True,
-    "no_speech_thold": 0.4 # probably not implemented in whispercpp
+    "max_tokens": 8,
+    "greedy": {"best_of": 1}
 }
 
 class Transcriber:
@@ -19,7 +20,7 @@ class Transcriber:
 
     def __init__(self, model_path: str):
         # inputs = _get_whispercpp_model_inputs(model_path)
-        self.model: Model = Model(model=model_path, log_level=logging.WARN, **PARAMS)
+        self.model: Model = Model(model=model_path, params_sampling_strategy=1, log_level=logging.WARN, **PARAMS)
 
         self.sample_rate = 16_000
         self.bit_depth = np.dtype(np.int16)
@@ -32,6 +33,6 @@ class Transcriber:
         #   Convert in-ram buffer to something the model can use directly without needing a temp file.
         #   Convert data from 16 bit wide integers to floating point with a width of 32 bits.
         #   Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
-        audio = np.array(data, dtype=self.bit_depth).astype(np.float32) / 32768.
+        audio = np.array(data, dtype=self.bit_depth) / 32768.
         segments = self.model.transcribe(audio)
         return " ".join([s.text for s in segments]).strip().lower()
