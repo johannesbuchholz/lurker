@@ -1,3 +1,4 @@
 sounddevice==0.4.6
 numpy==1.26.3
-pywhispercpp==1.2.0
+openai-whisper==20231117
+torch==1.13.1  # Downgrade to this version due to an arm bug: https://github.com/pytorch/pytorch/issues/132032

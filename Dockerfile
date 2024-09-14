@@ -16,9 +16,9 @@ COPY --chown=lurker:lurker --chmod=r src/ src/
 COPY --chown=lurker:lurker --chmod=rx __main__.py ./
 
 # add speech recognition model
-RUN mkdir --parents "models/whispercpp"
-COPY --chown=lurker:lurker --chmod=r misc/models/whispercpp/ggml-tiny.bin ./models/whispercpp
-ENV LURKER_MODEL=/lurker/models/whispercpp/ggml-tiny.bin
+RUN mkdir "models/"
+COPY --chown=lurker:lurker --chmod=r misc/models/tiny.pt ./models/
+ENV LURKER_MODEL=/lurker/models/tiny.pt
 
 # add empty dir to mount configuration into
 RUN mkdir "home"
