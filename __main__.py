@@ -41,7 +41,7 @@ if __name__ == "__main__":
     registry = HueActionRegistry(hue_client, actions_path)
     registry.load_actions()
 
-    transcriber = Transcriber(model_path=config.model())
+    transcriber = Transcriber(model_path=config.model(), spoken_language=config.language())
 
     listener = SpeechToTextListener(
         transcriber=transcriber,

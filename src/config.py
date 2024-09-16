@@ -15,6 +15,7 @@ LURKER_SILENCE_THRESHOLD = "LURKER_SILENCE_THRESHOLD"
 LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
 LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
 LURKER_KEYWORD_INTERVAL_SECONDS = "LURKER_KEYWORD_INTERVAL_SECONDS"
+LURKER_LANGUAGE = "LURKER_LANGUAGE"
 
 LOGGER = log.new_logger(__name__)
 
@@ -32,6 +33,7 @@ def _get_envs() -> Dict[str, str]:
         LURKER_INPUT_DEVICE: os.environ.get(LURKER_INPUT_DEVICE),
         LURKER_OUTPUT_DEVICE: os.environ.get(LURKER_OUTPUT_DEVICE),
         LURKER_KEYWORD_INTERVAL_SECONDS: os.environ.get(LURKER_KEYWORD_INTERVAL_SECONDS),
+        LURKER_LANGUAGE: os.environ.get(LURKER_LANGUAGE),
     }
     return {key: value for key, value in envs.items() if value is not None}
 
@@ -39,11 +41,12 @@ def _get_envs() -> Dict[str, str]:
 def _get_defaults() -> Dict[str, Optional[str]]:
     return {
         LURKER_LOG_LEVEL: "INFO",
-        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "1.",
+        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "0.8",
         LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS: "3.",
         LURKER_MODEL: "<path not set>",
         LURKER_SILENCE_THRESHOLD: "1800",
-        LURKER_KEYWORD_INTERVAL_SECONDS: "0.5"
+        LURKER_KEYWORD_INTERVAL_SECONDS: "0.8",
+        LURKER_LANGUAGE: "en"
     }
 
 
@@ -94,7 +97,11 @@ class LurkerConfig:
     
     def keyword_interval(self) -> float:
         return float(self._config.get(LURKER_KEYWORD_INTERVAL_SECONDS))
-
+    
+    def language(self) -> str:
+        return self._config.get(LURKER_LANGUAGE)
+    
     def __str__(self):
-        return "\n".join(
-            ["{}={}".format(name, value) for name, value in (self._config | {LURKER_USER: "***"}).items()])
+        key_value_strings = ["{}={}".format("LURKER_" + func.upper(), str(getattr(self, func)())) for func in dir(self) if
+                          callable(getattr(self, func)) and not func.startswith("__")]
+        return "\n".join(key_value_strings)

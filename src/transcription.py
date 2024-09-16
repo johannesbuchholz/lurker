@@ -6,8 +6,9 @@ class Transcriber:
     Abstraction of actual transcription engine in use.
     """
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, spoken_language: str):
         self.model: whisper.Whisper = whisper.load_model(model_path, in_memory=True)
+        self.spoken_language = spoken_language
         self.sample_rate = 16_000
         self.bit_depth = np.dtype(np.int16)
 
@@ -25,7 +26,7 @@ class Transcriber:
                                        append_punctuations="",
                                        without_timestamps=True,
                                        fp16=False,
-                                       language="de",
+                                       language=self.spoken_language,
                                        sample_len=8,
                                        )
         return result["text"].strip().lower()
