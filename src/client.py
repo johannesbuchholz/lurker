@@ -41,7 +41,7 @@ class LightPutRequest:
         return Request(url, method="PUT", data=data)
 
     def __str__(self):
-        return "LightPutRequest[{}]".format(self.keyvalues)
+        return str({k: v for k, v in self.keyvalues.items() if v is not None})
 
 
 class HueClient:

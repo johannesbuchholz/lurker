@@ -43,6 +43,8 @@ class SpeechToTextListener:
         self.is_listening = False
 
     def start_listening(self, keyword: str, lurker_keyword_interval_seconds: float):
+        if keyword is None:
+            raise ValueError("Keyword can not be None")
         if self.is_listening:
             LOGGER.debug("Already listening.")
             return
