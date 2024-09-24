@@ -3,6 +3,8 @@ An offline home assistant tool for operating HueBridge smart home things by spok
 
 Currently, only light requests are supported.
 
+This project is in a dynamic development state.
+
 ## Requirements
 - Python
   - Tested with python 3.9
@@ -34,7 +36,7 @@ You may also pass the option `--lurker-home <path>` to let lurker load configura
 The Dockerfile expects the "tiny" model at `misc/models`.
 Build the docker image (~8 GB in size).
 ```sh
-docker build . --tag johannesbuchholz/lurker:latest
+docker build . --tag lurker:latest
 ```
 
 Run the container with `docker run johannesbuchholz/lurker:docker`. 
