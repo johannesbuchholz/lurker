@@ -4,8 +4,7 @@
   "LURKER_KEYWORD": "hey john",
   "LURKER_LANGUAGE": "de",
   "LURKER_LOG_LEVEL": "DEBUG",
-  "LURKER_SILENCE_THRESHOLD": 1800,
   "LURKER_INPUT_DEVICE": "<device name>",
-  "LURKER_OUTPUT_DEVICE": "<device name>"
+  "LURKER_OUTPUT_DEVICE": "<device name>",
 }
 
