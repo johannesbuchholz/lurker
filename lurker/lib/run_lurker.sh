@@ -8,6 +8,7 @@ print_help() {
   echo "      If not set, runs lurker directly assuming existence of '/usr/bin/python3.9'."
   echo "  -m  Use directory 'lurker' on the first media device found on this machine"
   echo "      as LURKER_HOME (see lurker configuration regarding LURKER_HOME)."
+  echo "  -s  Stop the lurker"
 }
 
 find_lurker_home_in_media() {
@@ -16,15 +17,17 @@ find_lurker_home_in_media() {
 
 set -e
 
+script_version="0.0.0-PLACEHOLDER"
+
 if [ -z "$1" ]; then
   print_help
   exit 0
 fi
 
-while getopts ':md' opt; do
+while getopts ':mds' opt; do
   case "${opt}" in
     m)
-      HOST_MEDIA=1;;
+      MEDIA_LURKER_HOME=$(find_lurker_home_in_media);;
     d)
       DOCKER=1;;
     ?)
@@ -33,9 +36,6 @@ while getopts ':md' opt; do
   esac
 done
 
-echo "REMAINING ARGS: $*"
-
-MEDIA_LURKER_HOME="${HOST_MEDIA:+$(find_lurker_home_in_media)}"
 HOST_LURKER_HOME="${MEDIA_LURKER_HOME:-${HOME}/lurker}"
 
 echo "Determined lurker home on host machine: ${HOST_LURKER_HOME}"
@@ -44,7 +44,7 @@ if [ -z "${DOCKER}" ]; then
   echo "Run lurker"
   /usr/bin/python3.9 . --lurker-home "${HOST_LURKER_HOME}"
 else
-  image_to_use="${LURKER_IMAGE:-lurker:latest}"
+  image_to_use="${LURKER_IMAGE:-lurker:${script_version}}"
   echo "Run lurker as docker image: ${image_to_use}"
   docker run \
       --device /dev/snd \
