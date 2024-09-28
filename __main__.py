@@ -1,6 +1,7 @@
 import os
 import sys
 
+from src import config
 from src import log
 from src.action_registry import HueActionRegistry
 from src.client import HueClient
@@ -28,35 +29,33 @@ if __name__ == "__main__":
     LOGGER.info("Determined lurker home: %s", lurker_home_dir)
 
     LOGGER.info("Loading configuration")
-    config = LurkerConfig(lurker_home_dir + "/config.json")
-    LOGGER.info("Loaded configuration:\n%s", config)
+    lurker_config: LurkerConfig = config.load_lurker_config(lurker_home_dir + "/config.json")
+    LOGGER.info("Loaded configuration:\n%s", lurker_config.to_pretty_str())
 
-    log.set_all_levels(config.log_level())
+    log.set_all_levels(lurker_config.LURKER_LOG_LEVEL)
 
     LOGGER.info("Setting up connection to hue bridge")
-    hue_client = HueClient(config.host(), config.user())
+    hue_client = HueClient(lurker_config.LURKER_HOST, lurker_config.LURKER_USER)
 
     LOGGER.info("Setting up actions")
     actions_path = lurker_home_dir + "/actions"
     registry = HueActionRegistry(hue_client, actions_path)
     registry.load_actions()
 
-    transcriber = Transcriber(model_path=config.model(), spoken_language=config.language())
+    transcriber = Transcriber(model_path=lurker_config.LURKER_MODEL, spoken_language=lurker_config.LURKER_LANGUAGE)
 
     listener = SpeechToTextListener(
         transcriber=transcriber,
-        keyword_queue_length_seconds=config.keyword_queue_length_seconds(),
-        instruction_queue_length_seconds=config.instruction_queue_length_seconds(),
-        min_silence_threshold=config.min_silence_threshold(),
-        input_device_name=config.input_device(),
-        output_device_name=config.output_device(),
-        instruction_callback=registry.act
+        input_device_name=lurker_config.LURKER_INPUT_DEVICE,
+        output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
+        instruction_callback=registry.act,
+        **lurker_config.LURKER_SPEECH_CONFIG.__dict__
     )
 
     LOGGER.info("Start listening...")
-    play_ready(config.output_device())
+    play_ready(lurker_config.LURKER_OUTPUT_DEVICE)
     try:
-        listener.start_listening(config.keyword(), config.keyword_interval())
+        listener.start_listening(lurker_config.LURKER_KEYWORD)
     except Exception as e:
-        LOGGER.error("Fatal error: %s", str(e))
+        LOGGER.error("Fatal error: %s", str(e), e)
         exit(1)
