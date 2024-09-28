@@ -1,6 +1,7 @@
 # whisper module seems to be only installable on a "full" debian distribution.
 FROM python:3.9.19-slim-bookworm
 
+ARG BUILD_MODEL_PATH=misc/models/tiny.pt
 WORKDIR /lurker
 
 # setup python dependencies
@@ -17,7 +18,7 @@ COPY --chown=lurker:lurker --chmod=rx __main__.py ./
 
 # add speech recognition model
 RUN mkdir "models/"
-COPY --chown=lurker:lurker --chmod=r misc/models/tiny.pt ./models/
+COPY --chown=lurker:lurker --chmod=r ${BUILD_MODEL_PATH} ./models/
 ENV LURKER_MODEL=/lurker/models/tiny.pt
 
 # add empty dir to mount configuration into
