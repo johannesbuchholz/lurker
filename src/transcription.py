@@ -20,7 +20,7 @@ class Transcriber:
         #   Convert data from 16 bit wide integers to floating point with a width of 32 bits.
         #   Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
         audio = np.array(data, dtype=self.bit_depth).astype(np.float32) / 32768.
-        result = self.model.transcribe(audio,
+        result = self.model.transcribe(whisper.pad_or_trim(audio),
                                        condition_on_previous_text=False,
                                        prepend_punctuations="",
                                        append_punctuations="",
