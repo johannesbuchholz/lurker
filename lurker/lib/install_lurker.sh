@@ -27,12 +27,8 @@ fi
 
 # clone repo
 tmp_dir=$(mktemp --directory --dry-run --tmpdir "$(basename "$0").XXXXXXXXXXXX")
-echo "# Cloning lurker source code into ${tmp_dir}"
-git clone -q https://github.com/johannesbuchholz/lurker.git "${tmp_dir}"
-
-# determine version
-lurker_version=$(sh -c "cd ${tmp_dir} && git describe" | tr -d 'v')
-echo ">>> Lurker version ${lurker_version}"
+echo "# Cloning lurker v${script_version} source code into ${tmp_dir}"
+git clone -q --depth 1 --branch "v${script_version}" https://github.com/johannesbuchholz/lurker.git "${tmp_dir}"
 
 # create install dir
 install_path="${HOME}/lurker"
@@ -52,7 +48,7 @@ echo "# Downloading openai-whisper model"
 wget -nc --show-progress --no-verbose -O "${model_path}" "https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt"
 
 # build docker image
-image_tag="lurker:$lurker_version"
+image_tag="lurker:$script_version"
 echo "# Building docker image $image_tag"
 docker build "${tmp_dir}" --build-arg "BUILD_MODEL_PATH=${model_path}" --tag "${image_tag}"
 
