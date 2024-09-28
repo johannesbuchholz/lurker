@@ -47,7 +47,7 @@ if __name__ == "__main__":
         transcriber=transcriber,
         keyword_queue_length_seconds=config.keyword_queue_length_seconds(),
         instruction_queue_length_seconds=config.instruction_queue_length_seconds(),
-        silence_threshold=config.silence_threshold(),
+        min_silence_threshold=config.min_silence_threshold(),
         input_device_name=config.input_device(),
         output_device_name=config.output_device(),
         instruction_callback=registry.act

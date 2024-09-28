@@ -11,7 +11,7 @@ LURKER_KEYWORD_QUEUE_LENGTH_SECONDS = "LURKER_KEYWORD_QUEUE_LENGTH_SECONDS"
 LURKER_LOG_LEVEL = "LURKER_LOG_LEVEL"
 LURKER_USER = "LURKER_USER"
 LURKER_HOST = "LURKER_HOST"
-LURKER_SILENCE_THRESHOLD = "LURKER_SILENCE_THRESHOLD"
+LURKER_MIN_SILENCE_THRESHOLD = "LURKER_MIN_SILENCE_THRESHOLD"
 LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
 LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
 LURKER_KEYWORD_INTERVAL_SECONDS = "LURKER_KEYWORD_INTERVAL_SECONDS"
@@ -29,7 +29,7 @@ def _get_envs() -> Dict[str, str]:
         LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS: os.environ.get(LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS),
         LURKER_MODEL: os.environ.get(LURKER_MODEL),
         LURKER_KEYWORD: os.environ.get(LURKER_KEYWORD),
-        LURKER_SILENCE_THRESHOLD: os.environ.get(LURKER_SILENCE_THRESHOLD),
+        LURKER_MIN_SILENCE_THRESHOLD: os.environ.get(LURKER_MIN_SILENCE_THRESHOLD),
         LURKER_INPUT_DEVICE: os.environ.get(LURKER_INPUT_DEVICE),
         LURKER_OUTPUT_DEVICE: os.environ.get(LURKER_OUTPUT_DEVICE),
         LURKER_KEYWORD_INTERVAL_SECONDS: os.environ.get(LURKER_KEYWORD_INTERVAL_SECONDS),
@@ -38,13 +38,13 @@ def _get_envs() -> Dict[str, str]:
     return {key: value for key, value in envs.items() if value is not None}
 
 
-def _get_defaults() -> Dict[str, Optional[str]]:
+def _get_defaults() -> Dict[str, str]:
     return {
         LURKER_LOG_LEVEL: "INFO",
-        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "1",
+        LURKER_KEYWORD_QUEUE_LENGTH_SECONDS: "1.2",
         LURKER_INSTRUCTION_QUEUE_LENGTH_SECONDS: "3.",
         LURKER_MODEL: "<path not set>",
-        LURKER_SILENCE_THRESHOLD: "1400",
+        LURKER_MIN_SILENCE_THRESHOLD: "800",
         LURKER_KEYWORD_INTERVAL_SECONDS: "0.1",
         LURKER_LANGUAGE: "en"
     }
@@ -74,8 +74,8 @@ class LurkerConfig:
     def log_level(self) -> str:
         return self._config.get(LURKER_LOG_LEVEL)
 
-    def silence_threshold(self) -> int:
-        return int(self._config.get(LURKER_SILENCE_THRESHOLD))
+    def min_silence_threshold(self) -> int:
+        return int(self._config.get(LURKER_MIN_SILENCE_THRESHOLD))
 
     def input_device(self) -> Optional[str]:
         return self._config.get(LURKER_INPUT_DEVICE)
