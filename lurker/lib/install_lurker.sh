@@ -7,7 +7,7 @@
 
 set -e
 
-script_version="0.0.0-PLACEHOLDER"
+script_version="0.5.0"
 
 echo "Lurker installer script: version ${script_version}"
 

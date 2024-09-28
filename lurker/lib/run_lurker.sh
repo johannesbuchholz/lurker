@@ -17,7 +17,7 @@ find_lurker_home_in_media() {
 
 set -e
 
-script_version="0.0.0-PLACEHOLDER"
+script_version="0.5.0"
 
 if [ -z "$1" ]; then
   print_help
