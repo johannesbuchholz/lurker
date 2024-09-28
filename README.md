@@ -5,21 +5,23 @@ Currently, only light requests are supported.
 
 This project is in a dynamic development state.
 
-## Requirements
-- Python
-  - Tested with python 3.9
-  - Install the required dependencies by running `pip install --require-virtualenv -r requirements.txt`
+### Requirements
+Regardless of your preferred run option, lurker will need certain things to be set up. In each case, you will need to provide the following:  
+
+- Python 3.9
+  - openai-whisper and its dependencies require specifically python 3.9
+  - Dependencies may be installed by running `pip install --require-virtualenv -r requirements.txt`
 - Hardware
   - Lurker requires a recording device available to the host machine. On debian systems, check available devices with `ls -lh /dev/snd`.
   - Optionally: A speaker for playing sounds as feedback to speech inputs.
-- Third party
+- Openai whisper model
   - Lurker calls the transcription engine [openai-whisper](https://github.com/openai/whisper) for speech-to-text tasks. By default, lurker uses the "tiny" model provided by openai-whisper. More models can be found here: `.venv/lib/python3.9/site-packages/whisper/__init__.py:17`. If the requested model is not present on the machine, openai-whisper will download the respective model. To avoid that, you may also [configure](#configuration-parameters) lurker to use an already downloaded model.
 
-## How to run
-Optionally, download the "tiny" openai whisper model and provide the absolute path to the model via environment variable `LURKER_MODEL`. See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
-If no model is provided this way, teh whisper application will download a model.
+## Run locally
 
-### Run locally
+## Setup
+Download the "tiny" openai whisper model and provide the absolute path to the model via environment variable `LURKER_MODEL`. See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
+
 Install the required dependencies from `requirements.txt`.
 ```commandline
 pip install --require-virtualenv -r requirements.txt
@@ -39,19 +41,19 @@ Build the docker image (~8 GB in size).
 docker build . --tag lurker:latest
 ```
 
-Run the container with `docker run johannesbuchholz/lurker:docker`. 
+Run the container with `docker run lurker:latest` (the image `johannesbuchholz/lurker:latest` is also available on docker hub but may change at any time). 
 You will need to expose a sound device of your host machine. Additionally, you probably want to mount proper configuration and actions.
 - Sound device: Use [docker option `--device`](https://docs.docker.com/reference/cli/docker/container/run/#device) to expose hardware from the host machine to the docker container.
 - Configuration: Use [docker option `-v` or `--mount`](https://docs.docker.com/reference/cli/docker/container/run/#mount) to mount a set of configuration files to the container. Mount configuration to `/lurker/home` inside the container.
 
-Use the shell-script `run_lurker_docker.sh` to conveniently start the docker container with the possibility to read configuration form removable media.
+Use the shell-script `run_lurker.sh` to conveniently start the docker container with the possibility to read configuration form removable media.
 ```sh
-sh run_lurker.docker.sh
+sh lurker/lib/run_lurker.sh -d
 ```
 
 ## Lurker Home
 The lurker home path may contain a configuration file and actions that link key-paragraphs to requests sent to a Hue Bridge.
-Per default, the lurker home path is set to `~/lurker` unsless specified via command line option `--lurker-home <path>`.
+Per default, the lurker home path is set to `~/lurker` unless specified via command line option `--lurker-home <path>`.
 
 ### Configuration file
 Lurker may be configured through a config file at `<lurker-home>/config.json`. That [configuration](#configuration-parameters) may be overridden by environment variables.
@@ -95,7 +97,7 @@ Example:
     - `"hue"`: Hue setting.
     - `"sat"`: Saturation setting.
 
-All fields withing `request` are optional and missing field are not send the Hue Bridge.
+All fields under `request` are optional and missing field are not send the Hue Bridge.
 
 ### Configuration parameters
 All available configuration parameters are defined here: `src/config.py`
