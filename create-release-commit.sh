@@ -71,6 +71,7 @@ if [[ ${commit} ]]; then
   git diff-index HEAD --quiet --exit-code || (echo "Git working tree is not clean. Exiting..." && exit 1)
 
   sed "s/^script_version=.*$/script_version=\"${version}\"/" lurker/lib/*.sh -i
+  git add lurker/lib/*.sh
   git commit -m "build(release): Release ${version}"
   if [[ ${tag} ]]; then
     git tag -a "v${version}" -m "Release version v${version}"
