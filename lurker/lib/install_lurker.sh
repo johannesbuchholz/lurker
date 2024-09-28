@@ -28,7 +28,7 @@ fi
 # clone repo
 tmp_dir=$(mktemp --directory --dry-run --tmpdir "$(basename "$0").XXXXXXXXXXXX")
 echo "# Cloning lurker v${script_version} source code into ${tmp_dir}"
-git clone -q --depth 1 --branch "v${script_version}" https://github.com/johannesbuchholz/lurker.git "${tmp_dir}"
+git -c advice.detachedHead=false clone --quiet --depth 1 --branch "v${script_version}" https://github.com/johannesbuchholz/lurker.git "${tmp_dir}"
 
 # create install dir
 install_path="${HOME}/lurker"
@@ -42,14 +42,21 @@ cp -r "${tmp_dir}/lurker/actions" "${install_path}"
 cp "${tmp_dir}/lurker/config.json" "${install_path}"
 
 # download whisper model
-model_path="${install_path}/model/tiny.pt"
+model_path="${install_path}/models/tiny.pt"
 mkdir -p "$(dirname "${model_path}")"
 echo "# Downloading openai-whisper model"
-wget -nc --show-progress --no-verbose -O "${model_path}" "https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt"
+if [ -f "${model_path}" ]; then
+  echo "Model already exists"
+else
+  wget --show-progress -O "${model_path}" "https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt"
+fi
 
 # build docker image
 image_tag="lurker:$script_version"
 echo "# Building docker image $image_tag"
+#   create symlink to downloaded model inside context of Dockerfile at tmp dir.
+mkdir -p "${tmp_dir}/lurker/models"
+ln "${model_path}" "${tmp_dir}/lurker/models/tiny.pt"
 docker build "${tmp_dir}" --build-arg "BUILD_MODEL_PATH=${model_path}" --tag "${image_tag}"
 
 # Create systemd service if possible
