@@ -5,7 +5,7 @@
 
 set -e
 
-script_version="0.5.0"
+script_version="0.5.1"
 
 echo "Lurker systemd unit installer script: version ${script_version}"
 
