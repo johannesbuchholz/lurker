@@ -7,7 +7,7 @@
 
 set -e
 
-script_version="0.5.1"
+script_version="0.5.2"
 
 echo "Lurker installer script: version ${script_version}"
 
