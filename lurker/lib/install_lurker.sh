@@ -25,24 +25,18 @@ if [ ! "${userinput}" = "y" ]; then
   exit 0
 fi
 
-# clone repo
-tmp_dir=$(mktemp --directory --dry-run --tmpdir "$(basename "$0").XXXXXXXXXXXX")
-echo "# Cloning lurker v${script_version} source code into ${tmp_dir}"
-git -c advice.detachedHead=false clone --quiet --depth 1 --branch "v${script_version}" https://github.com/johannesbuchholz/lurker.git "${tmp_dir}"
-
 # create install dir
 install_path="${HOME}/lurker"
 echo "# Installation path is ${install_path}"
 mkdir -p "${install_path}"
 
-# create lurker home
-echo "# Creating programm entry point, install scripts and basic configuration templates"
-cp -r "${tmp_dir}/lurker/lib" "${install_path}"
-cp -r "${tmp_dir}/lurker/actions" "${install_path}"
-cp "${tmp_dir}/lurker/config.json" "${install_path}"
+# clone repo
+git_dir="${install_path}/v${script_version}"
+echo "# Cloning lurker v${script_version} source code into ${git_dir}"
+git -c advice.detachedHead=false clone --quiet --depth 1 --branch "v${script_version}" https://github.com/johannesbuchholz/lurker.git "${git_dir}"
 
 # download whisper model
-model_path="${install_path}/models/tiny.pt"
+model_path="${git_dir}/lurker/models/tiny.pt"
 mkdir -p "$(dirname "${model_path}")"
 echo "# Downloading openai-whisper model"
 if [ -f "${model_path}" ]; then
@@ -54,10 +48,7 @@ fi
 # build docker image
 image_tag="lurker:$script_version"
 echo "# Building docker image $image_tag"
-#   create symlink to downloaded model inside context of Dockerfile at tmp dir.
-mkdir -p "${tmp_dir}/lurker/models"
-ln "${model_path}" "${tmp_dir}/lurker/models/tiny.pt"
-docker build "${tmp_dir}" --build-arg "BUILD_MODEL_PATH=${model_path}" --tag "${image_tag}"
+docker build "${git_dir}" --tag "${image_tag}"
 
 # Create systemd service if possible
 echo "Create systemd unit template to start lurker on system startup? You may later do this again by running ${install_path}/install_lurker_systemd_unit.sh"

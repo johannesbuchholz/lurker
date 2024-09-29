@@ -8,7 +8,6 @@ print_help() {
   echo "      If not set, runs lurker directly assuming existence of '/usr/bin/python3.9'."
   echo "  -m  Use directory 'lurker' on the first media device found on this machine"
   echo "      as LURKER_HOME (see lurker configuration regarding LURKER_HOME)."
-  echo "  -s  Stop the lurker"
 }
 
 find_lurker_home_in_media() {
@@ -48,7 +47,7 @@ else
   echo "Run lurker as docker image: ${image_to_use}"
   docker run \
       --device /dev/snd \
-      --mount type=bind,source="${HOST_LURKER_HOME}",toptet=/lurker/home,readonly \
+      --mount type=bind,source="${HOST_LURKER_HOME}",target=/lurker/home,readonly \
       -d --rm --name "lurker" \
       "${image_to_use}"
 fi
