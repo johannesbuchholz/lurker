@@ -24,7 +24,7 @@ find_lurker_home_in_media() {
 
 set -e
 
-script_version="0.5.4"
+script_version="0.5.5"
 
 if [ -z "$1" ]; then
   print_help
