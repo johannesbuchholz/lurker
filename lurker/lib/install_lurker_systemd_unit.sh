@@ -9,14 +9,29 @@ script_version="0.5.2"
 
 echo "Lurker systemd unit installer script: version ${script_version}"
 
+echo
+echo "# Checking for required tools"
 if ! type "systemd" "systemctl"; then
   echo "ERROR: systemd is not available"
   exit 1
 fi
 
+echo
+echo "Continue? (y/n)"
+read  -r userinput
+if [ ! "${userinput}" = "y" ]; then
+  exit 0
+fi
+
+# Write service unit file
+service_name="start-lurker.service"
+service_file="/usr/lib/systemd/system/${start-lurker.service}"
+echo "Writing service unit file to ${service_file}"
+
 echo "# A systemd unit template that starts lurker on system startup.
-# This file has been created in the process of running ${0}
-# Unit version ${script_version}
+# This file has been created in the process of running ${0}.
+#
+# ${script_version}
 
 [Unit]
 Description=Start lurker
@@ -25,7 +40,9 @@ After=default.target
 [Service]
 ExecStart=${HOME}/lurker/run_lurker.sh -d -m
 
-" >> /usr/systemd/system/start-lurker.service
+" >> "${service_file}"
 
-systemctl enable start-lurker.service
-systemctl status start-lurker.service
+# enable service
+echo "# Enable service ${service_name}"
+systemctl enable "${service_name}"
+systemctl status "${service_name}"
