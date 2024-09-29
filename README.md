@@ -5,6 +5,15 @@ Currently, only light requests are supported.
 
 This project is in a dynamic development state.
 
+## Get lurker
+Lurker may be installed from source. 
+The installer script at `lurker/lib/install_lurker.sh` automates this process.
+
+If you are brave enough, you may directly run the following command:
+```shell
+wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lurker/lib/install_lurker.sh | sh
+```
+
 ### Requirements
 Regardless of your preferred run option, lurker will need certain things to be set up. In each case, you will need to provide the following:  
 

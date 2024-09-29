@@ -18,7 +18,7 @@ fi
 
 echo
 echo "Continue? (y/n)"
-read  -r userinput
+read -r userinput </dev/tty
 if [ ! "${userinput}" = "y" ]; then
   exit 0
 fi
