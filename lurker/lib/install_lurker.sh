@@ -38,7 +38,12 @@ echo "# Download lurker ${script_version} source code into ${tmp_dir}"
 git -c advice.detachedHead=false clone --quiet --depth 1 --branch "v${script_version}" https://github.com/johannesbuchholz/lurker.git "${tmp_dir}"
 
 echo "# Move lurker ${script_version} source code to ${install_dir}"
-cp -r --force "${tmp_dir}" "${lurker_dir}"
+cp -fr "${tmp_dir}" "${lurker_dir}"
+
+# create configuration templates if not yet present
+echo "Creating configuration templates if not yet present at ${lurker_dir}"
+cp -nr "${install_dir}/lurker/actions" "${lurker_dir}"
+cp -n "${install_dir}/lurker/config.json" "${lurker_dir}"
 
 # download whisper model
 model_dir="${install_dir}/lurker/models"
@@ -61,7 +66,8 @@ systemd_install_script_path="${install_dir}/lurker/lib/install_lurker_systemd_un
 echo
 echo "# Running subsequent installer script ${systemd_install_script_path}"
 if ! sh "${systemd_install_script_path}"; then
-  echo "ERROR: Could not install systemd unit for running lurker at system startup"
+  echo "ERROR: Could not install systemd unit in order to run lurker at system startup"
 fi
 
-echo "Installation is complete"
+echo "Installation is complete."
+echo "What now? Prepare fitting configuration and take a look at ${install_dir}/lurker/lib/run_lurker_docker.sh"

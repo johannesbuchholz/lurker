@@ -7,7 +7,7 @@ set -e
 
 script_version="0.5.4"
 
-echo "Lurker systemd unit installer script: version ${script_version}"
+echo "Lurker systemd unit installer script in order to run lurker at system startup: version ${script_version}"
 
 echo
 echo "# Checking for required tools"
@@ -38,7 +38,7 @@ Description=Start lurker
 After=default.target
 
 [Service]
-ExecStart=${HOME}/lurker/run_lurker.sh -d -m
+ExecStart=${HOME}/lurker/run_lurker_docker.sh -d -m
 
 " >> "${service_file}"
 
