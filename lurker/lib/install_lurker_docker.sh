@@ -36,7 +36,7 @@ echo "# Installation path is ${install_dir}"
 mkdir -p "${install_dir}"
 
 # clone repo (first clone to tmp dir and then move to the potentially already existing dir)
-tmp_dir="$(mktemp --directory --tmpdir "$(basename "$0")-${script_version}.XXXXXXXXXXXX")/${script_version}"
+tmp_dir="$(mktemp --directory --tmpdir "install-lurker-docker-${script_version}.XXXXXXXXXXXX")/${script_version}"
 echo "# Download lurker ${script_version} source code into ${tmp_dir}"
 git -c advice.detachedHead=false clone --quiet --depth 1 --branch "v${script_version}" https://github.com/johannesbuchholz/lurker.git "${tmp_dir}"
 
