@@ -7,7 +7,7 @@
 
 set -e
 
-script_version="0.6.6"
+script_version="0.6.7"
 
 echo
 echo "--------------------------------------------------"
