@@ -57,5 +57,5 @@ if __name__ == "__main__":
     try:
         listener.start_listening(lurker_config.LURKER_KEYWORD)
     except Exception as e:
-        LOGGER.error("Fatal error: %s", str(e), e)
+        LOGGER.error("Fatal error: %s", str(e), exc_info=e)
         exit(1)
