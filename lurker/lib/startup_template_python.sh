@@ -39,4 +39,5 @@ LURKER_HOME="${MEDIA_LURKER_HOME:-${HOME}/lurker}"
 
 echo "# Determined lurker home on host machine: ${LURKER_HOME}"
 
+export LURKER_MODEL="${MODEL_PATH}"
 ${PYTHON_CMD} --lurker-home "${LURKER_HOME}"

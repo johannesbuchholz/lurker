@@ -9,7 +9,10 @@ set -e
 
 script_version="0.6.1"
 
+echo
+echo "--------------------------------------------------"
 echo "Lurker installer script: version ${script_version}"
+echo "--------------------------------------------------"
 
 echo
 echo "# Checking for required tools"
