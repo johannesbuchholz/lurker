@@ -5,7 +5,7 @@
 
 set -e
 
-script_version="0.5.5"
+script_version="0.6.0"
 
 echo "Lurker systemd unit installer script in order to run lurker at system startup: version ${script_version}"
 
