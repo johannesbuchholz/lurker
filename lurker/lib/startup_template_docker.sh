@@ -4,8 +4,7 @@ print_help() {
   echo "
   This is a convenience script to launch lurker.
 
-  Run lurker as docker image assuming the existence of 'lurker:${script_version}'.
-  If not set, runs lurker directly assuming existence of '/usr/bin/python3.9'.
+  Runs lurker as a python programm assuming the existence of a python environment with all necessary dependencies.
 
   At startup, lurker will look for configuration in the provided lurker home directory.
   This script launches lurker to '~/lurker' as its home directory unless using option -m.
@@ -41,15 +40,15 @@ while getopts ':mds' opt; do
   esac
 done
 
-HOST_LURKER_HOME="${MEDIA_LURKER_HOME:-${HOME}/lurker}"
+LURKER_HOME="${MEDIA_LURKER_HOME:-${HOME}/lurker}"
 
-echo "# Determined lurker home on host machine: ${HOST_LURKER_HOME}"
+echo "# Determined lurker home on host machine: ${LURKER_HOME}"
 
 image_to_use="${LURKER_IMAGE:-lurker:${script_version}}"
 echo "# Run lurker docker image: ${image_to_use}"
 
 docker run \
     --device /dev/snd \
-    --mount type=bind,source="${HOST_LURKER_HOME}",target=/lurker/home,readonly \
+    --mount type=bind,source="${LURKER_HOME}",target=/lurker/home,readonly \
     -d --rm --name "lurker" \
     "${image_to_use}"

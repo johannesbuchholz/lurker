@@ -58,7 +58,7 @@ You will need to expose a sound device of your host machine. Additionally, you p
 
 Use the shell-script `run_lurker_docker.sh` to conveniently start the docker container with the possibility to read configuration form removable media.
 ```sh
-sh lurker/lib/run_lurker_docker.sh
+sh lurker/lib/startup_template_docker.sh
 ```
 
 ## Lurker Home

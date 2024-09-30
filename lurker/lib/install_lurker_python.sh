@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Script to download and install lurker.
+# Script to download and install lurker to be run as a python programm.
 # This includes
 #   - downloading lurker source code from https://github.com/johannesbuchholz/lurker.git to ~/lurker
 #   - creating entry point scripts and configuration at ~/lurker
@@ -13,7 +13,7 @@ echo "Lurker installer script: version ${script_version}"
 
 echo
 echo "# Checking for required tools"
-if ! type "git" "docker" "wget" "mktemp"; then
+if ! type "pip" "python" "git" "mktemp" "wget"; then
   echo "ERROR: Not all required tools are installed"
   exit 1
 fi
@@ -41,7 +41,7 @@ echo "# Move lurker ${script_version} source code to ${install_dir}"
 cp -fr "${tmp_dir}" "${lurker_dir}"
 
 # create configuration templates if not yet present
-echo "Creating configuration templates if not yet present at ${lurker_dir}"
+echo "# Creating configuration templates if not yet present at ${lurker_dir}"
 cp -nr "${install_dir}/lurker/actions" "${lurker_dir}"
 cp -n "${install_dir}/lurker/config.json" "${lurker_dir}"
 
@@ -56,18 +56,24 @@ else
   wget -q --show-progress --progress=bar -O "${model_path}" "https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt"
 fi
 
-# build docker image
-image_tag="lurker:$script_version"
-echo "# Building docker image $image_tag"
-docker build "${install_dir}" --tag "${image_tag}"
+# build python environment
+venv_dir="${install_dir}/venv"
+echo "# Building python environment at ${venv_dir}"
+python -m venv "${venv_dir}"
+"${venv_dir}/bin/pip" install -r "${install_dir}/requirements.txt"
+
+# create startup script
+startup_script_path="${install_dir}/run_lurker.sh"
+echo "# Placing lurker startup script at ${startup_script_path}"
+export PYTHON_CMD="${venv_dir}/bin/python" && evalenv < "${install_dir}/lurker/lib/startup_template_python.sh" > "${startup_script_path}"
 
 # Create systemd service if possible
 systemd_install_script_path="${install_dir}/lurker/lib/install_lurker_systemd_unit.sh"
 echo
 echo "# Running subsequent installer script ${systemd_install_script_path}"
-if ! sh "${systemd_install_script_path}"; then
+if ! (export LURKER_STARTUP_SCRIPT="${startup_script_path}" && sh "${systemd_install_script_path}"); then
   echo "ERROR: Could not install systemd unit in order to run lurker at system startup"
 fi
 
 echo "Installation is complete."
-echo "What now? Prepare fitting configuration and take a look at ${install_dir}/lurker/lib/run_lurker_docker.sh"
+echo "What now? Prepare fitting configuration and take a look at ${startup_script_path}."

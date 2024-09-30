@@ -16,6 +16,8 @@ if ! type "systemd" "systemctl"; then
   exit 1
 fi
 
+
+
 echo
 echo "Continue? (y/n)"
 read -r userinput </dev/tty
@@ -38,7 +40,7 @@ Description=Start lurker
 After=default.target
 
 [Service]
-ExecStart=${HOME}/lurker/run_lurker_docker.sh -d -m
+ExecStart=${LURKER_STARTUP_SCRIPT}
 
 " >> "${service_file}"
 
