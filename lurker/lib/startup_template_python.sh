@@ -25,11 +25,6 @@ set -e
 
 script_version="0.6.0"
 
-if [ -z "$1" ]; then
-  print_help
-  exit 0
-fi
-
 while getopts ':mds' opt; do
   case "${opt}" in
     m)
@@ -44,4 +39,4 @@ LURKER_HOME="${MEDIA_LURKER_HOME:-${HOME}/lurker}"
 
 echo "# Determined lurker home on host machine: ${LURKER_HOME}"
 
-${PYTHON_CMD} __main__.py --lurker-home "${LURKER_HOME}"
+${PYTHON_CMD} --lurker-home "${LURKER_HOME}"

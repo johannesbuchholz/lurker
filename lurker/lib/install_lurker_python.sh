@@ -13,7 +13,7 @@ echo "Lurker installer script: version ${script_version}"
 
 echo
 echo "# Checking for required tools"
-if ! type "pip" "python" "git" "mktemp" "wget"; then
+if ! type "pip" "python" "envsubst" "git" "mktemp" "wget"; then
   echo "ERROR: Not all required tools are installed"
   exit 1
 fi
@@ -58,14 +58,17 @@ fi
 
 # build python environment
 venv_dir="${install_dir}/venv"
+echo
 echo "# Building python environment at ${venv_dir}"
 python -m venv "${venv_dir}"
 "${venv_dir}/bin/pip" install -r "${install_dir}/requirements.txt"
 
 # create startup script
 startup_script_path="${install_dir}/run_lurker.sh"
+echo
 echo "# Placing lurker startup script at ${startup_script_path}"
-export PYTHON_CMD="${venv_dir}/bin/python" && evalenv < "${install_dir}/lurker/lib/startup_template_python.sh" > "${startup_script_path}"
+#   shellcheck disable=SC2016
+export PYTHON_CMD="${venv_dir}/bin/python ${install_dir}" && envsubst '${PYTHON_CMD]' < "${install_dir}/lurker/lib/startup_template_python.sh" > "${startup_script_path}"
 
 # Create systemd service if possible
 systemd_install_script_path="${install_dir}/lurker/lib/install_lurker_systemd_unit.sh"
@@ -75,5 +78,6 @@ if ! (export LURKER_STARTUP_SCRIPT="${startup_script_path}" && sh "${systemd_ins
   echo "ERROR: Could not install systemd unit in order to run lurker at system startup"
 fi
 
+echo
 echo "Installation is complete."
-echo "What now? Prepare fitting configuration and take a look at ${startup_script_path}."
+echo "What now? Preparing fitting configuration and take a look at ${startup_script_path}."

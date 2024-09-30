@@ -25,11 +25,6 @@ set -e
 
 script_version="0.6.0"
 
-if [ -z "$1" ]; then
-  print_help
-  exit 0
-fi
-
 while getopts ':mds' opt; do
   case "${opt}" in
     m)

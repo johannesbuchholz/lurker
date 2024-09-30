@@ -16,8 +16,6 @@ if ! type "systemd" "systemctl"; then
   exit 1
 fi
 
-
-
 echo
 echo "Continue? (y/n)"
 read -r userinput </dev/tty
@@ -28,7 +26,8 @@ fi
 # Write service unit file
 service_name="start-lurker.service"
 service_file="/usr/lib/systemd/system/${start-lurker.service}"
-echo "Writing service unit file to ${service_file}"
+echo
+echo "# Writing service unit file to ${service_file}"
 
 echo "# A systemd unit template that starts lurker on system startup.
 # This file has been created in the process of running ${0}.
@@ -42,7 +41,7 @@ After=default.target
 [Service]
 ExecStart=${LURKER_STARTUP_SCRIPT}
 
-" >> "${service_file}"
+" > "${service_file}"
 
 # enable service
 echo "# Enable service ${service_name}"
