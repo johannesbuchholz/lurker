@@ -56,7 +56,7 @@ class SpeechConfig:
 
 @dataclass(frozen=True)
 class LurkerConfig:
-    LURKER_MODEL: str = "tiny.pt"
+    LURKER_MODEL: str = "tiny"
     LURKER_INPUT_DEVICE: str = None
     LURKER_OUTPUT_DEVICE: str = None
     LURKER_USER: str = None
