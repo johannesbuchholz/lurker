@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # Script for creating a systemd unit file that starts lurker at system startup.
-# Requires sudo privileges to run.
 
 set -e
 
@@ -28,7 +27,9 @@ fi
 
 # Write service unit file
 service_name="start-lurker.service"
-service_file="/usr/lib/systemd/system/${start-lurker.service}"
+user_systemd_unit_dir="${HOME}/.config/systemd/system/"
+mkdir -p "${user_systemd_unit_dir}"
+service_file="${user_systemd_unit_dir}/${start-lurker.service}"
 echo
 echo "# Writing service unit file to ${service_file}"
 
@@ -37,9 +38,12 @@ echo "# A systemd unit template that starts lurker on system startup.
 #
 # ${script_version}
 
+[Install]
+WantedBy = multi-user.target
+
 [Unit]
 Description=Start lurker
-After=default.target
+After=multi-user.target
 
 [Service]
 ExecStart=${LURKER_STARTUP_SCRIPT}
@@ -48,5 +52,7 @@ ExecStart=${LURKER_STARTUP_SCRIPT}
 
 # enable service
 echo "# Enable service ${service_name}"
-systemctl enable "${service_name}"
+systemctl enable --user "${service_name}"
 systemctl status "${service_name}"
+
+echo "Installation of systemd unit is complete"

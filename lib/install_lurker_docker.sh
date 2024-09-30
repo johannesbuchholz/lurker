@@ -77,5 +77,6 @@ if ! (export LURKER_STARTUP_SCRIPT="${startup_script_path}" && sh "${systemd_ins
   echo "ERROR: Could not install systemd unit in order to run lurker at system startup"
 fi
 
+echo
 echo "Installation is complete."
 echo "What now? Prepare fitting configuration and take a look at ${startup_script_path}."
