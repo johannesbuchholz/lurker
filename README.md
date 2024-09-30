@@ -7,13 +7,13 @@ This project is in a dynamic development state.
 
 ## Get lurker
 Lurker may be installed from source either using a raw python installation or by building a docker image.
-- For the `python` installation, take a look at  `lurker/lib/install_lurker_python.sh`.
-- For the `docker` installation, take a look at  `lurker/lib/install_lurker_docker.sh`.
+- For the `python` installation, take a look at  `lib/install_lurker_python.sh`.
+- For the `docker` installation, take a look at  `lib/install_lurker_docker.sh`.
 
 If you are brave enough, you may directly run one of the following commands
-> wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lurker/lib/install_lurker_python.sh | sh
+> wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install_lurker_python.sh | sh
 
-> wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lurker/lib/install_lurker_docker.sh | sh
+> wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install_lurker_docker.sh | sh
 
 ### Requirements
 Regardless of your preferred run option, lurker will need certain things to be set up. In each case, you will need to provide the following:  
@@ -57,9 +57,13 @@ You will need to expose a sound device of your host machine. Additionally, you p
 - Sound device: Use [docker option `--device`](https://docs.docker.com/reference/cli/docker/container/run/#device) to expose hardware from the host machine to the docker container.
 - Configuration: Use [docker option `-v` or `--mount`](https://docs.docker.com/reference/cli/docker/container/run/#mount) to mount a set of configuration files to the container. Mount configuration to `/lurker/home` inside the container.
 
-Use the shell-script `run_lurker_docker.sh` to conveniently start the docker container with the possibility to read configuration form removable media.
+You may run the docker image in the following way where `${LURKER_HOME}` is a path to your configuration files:
 ```sh
-sh lurker/lib/startup_template_docker.sh
+docker run \
+    --device /dev/snd \
+    --mount type=bind,source="${LURKER_HOME}",target=/lurker/home,readonly \
+    -d --rm --name "lurker" \
+    lurker:latest
 ```
 
 ## Lurker Home

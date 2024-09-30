@@ -11,7 +11,7 @@ script_version="0.6.3"
 
 echo
 echo "--------------------------------------------------"
-echo "Lurker installer script: version ${script_version}"
+echo "Lurker installer script PYTHON ${script_version}"
 echo "--------------------------------------------------"
 
 echo
@@ -73,10 +73,10 @@ echo "# Placing lurker startup script at ${startup_script_path}"
 export PYTHON_CMD="${venv_dir}/bin/python ${install_dir}"
 export MODEL_PATH="${model_path}"
 #   shellcheck disable=SC2016
-envsubst '${PYTHON_CMD} ${MODEL_PATH}' < "${install_dir}/lurker/lib/startup_template_python.sh" > "${startup_script_path}"
+envsubst '${PYTHON_CMD} ${MODEL_PATH}' < "${install_dir}/lib/startup_template_python.sh" > "${startup_script_path}"
 
 # Create systemd service if possible
-systemd_install_script_path="${install_dir}/lurker/lib/install_lurker_systemd_unit.sh"
+systemd_install_script_path="${install_dir}/lib/install_lurker_systemd_unit.sh"
 echo "# Running subsequent installer script ${systemd_install_script_path}"
 if ! (export LURKER_STARTUP_SCRIPT="${startup_script_path}" && sh "${systemd_install_script_path}"); then
   echo "ERROR: Could not install systemd unit in order to run lurker at system startup"

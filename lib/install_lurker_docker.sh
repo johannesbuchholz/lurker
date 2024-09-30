@@ -11,7 +11,7 @@ script_version="0.6.3"
 
 echo
 echo "--------------------------------------------------"
-echo "Lurker installer script: version ${script_version}"
+echo "Lurker installer script DOCKER ${script_version}"
 echo "--------------------------------------------------"
 
 echo
@@ -70,7 +70,7 @@ echo "# Placing lurker startup script at ${startup_script_path}"
 cp -f -T "${install_dir}/lib/startup_template_docker.sh" "${startup_script_path}"
 
 # Create systemd service if possible
-systemd_install_script_path="${install_dir}/lurker/lib/install_lurker_systemd_unit.sh"
+systemd_install_script_path="${install_dir}/lib/install_lurker_systemd_unit.sh"
 echo
 echo "# Running subsequent installer script ${systemd_install_script_path}"
 if ! (export LURKER_STARTUP_SCRIPT="${startup_script_path}" && sh "${systemd_install_script_path}"); then
