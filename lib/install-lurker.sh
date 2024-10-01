@@ -58,10 +58,13 @@ echo "-------------------------------------------------------------------------"
 
 required_tools="mktemp wget git"
 
-if [ ${type_docker} -eq 1 ]; then
+if [ -n "${type_docker}" ]; then
   required_tools="${required_tools} docker"
-else
+elif [ -n "${type_python}" ]; then
   required_tools="${required_tools} envsubst pip python"
+else
+  echo "Unexpected state: type_docker=$type_docker, type_python=$type_python"
+  exit 1
 fi
 
 echo
