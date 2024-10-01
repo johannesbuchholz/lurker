@@ -12,6 +12,8 @@ print_help() {
         This is helpful when you want to be able to change configuration without accessing files directly
         on the host machine, for example when running on a raspberry pi or similar devices.
         To make best use of this option, be sure that your storage devices is automatically mounted to /media.
+
+  Version ${script_version}
   "
 }
 

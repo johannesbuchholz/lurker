@@ -6,30 +6,33 @@ Currently, only light requests are supported.
 This project is in a dynamic development state.
 
 ## Get lurker
-Lurker may be installed from source either using a raw python installation or by building a docker image.
-- For the `python` installation, take a look at  `lib/install-lurker-python.sh`.
-- For the `docker` installation, take a look at  `lib/install-lurker-docker.sh`.
+Make sure you meet the [requirements](#requirements).
+Lurker may be installed from source either using a raw python installation or by building a docker image through the
+installer script at `lib/install-lurker.sh`.
 
 If you are brave enough, you may directly run one of the following commands
-> wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker-python.sh | sh
+For a docker installation, use
+> wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker.sh | sh -s -- -d
 
-> wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker-docker.sh | sh
+For a python installation, use
+> wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker.sh | sh -s -- -p
+
+For installation on raspberry pi, you may follow you may follow the installation guide at [install-on-rasbian.md](https://github.com/johannesbuchholz/lurker/blob/main/install-on-rasbian.md)
 
 ### Requirements
-Regardless of your preferred run option, lurker will need certain things to be set up. In each case, you will need to provide the following:  
+Regardless of your preferred installation method, lurker will need certain things to be set up beforehand:
 
-- Python 3.9
-  - openai-whisper and its dependencies require specifically python 3.9
-  - Dependencies may be installed by running `pip install --require-virtualenv -r requirements.txt`
+- Python [3.9, 3.11)
 - Hardware
+  - Lurker requires enough CPU resources to perform in a satisfying fashion. For example, lurker runs fine on a [raspberry pi 5](https://www.raspberrypi.com/products/raspberry-pi-5/).
   - Lurker requires a recording device available to the host machine. On debian systems, check available devices with `ls -lh /dev/snd`.
   - Optionally: A speaker for playing sounds as feedback to speech inputs.
-- Openai whisper model
-  - Lurker calls the transcription engine [openai-whisper](https://github.com/openai/whisper) for speech-to-text tasks. By default, lurker uses the "tiny" model provided by openai-whisper. More models can be found here: `.venv/lib/python3.9/site-packages/whisper/__init__.py:17`. If the requested model is not present on the machine, openai-whisper will download the respective model. To avoid that, you may also [configure](#configuration-parameters) lurker to use an already downloaded model.
+- The "tiny" openai-whisper model
+  - Lurker calls the transcription engine [openai-whisper](https://github.com/openai/whisper) for speech-to-text tasks.
+  - In order to run lurker offline after the installation completes, you need to [download](https://github.com/openai/whisper/blob/main/whisper/__init__.py) the model beforehand. Otherwise, the whisper transcription module will download the tiny model on startup.
 
 ## Run locally
 
-## Setup
 Download the "tiny" openai whisper model and provide the absolute path to the model via environment variable `LURKER_MODEL`. S
 See https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt.
 
@@ -45,7 +48,7 @@ python __main__.py
 
 You may also pass the option `--lurker-home <path>` to let lurker load configuration and actions from the provided [home path](#lurker-home). Otherwise, lurkers assumes its home at `~/lurker`. 
 
-### Run as docker container
+## Run as docker container
 The Dockerfile expects the tiny model at `lurker/models/tiny.pt`.
 Build the docker image (~6dock GBEOFin size).
 ```sh
@@ -112,7 +115,7 @@ Example:
     - `"hue"`: Hue setting.
     - `"sat"`: Saturation setting.
 
-All fields under `request` are optional and missing field are not send the Hue Bridge.
+All fields under `request` are optional and missing fields are not send the Hue Bridge.
 
 ### Configuration parameters
 All available configuration parameters are defined here: `src/config.py`
