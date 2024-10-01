@@ -27,32 +27,32 @@ fi
 
 # Write service unit file
 service_name="start-lurker.service"
-user_systemd_unit_dir="${HOME}/.config/systemd/system/"
+user_systemd_unit_dir="${HOME}/.local/share/systemd/user"
 mkdir -p "${user_systemd_unit_dir}"
-service_file="${user_systemd_unit_dir}/${start-lurker.service}"
+service_file="${user_systemd_unit_dir}/$service_name"
 echo
 echo "# Writing service unit file to ${service_file}"
-
-echo "# A systemd unit template that starts lurker on system startup.
+echo "
+# A systemd unit template that starts lurker on system startup.
 # This file has been created in the process of running ${0}.
 #
 # ${script_version}
 
 [Install]
-WantedBy = multi-user.target
+WantedBy = default.target
 
 [Unit]
 Description=Start lurker
-After=multi-user.target
+After=default.target
 
 [Service]
-ExecStart=${LURKER_STARTUP_SCRIPT}
+ExecStart=${LURKER_CMD}
 
 " > "${service_file}"
 
 # enable service
 echo "# Enable service ${service_name}"
 systemctl enable --user "${service_name}"
-systemctl status "${service_name}"
+systemctl status --user "${service_name}"
 
 echo "Installation of systemd unit is complete"
