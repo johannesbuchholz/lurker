@@ -46,7 +46,7 @@ Description=Start lurker
 After=default.target
 
 [Service]
-ExecStart=${LURKER_CMD}
+ExecStart=${LURKER_STARTUP_SCRIPT}
 
 " > "${service_file}"
 

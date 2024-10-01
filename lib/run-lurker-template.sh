@@ -2,9 +2,7 @@
 
 print_help() {
   echo "
-  This is a convenience script to launch lurker.
-
-  Runs lurker as a python programm assuming the existence of a python environment with all necessary dependencies.
+  Script to launch lurker.
 
   At startup, lurker will look for configuration in the provided lurker home directory.
   This script launches lurker to '~/lurker' as its home directory unless using option -m.
@@ -25,7 +23,7 @@ set -e
 
 script_version="0.6.7"
 
-while getopts ':mds' opt; do
+while getopts ':m' opt; do
   case "${opt}" in
     m)
       MEDIA_LURKER_HOME=$(find_lurker_home_in_media);;
@@ -39,11 +37,4 @@ LURKER_HOME="${MEDIA_LURKER_HOME:-${HOME}/lurker}"
 
 echo "# Determined lurker home on host machine: ${LURKER_HOME}"
 
-image_to_use="${LURKER_IMAGE:-lurker:${script_version}}"
-echo "# Run lurker docker image: ${image_to_use}"
-
-docker run \
-    --device /dev/snd \
-    --mount type=bind,source="${LURKER_HOME}",target=/lurker/home,readonly \
-    -d --rm --name "lurker" \
-    "${image_to_use}"
+${LURKER_CMD}
