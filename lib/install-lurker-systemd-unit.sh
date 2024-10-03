@@ -8,7 +8,7 @@ script_version="0.6.12"
 
 echo
 echo "---------------------------------------------------------------"
-echo "Lurker installer script SYSTEMD UNIT ${script_version}"
+echo "Lurker installer script ${script_version}: SYSTEMD UNIT"
 echo "---------------------------------------------------------------"
 
 echo
