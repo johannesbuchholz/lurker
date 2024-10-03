@@ -29,7 +29,7 @@ fi
 service_name="lurker.service"
 user_systemd_unit_dir="${HOME}/.local/share/systemd/user"
 mkdir -p "${user_systemd_unit_dir}"
-service_file="${user_systemd_unit_dir}/$service_name"
+service_file="${user_systemd_unit_dir}/${service_name}"
 echo
 echo "# Writing service unit file to ${service_file}"
 echo "
@@ -57,4 +57,5 @@ SuccessExitStatus=SIGKILL
 echo "# Enable service ${service_name}"
 systemctl enable --user "${service_name}"
 
+echo
 echo "Installation of systemd unit is complete"

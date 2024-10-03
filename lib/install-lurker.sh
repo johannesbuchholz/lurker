@@ -4,6 +4,7 @@
 # This includes
 #   - downloading lurker source code from https://github.com/johannesbuchholz/lurker.git to ~/lurker
 #   - creating entry point scripts and configuration at ~/lurker
+# TODO: Add uninstall script
 
 set -e
 
@@ -157,6 +158,10 @@ export LURKER_CMD
 envsubst '${LURKER_CMD}' < "${install_dir}/lib/run-lurker-template.sh" > "${startup_script_path}"
 chmod +x "${startup_script_path}"
 
+echo
+echo "Installation is complete."
+echo "What now? Prepare fitting configuration and take a look at ${startup_script_path}"
+
 # create systemd service if possible
 systemd_install_script_path="${install_dir}/lib/install-lurker-systemd-unit.sh"
 echo
@@ -164,7 +169,3 @@ echo "# Running subsequent installer script ${systemd_install_script_path}"
 if ! (export LURKER_STARTUP_SCRIPT="${startup_script_path}" && sh "${systemd_install_script_path}"); then
   echo "ERROR: Could not install systemd unit in order to run lurker at system startup"
 fi
-
-echo
-echo "Installation is complete."
-echo "What now? Prepare fitting configuration and take a look at ${startup_script_path}"
