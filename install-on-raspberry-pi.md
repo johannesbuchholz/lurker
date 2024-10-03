@@ -23,26 +23,29 @@ sudo apt install git
 ```
 
 ## Configure the system
-Install usbmount for automatic usb-detection.
-
-Get package building toolkit
-> sudo apt-get update && sudo apt-get install -y debhelper build-essential 
-
-Clone source
-> git clone https://github.com/rbrito/usbmount.git
+Install udiskie for automatic usb-detection.
+> apt install udiskie
  
-Build package
- ```shell
-cd usbmount
-sudo dpkg-buildpackage -us -uc -b
-cd ..
+Create a systemd service unite file `~/.config/systemd/user/udieskie.service` with the following content:
+ ```unit file (systemd)
+[Unit]
+Description=Start udiskie to automount usbdrives
+After=default.target
+
+[Service]
+ExecStart=/usr/bin/udiskie
+Restart=always
+
+[Install]
+WantedBy=default.target
 ```
 
-Install package (dpkg will probably fail on missing packages while apt install -f will install missing dependencies)
- ```shell
- dpkg -i <package>.deb
- apt-get install -f
- ```
+Enable and start the service
+```shell
+systemctl --user daemon-reload
+systemctl enable --user udieskie.service
+systemctl start --user udieskie.service
+```
 
 ## Prepare lurker configuration
 

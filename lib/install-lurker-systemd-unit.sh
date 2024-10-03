@@ -27,7 +27,7 @@ fi
 
 # Write service unit file
 service_name="lurker.service"
-user_systemd_unit_dir="${HOME}/.local/share/systemd/user"
+user_systemd_unit_dir="${HOME}/.config/systemd/user"
 mkdir -p "${user_systemd_unit_dir}"
 service_file="${user_systemd_unit_dir}/${service_name}"
 echo
