@@ -26,7 +26,7 @@ if [ ! "${userinput}" = "y" ]; then
 fi
 
 service_name="lurker.service"
-user_systemd_unit_dir="${HOME}/.local/share/systemd/user"
+user_systemd_unit_dir="${HOME}/.config/systemd/user"
 service_file="${user_systemd_unit_dir}/${service_name}"
 
 # disable service
