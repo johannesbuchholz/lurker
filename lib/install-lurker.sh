@@ -45,7 +45,7 @@ while getopts ':pd' opt; do
   esac
 done
 
-if [ ${type_docker} -eq ${type_python} ]; then
+if [ "${type_docker}" = "${type_python}" ]; then
   echo "Define exactly one installation type: given='$*'"
   print_help
   exit 1
@@ -132,21 +132,19 @@ else
   exit 1
 fi
 
-# create startup script
+# create startup and top script
 if [ -n "${type_docker}" ]; then
-  LURKER_CMD="
-  echo \"# Run lurker docker image: lurker:${script_version}\"
-  docker run \
-      --device /dev/snd \
-      --mount type=bind,source=${LURKER_HOME},target=/lurker/home,readonly \
-      -d --rm --name \"lurker\" \
-      lurker:${script_version}
-  "
+  LURKER_CMD="echo \"# Run lurker docker image: lurker:${script_version}\"
+docker run \\
+    --device /dev/snd \\
+    --mount type=bind,source=\${LURKER_HOME},target=/lurker/home,readonly \\
+    --rm --name \"lurker\" \\
+    lurker:${script_version}
+"
 elif [ -n "${type_python}" ]; then
-  LURKER_CMD="
-  export LURKER_MODEL=${model_path}
-  ${venv_dir}/bin/python ${install_dir} --lurker-home ${LURKER_HOME}
-  "
+  LURKER_CMD="export LURKER_MODEL=${model_path}
+${venv_dir}/bin/python ${install_dir} --lurker-home \${LURKER_HOME}
+"
 else
   echo "Unexpected state: type_docker=$type_docker, type_python=$type_python"
   exit 1
@@ -157,6 +155,7 @@ echo "# Placing lurker startup script at ${startup_script_path}"
 export LURKER_CMD
 # shellcheck disable=SC2016
 envsubst '${LURKER_CMD}' < "${install_dir}/lib/run-lurker-template.sh" > "${startup_script_path}"
+chmod +x "${startup_script_path}"
 
 # create systemd service if possible
 systemd_install_script_path="${install_dir}/lib/install-lurker-systemd-unit.sh"
@@ -168,4 +167,4 @@ fi
 
 echo
 echo "Installation is complete."
-echo "What now? Prepare fitting configuration and take a look at ${startup_script_path}."
+echo "What now? Prepare fitting configuration and take a look at ${startup_script_path}"

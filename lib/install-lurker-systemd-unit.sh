@@ -39,20 +39,22 @@ echo "
 # ${script_version}
 
 [Install]
-WantedBy = default.target
+WantedBy=default.target
 
 [Unit]
-Description=Start lurker
+Description=Offline speech to command homeassistant
 After=default.target
 
 [Service]
+Restart=always
+RestartSec=5
 ExecStart=${LURKER_STARTUP_SCRIPT}
+SuccessExitStatus=SIGKILL
 
 " > "${service_file}"
 
 # enable service
 echo "# Enable service ${service_name}"
 systemctl enable --user "${service_name}"
-systemctl status --user "${service_name}"
 
 echo "Installation of systemd unit is complete"
