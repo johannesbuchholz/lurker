@@ -26,7 +26,7 @@ if [ ! "${userinput}" = "y" ]; then
 fi
 
 # Write service unit file
-service_name="start-lurker.service"
+service_name="lurker.service"
 user_systemd_unit_dir="${HOME}/.local/share/systemd/user"
 mkdir -p "${user_systemd_unit_dir}"
 service_file="${user_systemd_unit_dir}/$service_name"
@@ -39,20 +39,22 @@ echo "
 # ${script_version}
 
 [Install]
-WantedBy = default.target
+WantedBy=default.target
 
 [Unit]
-Description=Start lurker
+Description=Offline natural speech homeassistant
 After=default.target
 
 [Service]
+Restart=always
+RestartSec=5
 ExecStart=${LURKER_STARTUP_SCRIPT}
+SuccessExitStatus=SIGKILL
 
 " > "${service_file}"
 
 # enable service
 echo "# Enable service ${service_name}"
 systemctl enable --user "${service_name}"
-systemctl status --user "${service_name}"
 
 echo "Installation of systemd unit is complete"
