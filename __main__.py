@@ -3,9 +3,10 @@ import sys
 
 from src import config
 from src import log
-from src.action_registry import HueActionRegistry
-from src.client import HueClient
+from src.action import ActionRegistry, ActionHandler
 from src.config import LurkerConfig
+from src.external.client import HueClient
+from src.management import Orchestrator
 from src.sound import play_ready
 from src.speech import SpeechToTextListener
 from src.transcription import Transcriber
@@ -34,21 +35,23 @@ if __name__ == "__main__":
 
     log.set_all_levels(lurker_config.LURKER_LOG_LEVEL)
 
+    # TODO: Implement dynamic loading of ActionHandler
     LOGGER.info("Setting up connection to hue bridge")
-    hue_client = HueClient(lurker_config.LURKER_HOST, lurker_config.LURKER_USER)
+    hue_client: ActionHandler = HueClient(**lurker_config.LURKER_HANDLER_CONFIG)
 
     LOGGER.info("Setting up actions")
     actions_path = lurker_home_dir + "/actions"
-    registry = HueActionRegistry(hue_client, actions_path)
+    registry = ActionRegistry(actions_path)
     registry.load_actions()
 
+    orchestrator = Orchestrator(registry, hue_client, output_device_name=lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(model_path=lurker_config.LURKER_MODEL, spoken_language=lurker_config.LURKER_LANGUAGE)
 
     listener = SpeechToTextListener(
         transcriber=transcriber,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
-        instruction_callback=registry.act,
+        instruction_callback=orchestrator.act,
         **lurker_config.LURKER_SPEECH_CONFIG.__dict__
     )
 

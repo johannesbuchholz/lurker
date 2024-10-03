@@ -1,10 +1,11 @@
 import json
 from http.client import HTTPResponse
-from typing import Optional, Union, Tuple, Collection
+from typing import Optional, Union, Collection, Any, Dict
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
 from src import log
+from src.action import ActionHandler, Action
 
 LOGGER = log.new_logger(__name__)
 
@@ -13,17 +14,17 @@ class LightSelector:
 
     ALL = "ALL"
 
-    def __init__(self, ids: Union[str, Collection[str]]):
-        self.ids = ids
+    def __init__(self, lights: Union[str, Collection[str]]):
+        self.lights = lights
 
     def select(self, available_ids: Collection[str]) -> Collection[str]:
-        if self.ids == LightSelector.ALL:
+        if self.lights == LightSelector.ALL:
             return available_ids
 
-        return self.ids
+        return self.lights
 
     def __str__(self):
-        return str(self.ids)
+        return str(self.lights)
 
 
 class LightPutRequest:
@@ -43,15 +44,19 @@ class LightPutRequest:
     def __str__(self):
         return str({k: v for k, v in self.keyvalues.items() if v is not None})
 
+class LightAction:
+    def __init__(self, lights: Union[str, Collection[str]], request: dict):
+        self.selector = LightSelector(lights)
+        self.request = LightPutRequest(**request)
 
-class HueClient:
+class HueClient(ActionHandler):
 
     def __init__(self, host: str, user: str):
         self.host = host
         self.user = user
-        self._retrieve_lights()
+        self.lights = self._retrieve_lights()
 
-    def _retrieve_lights(self) -> None:
+    def _retrieve_lights(self) -> Dict[str, Any]:
         url = "http://{}/api/{}/lights".format(self.host, self.user)
         try:
             response: HTTPResponse = urlopen(url)
@@ -59,19 +64,24 @@ class HueClient:
                 raise URLError("Response status was not OK (200): response={}".format(response.read()))
         except Exception as e:
             LOGGER.error("Could not retrieve lights from %s: %s", self.host, str(e))
-            return
+            return {}
 
         self.lights: dict = json.loads(response.read())
-        self.light_ids = self.lights.keys()
 
-    def light(self, light_action: Tuple[LightSelector, LightPutRequest]):
-        LOGGER.info("Sending request: selected_lights=%s, request=%s", light_action[0], light_action[1])
-        light_selector, request = light_action
-        try:
-            selected_ids = light_selector.select(self.light_ids)
-        except AttributeError:
+    def _light(self, light_action: LightAction):
+        LOGGER.debug("Sending request: selected_lights=%s, request=%s", light_action.selector, light_action.request)
+        selected_ids = light_action.selector.select(self.lights.keys())
+        if len(selected_ids) == 0:
             LOGGER.warning("Can not send request: light ids have not been initialized")
             return
         for light_id in selected_ids:
-            response = urlopen(request.to_http_request(self.host, self.user, light_id))
-            LOGGER.info("Request response: " + str(response.read()))
+            http_request = light_action.request.to_http_request(self.host, self.user, light_id)
+            try:
+                urlopen(http_request)
+            except Exception as e:
+                LOGGER.error("Could not send light request to light: request=%s, light_id=%s, msg=%s", http_request, light_id, str(e), exc_info=e)
+
+    def _handle_internal(self, action: Action) -> bool:
+        light_action = LightAction(**action.command)
+        self._light(light_action)
+        return True

@@ -17,7 +17,7 @@ class SpeechToTextListener:
                  transcriber: Transcriber,
                  input_device_name: Optional[str],
                  output_device_name: Optional[str],
-                 instruction_callback: Callable[[str], bool],
+                 instruction_callback: Callable[[str], None],
                  keyword_queue_length_seconds: float,
                  instruction_queue_length_seconds: float,
                  min_silence_threshold: int,
@@ -74,13 +74,7 @@ class SpeechToTextListener:
                 instruction = self._record_instruction()
                 LOGGER.info("Extracted instruction: %s", instruction)
                 self._clear_queues()
-
-                if self.instruction_callback(instruction):
-                    LOGGER.info("Successfully acted on instruction: %s", instruction)
-                    sound.play_positive(self.output_device_name)
-                else:
-                    LOGGER.info("Could not act on instruction: %s", instruction)
-                    sound.play_negative(self.output_device_name)
+                self.instruction_callback(instruction)
 
 
     def stop_listening(self):

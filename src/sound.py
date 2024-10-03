@@ -1,6 +1,6 @@
 import os
 import wave
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 import numpy as np
 import sounddevice as sd
@@ -10,22 +10,22 @@ from src import log
 LOGGER = log.new_logger(__name__)
 
 
-def play_ready(output_device_name: str) -> None:
+def play_ready(output_device_name: Optional[str]) -> None:
     entry = _SOUNDS.get("ready.wav", ())
     _play_sound(output_device_name, entry)
 
 
-def play_positive(output_device_name: str) -> None:
+def play_positive(output_device_name: Optional[str]) -> None:
     entry = _SOUNDS.get("positive.wav", ())
     _play_sound(output_device_name, entry)
 
 
-def play_negative(output_device_name: str):
+def play_negative(output_device_name: Optional[str]):
     entry = _SOUNDS.get("negative.wav", ())
     _play_sound(output_device_name, entry)
 
 
-def _play_sound(output_device_name: str, data_and_samplerate: Tuple[np.ndarray, int]) -> None:
+def _play_sound(output_device_name: Optional[str], data_and_samplerate: Tuple[np.ndarray, int]) -> None:
     if data_and_samplerate:
         try:
             data, samplerate = data_and_samplerate

@@ -9,20 +9,17 @@ from src import log
 LURKER_KEYWORD = "LURKER_KEYWORD"
 LURKER_MODEL = "LURKER_MODEL"
 LURKER_LOG_LEVEL = "LURKER_LOG_LEVEL"
-LURKER_USER = "LURKER_USER"
-LURKER_HOST = "LURKER_HOST"
 LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
 LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
 LURKER_LANGUAGE = "LURKER_LANGUAGE"
 LURKER_SPEECH_CONFIG = "LURKER_SPEECH_CONFIG"
+LURKER_HANDLER_CONFIG = "LURKER_HANDLER_CONFIG"
 
 LOGGER = log.new_logger(__name__)
 
 
 def _get_envs() -> Dict[str, str]:
     envs = {
-        LURKER_HOST: os.environ.get(LURKER_HOST),
-        LURKER_USER: os.environ.get(LURKER_USER),
         LURKER_LOG_LEVEL: os.environ.get(LURKER_LOG_LEVEL),
         LURKER_MODEL: os.environ.get(LURKER_MODEL),
         LURKER_KEYWORD: os.environ.get(LURKER_KEYWORD),
@@ -56,15 +53,14 @@ class SpeechConfig:
 
 @dataclass(frozen=True)
 class LurkerConfig:
-    LURKER_MODEL: str = "tiny"
+    LURKER_LOG_LEVEL: str = "INFO"
     LURKER_INPUT_DEVICE: str = None
     LURKER_OUTPUT_DEVICE: str = None
-    LURKER_USER: str = None
-    LURKER_HOST: str = None
     LURKER_KEYWORD: str = "hey john"
-    LURKER_LOG_LEVEL: str = "INFO"
+    LURKER_MODEL: str = "tiny"
     LURKER_LANGUAGE: str = "en"
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)
+    LURKER_HANDLER_CONFIG: Dict[str, str] = field(default_factory=dict)
 
     def to_pretty_str(self) -> str:
         key_value_strings = ["{}={}".format(field_name, value) for field_name, value in dataclasses.asdict(self).items()]
@@ -79,5 +75,12 @@ def load_lurker_config(config_path: str) -> LurkerConfig:
             # transform param value to a string and try to load it as a dictionary
             speech_config_param_value = json.loads(str(speech_config_param_value))
         config_param_dict[LURKER_SPEECH_CONFIG] = SpeechConfig(**speech_config_param_value)
+
+    if LURKER_HANDLER_CONFIG in config_param_dict:
+        handler_config_param_value = config_param_dict[LURKER_HANDLER_CONFIG]
+        if type(handler_config_param_value) is not dict:
+            # transform param value to a string and try to load it as a dictionary
+            handler_config_param_value = json.loads(str(handler_config_param_value))
+            config_param_dict[LURKER_HANDLER_CONFIG] = handler_config_param_value
 
     return LurkerConfig(**config_param_dict)

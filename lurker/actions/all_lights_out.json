@@ -1,7 +1,9 @@
 {
   "keys": ["all lights out", "all lights off", "make it dark", "the lights off", "licht aus"],
-  "lights": "ALL",
-  "request": {
-    "on": false
+  "command": {
+    "lights": "ALL",
+    "request": {
+      "on": false
+    }
   }
 }
