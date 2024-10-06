@@ -76,6 +76,7 @@ class ActionHandler(abc.ABC):
         if type(command) is str:
             callable_command = ActionHandler.SPECIAL_COMMANDS.get(command, None)
             if callable_command is not None:
+                self._logger.info(f"Handling special command: {command}")
                 callable_command()
                 return True
 
