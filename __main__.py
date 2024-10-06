@@ -33,7 +33,7 @@ if __name__ == "__main__":
     lurker_config: LurkerConfig = config.load_lurker_config(lurker_home_dir + "/config.json")
     LOGGER.info("Loaded configuration:\n%s", lurker_config.to_pretty_str())
 
-    log.set_all_levels(lurker_config.LURKER_LOG_LEVEL)
+    log.init_global_config(lurker_config.LURKER_LOG_LEVEL)
 
     # TODO: Implement dynamic loading of ActionHandler
     LOGGER.info("Setting up connection to hue bridge")
