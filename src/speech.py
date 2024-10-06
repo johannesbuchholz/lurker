@@ -103,11 +103,9 @@ class SpeechToTextListener:
                     self.keyword_queue, self._compute_silence_threshold(), self.speech_bucket_count, self.required_leading_silence_ratio, self.required_speech_ratio, self.required_trailing_silence_ratio)
                 self.keyword_queue_bucket_means.append(queue_mean)
                 if is_relevant:
-                    LOGGER.debug("Keyword queue is relevant")
                     transcription = self.transcriber.transcribe(self.keyword_queue)
                     intermediate_decode = filter_non_alnum(transcription)
                 else:
-                    LOGGER.debug("Keyword queue is NOT relevant")
                     intermediate_decode = ""
                 sleep(self.queue_check_interval_seconds)
             if keyword in intermediate_decode:
@@ -196,14 +194,14 @@ def _has_keyword_queue_leading_silence_followed_by_speech_and_silence(data: Coll
         else:
             last_silent_bucket = i
         if last_bucket_with_speech is not None and last_bucket_with_speech < required_leading_silence_buckets:
-            LOGGER.log(1, "Too few leading silent buckets: current_bucket=%s, last_bucket_with_speech=%i, min_required_leading_silent_buckets=%i",
+            LOGGER.log(1, "Keyword queue is NOT relevant: Too few leading silent buckets: current_bucket=%s, last_bucket_with_speech=%i, min_required_leading_silent_buckets=%i",
                          i, last_bucket_with_speech, required_leading_silence_buckets)
             return False, arr.mean()
         if last_bucket_with_speech is not None and buckets_with_speech >= required_buckets_with_speech:
             # here if there is enough speech
             trailing_silence_length = last_silent_bucket - last_bucket_with_speech # may be negative
             if trailing_silence_length >= required_trailing_silence_buckets:
-                LOGGER.log(1, "Keyword queue: current_bucket=%s, last_bucket_with_speech=%s, buckets_with_speech=%s, required_buckets_with_speech=%s, last_silent_bucket=%s, trailing_silence_length=%s, required_trailing_silence_buckets=%s",
+                LOGGER.log(1, "Keyword queue is relevant: current_bucket=%s, last_bucket_with_speech=%s, buckets_with_speech=%s, required_buckets_with_speech=%s, last_silent_bucket=%s, trailing_silence_length=%s, required_trailing_silence_buckets=%s",
                     i, last_bucket_with_speech, buckets_with_speech, buckets_with_speech, last_silent_bucket, trailing_silence_length, required_trailing_silence_buckets)
                 return True, arr.mean()
     LOGGER.log(1, "Keyword queue is NOT relevant: Could not find silence after speech: last_bucket_with_speech=%s, buckets_with_speech=%s, required_buckets_with_speech=%s, last_silent_bucket=%s, trailing_silence_length=%s, required_trailing_silence_buckets=%s",

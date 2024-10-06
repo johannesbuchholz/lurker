@@ -1,11 +1,12 @@
+import importlib.util
 import os
 import sys
+from typing import Optional
 
 from src import config
 from src import log
 from src.action import ActionRegistry, ActionHandler
 from src.config import LurkerConfig
-from src.external.client import HueClient
 from src.management import Orchestrator
 from src.sound import play_ready
 from src.speech import SpeechToTextListener
@@ -19,32 +20,51 @@ def _determine_lurker_home() -> str:
         i = sys.argv.index("--lurker-home")
     except ValueError:
         i = None
-    if i and i + 1 < len(sys.argv):
+    if i is not None and i + 1 < len(sys.argv):
         return os.path.abspath(sys.argv[i + 1])
     else:
         return os.getcwd() + "/lurker"
 
 
+def _load_external_handler_module(module_path: Optional[str]) -> None:
+    """
+    If the module contains a class extending ActionHandler, that class will trigger
+    __init__subclass of ActionHandler and thereby be registered.
+    """
+    if module_path is None:
+        return
+
+    # load module
+    module_name_to_be_imported = "exthandler"
+    spec = importlib.util.spec_from_file_location(module_name_to_be_imported, module_path)
+    extmodule = importlib.util.module_from_spec(spec)
+    if module_name_to_be_imported in sys.modules.keys():
+        raise ValueError(f"Could not add dynamically loaded module {module_name_to_be_imported} to modules: It already exists in {sys.modules.keys()}")
+    sys.modules[module_name_to_be_imported] = extmodule
+    spec.loader.exec_module(extmodule)
+
 if __name__ == "__main__":
     lurker_home_dir = _determine_lurker_home()
-    LOGGER.info("Determined lurker home: %s", lurker_home_dir)
+    LOGGER.info(f"Determined lurker home: {lurker_home_dir}", )
 
     LOGGER.info("Loading configuration")
     lurker_config: LurkerConfig = config.load_lurker_config(lurker_home_dir + "/config.json")
-    LOGGER.info("Loaded configuration:\n%s", lurker_config.to_pretty_str())
+    LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
 
     log.init_global_config(lurker_config.LURKER_LOG_LEVEL)
 
-    # TODO: Implement dynamic loading of ActionHandler
-    LOGGER.info("Setting up connection to hue bridge")
-    hue_client: ActionHandler = HueClient(**lurker_config.LURKER_HANDLER_CONFIG)
+    LOGGER.info("Loading action handlers")
+    _load_external_handler_module(lurker_config.LURKER_HANDLER_PATH)
+    handler_class = ActionHandler.implementation
+    handler = handler_class(**lurker_config.LURKER_HANDLER_CONFIG)
+    LOGGER.info("Created handlers: %s", type(handler))
 
     LOGGER.info("Setting up actions")
     actions_path = lurker_home_dir + "/actions"
     registry = ActionRegistry(actions_path)
     registry.load_actions()
 
-    orchestrator = Orchestrator(registry, hue_client, output_device_name=lurker_config.LURKER_OUTPUT_DEVICE)
+    orchestrator = Orchestrator(registry, handler, output_device_name=lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(model_path=lurker_config.LURKER_MODEL, spoken_language=lurker_config.LURKER_LANGUAGE)
 
     listener = SpeechToTextListener(
@@ -60,5 +80,5 @@ if __name__ == "__main__":
     try:
         listener.start_listening(lurker_config.LURKER_KEYWORD)
     except Exception as e:
-        LOGGER.error("Fatal error: %s", str(e), exc_info=e)
+        LOGGER.error(f"Fatal error: {e}", exc_info=e)
         exit(1)

@@ -2,11 +2,10 @@ import abc
 import json
 import os
 from pathlib import Path
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, Any
 
 from src import log
 
-LOGGER = log.new_logger(__name__)
 
 class Action:
     """
@@ -24,10 +23,20 @@ class Action:
                 return k
         return None
 
-    def __repr__(self):
+
+    def __str__(self):
         return "Action[keys: {}, command: {}]".format(self.keys, self.command)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "keys": self.keys,
+            "command": self.command
+        }
+
+
 class ActionRegistry:
+
+    log = log.new_logger(__qualname__)
 
     @staticmethod
     def _load_action(action_path: str) -> Action:
@@ -36,7 +45,7 @@ class ActionRegistry:
             try:
                 return Action(**action_dict)
             except Exception as e:
-                LOGGER.warning("Could not load action from %s: " + str(e))
+                ActionRegistry.log.warning("Could not load action from %s: " + str(e))
 
     def __init__(self, actions_path: str):
         self.actions_path = actions_path
@@ -46,35 +55,48 @@ class ActionRegistry:
     def load_actions(self) -> None:
         actions = {}
         if not os.path.exists(self.actions_path):
-            LOGGER.warning("No actions defined at " + self.actions_path)
+            ActionRegistry.log.warning("No actions defined at " + self.actions_path)
             return
         for action_path in os.scandir(self.actions_path):
             abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
             loaded_action = ActionRegistry._load_action(str(abs_path))
             actions[action_path.name] = loaded_action
-        LOGGER.info("Loaded actions: count=%s, files=%s", len(actions), list(actions.keys()))
+        ActionRegistry.log.info("Loaded actions: count=%s, files=%s", len(actions), list(actions.keys()))
         self.actions = actions
 
     def find(self, instruction: str) -> Optional[Action]:
         for action in self.actions.values():
             matching_key = action.matches(instruction.lower())
             if matching_key is not None:
-                LOGGER.info("Found matching action for instruction: instruction=%s, key=%s", instruction, matching_key)
+                ActionRegistry.log.info("Found matching action for instruction: instruction=%s, key=%s", instruction, matching_key)
                 return action
         return None
 
+
 class ActionHandler(abc.ABC):
     """
-    Baseclass to handle act on a specific instruction.
+    Baseclass to act on a specific instruction.
     This class is intended to be extended.
     """
 
-    SPECIAL_COMMANDS: Dict[str, Callable[[], None]] = {"EXIT": exit}
+    _logger = log.new_logger(__qualname__)
+    _special_commands: Dict[str, Callable[[], None]] = {"EXIT": exit}
+    implementation = None
+
+    def __init__(self):
+        self._logger = log.new_logger(self.__class__.__name__)
+
+    def __init_subclass__(cls, **kwargs):
+        if ActionHandler.implementation is None or cls.implementation is FallbackHandler:
+            ActionHandler.implementation = cls
+            ActionHandler._logger.info(f"Registered subclass {cls}")
+        else:
+            raise RuntimeError(f"Only one subclass may be registered and {cls.implementation} has already been registered.")
 
     def handle(self, action: Action) -> bool:
         command = action.command
         if type(command) is str:
-            callable_command = ActionHandler.SPECIAL_COMMANDS.get(command, None)
+            callable_command = ActionHandler._special_commands.get(command, None)
             if callable_command is not None:
                 self._logger.info(f"Handling special command: {command}")
                 callable_command()
@@ -86,7 +108,16 @@ class ActionHandler(abc.ABC):
     @abc.abstractmethod
     def _handle_internal(self, action: Action) -> bool:
         """
-        Implement by extending classes.
         :return: True iff the action has been handled successfully.
         """
         pass
+
+
+class FallbackHandler(ActionHandler):
+
+    def __init__(self):
+        super().__init__()
+
+    def _handle_internal(self, action: Action) -> bool:
+        self._logger.info("Received action: %s", action)
+        return True
