@@ -10,7 +10,6 @@ There are two alternatives:
 In the following, we assume you are running some debian distribution like [raspberri Pi OS](https://www.raspberrypi.com/software/operating-systems/) with an internet connection already set up.
 
 ## Installing basic tools
-
 Start by updating `apt` indexes.
 
 ```shell
@@ -38,6 +37,12 @@ Restart=always
 
 [Install]
 WantedBy=default.target
+```
+
+Configure udiskie to mount drives with read-write access by creating a configfile at `.config/udiskie/udiskie.yaml` with the following content:
+```yaml
+device_config:
+- options: [rw]
 ```
 
 Enable and start the service
