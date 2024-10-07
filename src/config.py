@@ -53,6 +53,7 @@ class SpeechConfig:
     required_leading_silence_ratio: float = 0.1
     required_speech_ratio: float = 0.15
     required_trailing_silence_ratio: float = 0.2
+    ambiance_level_factor: float = 1.5
 
 @dataclass(frozen=True)
 class LurkerConfig:

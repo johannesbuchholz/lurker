@@ -71,7 +71,7 @@ if __name__ == "__main__":
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
         instruction_callback=orchestrator.act,
-        **lurker_config.LURKER_SPEECH_CONFIG.__dict__
+        speech_config=lurker_config.LURKER_SPEECH_CONFIG
     )
 
     LOGGER.info("Start listening...")

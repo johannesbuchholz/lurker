@@ -7,6 +7,7 @@ import numpy as np
 import sounddevice as sd
 
 from src import log, sound
+from src.config import SpeechConfig
 from src.text import filter_non_alnum
 from src.transcription import Transcriber
 
@@ -18,41 +19,28 @@ class SpeechToTextListener:
                  input_device_name: Optional[str],
                  output_device_name: Optional[str],
                  instruction_callback: Callable[[str], None],
-                 keyword_queue_length_seconds: float,
-                 instruction_queue_length_seconds: float,
-                 min_silence_threshold: int,
-                 queue_check_interval_seconds: float,
-                 speech_bucket_count: int,
-                 required_leading_silence_ratio: float,
-                 required_speech_ratio: float,
-                 required_trailing_silence_ratio: float
+                 speech_config: SpeechConfig,
                  ):
         """
         :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
         acting on the instruction has been successful.
         """
-        self._logger = log.new_logger(self.__name__)
+        self._logger = log.new_logger(self.__class__.__name__)
         self.transcriber = transcriber
 
         self.input_device_name = input_device_name
         self.output_device_name = output_device_name
         self.instruction_callback = instruction_callback
 
-        # speech config
-        self.min_silence_threshold = min_silence_threshold
-        self.queue_check_interval_seconds = queue_check_interval_seconds
-        self.speech_bucket_count = speech_bucket_count
-        self.required_leading_silence_ratio = required_leading_silence_ratio
-        self.required_speech_ratio = required_speech_ratio
-        self.required_trailing_silence_ratio = required_trailing_silence_ratio
+        self.speech_config = speech_config
 
         self.sample_rate = 16_000
         self.bit_depth = np.dtype(np.int16)
         #  seconds * samples_per_second * bits_per_sample / 8 = bytes required to store seconds of data
         #  For example: 3 seconds at 16_000 Hz at 16 bit require 96000 bytes (96 kb)
         byte_count_per_second = int(self.sample_rate * np.iinfo(self.bit_depth).bits / 8)
-        self.keyword_queue = deque(maxlen=int(keyword_queue_length_seconds * byte_count_per_second))
-        self.instruction_queue = deque(maxlen=int(instruction_queue_length_seconds * byte_count_per_second))
+        self.keyword_queue = deque(maxlen=int(self.speech_config.keyword_queue_length_seconds * byte_count_per_second))
+        self.instruction_queue = deque(maxlen=int(self.speech_config.instruction_queue_length_seconds * byte_count_per_second))
         self.is_listening = False
 
         self.keyword_queue_bucket_means = deque(maxlen=100)
@@ -101,14 +89,19 @@ class SpeechToTextListener:
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
                 self._logger.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
                 is_relevant, queue_mean = _has_keyword_queue_leading_silence_followed_by_speech_and_silence(
-                    self.keyword_queue, self._compute_silence_threshold(), self.speech_bucket_count, self.required_leading_silence_ratio, self.required_speech_ratio, self.required_trailing_silence_ratio)
+                    self.keyword_queue,
+                    self._compute_silence_threshold(self.speech_config.ambiance_level_factor),
+                    self.speech_config.speech_bucket_count,
+                    self.speech_config.required_leading_silence_ratio,
+                    self.speech_config.required_speech_ratio,
+                    self.speech_config.required_trailing_silence_ratio)
                 self.keyword_queue_bucket_means.append(queue_mean)
                 if is_relevant:
                     transcription = self.transcriber.transcribe(self.keyword_queue)
                     intermediate_decode = filter_non_alnum(transcription)
                 else:
                     intermediate_decode = ""
-                sleep(self.queue_check_interval_seconds)
+                sleep(self.speech_config.queue_check_interval_seconds)
             if keyword in intermediate_decode:
                 self._logger.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
                 return True
@@ -119,9 +112,14 @@ class SpeechToTextListener:
             self._logger.debug("Waiting for action queue to be filled: queue_length_byte={}"
                          .format(self.instruction_queue.maxlen))
             while (self.is_listening
-                   and not _has_instruction_queue_speech_followed_by_silence(self.instruction_queue, self._compute_silence_threshold(), self.speech_bucket_count, self.required_speech_ratio, self.required_trailing_silence_ratio)
+                   and not _has_instruction_queue_speech_followed_by_silence(
+                        self.instruction_queue,
+                        self._compute_silence_threshold(self.speech_config.ambiance_level_factor),
+                        self.speech_config.speech_bucket_count,
+                        self.speech_config.required_speech_ratio,
+                        self.speech_config.required_trailing_silence_ratio)
                    and (len(self.instruction_queue) < self.instruction_queue.maxlen)):
-                sleep(self.queue_check_interval_seconds)
+                sleep(self.speech_config.queue_check_interval_seconds)
             recorded_instruction: str = self.transcriber.transcribe(self.instruction_queue)
             self._logger.debug("Recorded instruction: sample_count={}, text={}".format(len(self.instruction_queue), recorded_instruction))
             return recorded_instruction
@@ -130,15 +128,15 @@ class SpeechToTextListener:
         self.keyword_queue.clear()
         self.instruction_queue.clear()
 
-    def _compute_silence_threshold(self, ambiance_level_factor: float = 1.5) -> int:
+    def _compute_silence_threshold(self, ambiance_level_factor: float) -> int:
         if len(self.keyword_queue) > 0:
             ambiance_level_median = round(np.median(self.keyword_queue_bucket_means))
         else:
             ambiance_level_median = 0
 
-        threshold = max(self.min_silence_threshold, round(ambiance_level_median * ambiance_level_factor))
-        self._logger.log(1, "Compute silence threshold: ambiance_level_median=%s, ambiance_level_factor=%s, threshold: %s",
-                   ambiance_level_median, ambiance_level_factor, threshold)
+        factorized_threshold = round(ambiance_level_median * ambiance_level_factor)
+        threshold = max(self.speech_config.min_silence_threshold, factorized_threshold)
+        self._logger.log(1, f"Compute silence threshold: ambiance_level_median * ambiance_level_factor = {ambiance_level_median} * {ambiance_level_factor} = {factorized_threshold} -> threshold {threshold}")
         return threshold
 
 

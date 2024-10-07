@@ -5,8 +5,8 @@
   },
   "LURKER_KEYWORD": "hey john",
   "LURKER_LANGUAGE": "de",
-  "LURKER_LOG_LEVEL": "INFO",
-  "LURKER_INPUT_DEVICE": "logi",
-  "LURKER_OUTPUT_DEVICE": null,
+  "LURKER_LOG_LEVEL": 1,
+  "LURKER_INPUT_DEVICE": "jabra",
+  "LURKER_OUTPUT_DEVICE": "jabra",
   "LURKER_MODEL": "tiny"
 }
