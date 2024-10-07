@@ -31,6 +31,7 @@ class SpeechToTextListener:
         :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
         acting on the instruction has been successful.
         """
+        self._logger = log.new_logger(self.__name__)
         self.transcriber = transcriber
 
         self.input_device_name = input_device_name
@@ -63,16 +64,16 @@ class SpeechToTextListener:
         if keyword is None:
             raise ValueError("Keyword can not be None")
         if self.is_listening:
-            LOGGER.debug("Already listening.")
+            self._logger.debug("Already listening.")
             return
-        LOGGER.info("Start recording using keyword '%s'", keyword)
+        self._logger.info("Start recording using keyword '%s'", keyword)
 
         self.is_listening = True
         while self.is_listening:
             if self._wait_for_keyword(keyword):
                 sound.play_ready(self.output_device_name)
                 instruction = self._record_instruction()
-                LOGGER.info("Extracted instruction: %s", instruction)
+                self._logger.info("Extracted instruction: %s", instruction)
                 self._clear_queues()
                 self.instruction_callback(instruction)
 
@@ -98,7 +99,7 @@ class SpeechToTextListener:
         with self._start_new_input_audio_stream(self._fill_keyword_queue):
             intermediate_decode: str = ""
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
-                LOGGER.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
+                self._logger.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
                 is_relevant, queue_mean = _has_keyword_queue_leading_silence_followed_by_speech_and_silence(
                     self.keyword_queue, self._compute_silence_threshold(), self.speech_bucket_count, self.required_leading_silence_ratio, self.required_speech_ratio, self.required_trailing_silence_ratio)
                 self.keyword_queue_bucket_means.append(queue_mean)
@@ -109,20 +110,20 @@ class SpeechToTextListener:
                     intermediate_decode = ""
                 sleep(self.queue_check_interval_seconds)
             if keyword in intermediate_decode:
-                LOGGER.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
+                self._logger.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
                 return True
             return False
 
     def _record_instruction(self) -> str:
         with ((self._start_new_input_audio_stream(self._fill_instruction_queue))):
-            LOGGER.debug("Waiting for action queue to be filled: queue_length_byte={}"
+            self._logger.debug("Waiting for action queue to be filled: queue_length_byte={}"
                          .format(self.instruction_queue.maxlen))
             while (self.is_listening
                    and not _has_instruction_queue_speech_followed_by_silence(self.instruction_queue, self._compute_silence_threshold(), self.speech_bucket_count, self.required_speech_ratio, self.required_trailing_silence_ratio)
                    and (len(self.instruction_queue) < self.instruction_queue.maxlen)):
                 sleep(self.queue_check_interval_seconds)
             recorded_instruction: str = self.transcriber.transcribe(self.instruction_queue)
-            LOGGER.debug("Recorded instruction: sample_count={}, text={}".format(len(self.instruction_queue), recorded_instruction))
+            self._logger.debug("Recorded instruction: sample_count={}, text={}".format(len(self.instruction_queue), recorded_instruction))
             return recorded_instruction
 
     def _clear_queues(self) -> None:
@@ -136,7 +137,7 @@ class SpeechToTextListener:
             ambiance_level_median = 0
 
         threshold = max(self.min_silence_threshold, round(ambiance_level_median * ambiance_level_factor))
-        LOGGER.log(1, "Compute silence threshold: ambiance_level_median=%s, ambiance_level_factor=%s, threshold: %s",
+        self._logger.log(1, "Compute silence threshold: ambiance_level_median=%s, ambiance_level_factor=%s, threshold: %s",
                    ambiance_level_median, ambiance_level_factor, threshold)
         return threshold
 
@@ -172,6 +173,7 @@ def _has_keyword_queue_leading_silence_followed_by_speech_and_silence(data: Coll
 
     arr = np.abs(np.array(data))
     interval_length = math.ceil(len(arr) / bucket_count)
+
 
     LOGGER.log(1, "\n" + _queue_to_str(arr, bucket_count, silence_threshold))
 
