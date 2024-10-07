@@ -166,6 +166,6 @@ echo "What now? Prepare fitting configuration and take a look at ${startup_scrip
 systemd_install_script_path="${install_dir}/lib/install-lurker-systemd-unit.sh"
 echo
 echo "# Running subsequent installer script ${systemd_install_script_path}"
-if ! (export LURKER_STARTUP_SCRIPT="${startup_script_path}" && sh "${systemd_install_script_path}"); then
+if ! (export LURKER_STARTUP_SCRIPT="/bin/sh -c '${startup_script_path} -m'" && sh "${systemd_install_script_path}"); then
   echo "ERROR: Could not install systemd unit in order to run lurker at system startup"
 fi
