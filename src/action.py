@@ -1,8 +1,9 @@
 import abc
 import json
 import os
+import re
 from pathlib import Path
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Pattern, Match
 
 from src import log
 
@@ -12,20 +13,28 @@ class Action:
     Intended to map speech-to-text translated snippets to some predefined command.
     """
 
+    @staticmethod
+    def compile_regexes(keys: List[str]) -> List[Pattern]:
+        patterns = []
+        for k in keys:
+            if k.startswith("/") and k.endswith("/"):
+                p = k
+            else:
+                p = ".*" + k[1:-1] + ".*"
+            patterns.append(re.compile(p))
+        return patterns
+
     def __init__(self, keys: List[str], command: str | Dict):
         self.keys = keys
         self.command = command
+        self.patterns: List[Pattern] = self.compile_regexes(self.keys)
 
-    # TODO: Add regex matching
-    def matches(self, snippet: str) -> Optional[str]:
-        for k in self.keys:
-            if k in snippet:
-                return k
+    def matches(self, snippet: str) -> Optional[Match]:
+        for p in self.patterns:
+            match = p.match(snippet)
+            if match is not None:
+                return match
         return None
-
-
-    def __str__(self):
-        return "Action[keys: {}, command: {}]".format(self.keys, self.command)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -33,10 +42,13 @@ class Action:
             "command": self.command
         }
 
+    def __str__(self):
+        return f"Action[keys: {self.keys}, command: {self.command}]"
+
 
 class ActionRegistry:
 
-    log = log.new_logger(__qualname__)
+    logger = log.new_logger(__qualname__)
 
     @staticmethod
     def _load_action(action_path: str) -> Action:
@@ -45,7 +57,7 @@ class ActionRegistry:
             try:
                 return Action(**action_dict)
             except Exception as e:
-                ActionRegistry.log.warning("Could not load action from %s: " + str(e))
+                ActionRegistry.logger.warning(f"Could not load action from %s: {e}")
 
     def __init__(self, actions_path: str):
         self.actions_path = actions_path
@@ -55,20 +67,20 @@ class ActionRegistry:
     def load_actions(self) -> None:
         actions = {}
         if not os.path.exists(self.actions_path):
-            ActionRegistry.log.warning("No actions defined at " + self.actions_path)
+            self.logger.warning(f"No actions defined at {self.actions_path}")
             return
         for action_path in os.scandir(self.actions_path):
             abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
             loaded_action = ActionRegistry._load_action(str(abs_path))
             actions[action_path.name] = loaded_action
-        ActionRegistry.log.info("Loaded actions: count=%s, files=%s", len(actions), list(actions.keys()))
+        self.logger.info(f"Loaded actions: count={len(actions)}, files={list(actions.keys())}")
         self.actions = actions
 
     def find(self, instruction: str) -> Optional[Action]:
         for action in self.actions.values():
-            matching_key = action.matches(instruction.lower())
-            if matching_key is not None:
-                ActionRegistry.log.info("Found matching action for instruction: instruction=%s, key=%s", instruction, matching_key)
+            match = action.matches(instruction.lower())
+            if match is not None:
+                self.logger.info(f"Found matching action for instruction: instruction={instruction}, match={match}")
                 return action
         return None
 

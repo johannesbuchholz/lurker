@@ -18,7 +18,7 @@ class Orchestrator:
         action = self.registry.find(instruction)
         if action is None:
             self._logger.info(f"Could not find action for instruction '{instruction}'")
-            sound.play_positive(self.output_device_name)
+            sound.play_negative(self.output_device_name)
         else:
             self._logger.debug(f"Found action for instruction {instruction}: {action}")
             sound.play_positive(self.output_device_name)
