@@ -26,22 +26,21 @@ def _determine_lurker_home() -> str:
         return os.getcwd() + "/lurker"
 
 
-def _load_external_handler_module(module_path: Optional[str]) -> None:
+def _load_external_handler_module(module_name: Optional[str]) -> None:
     """
     If the module contains a class extending ActionHandler, that class will trigger
-    __init__subclass of ActionHandler and thereby be registered.
+    __init_subclass__ of ActionHandler and thereby be registered.
     """
-    if module_path is None:
+    if module_name is None:
         return
-
+    elif module_name in sys.modules.keys():
+        LOGGER.warning(f"Could not add dynamically loaded module {module_name} to modules: It already exists in sys.modules.keys()")
+        return
     # load module
-    module_name_to_be_imported = "exthandler"
-    spec = importlib.util.spec_from_file_location(module_name_to_be_imported, module_path)
-    extmodule = importlib.util.module_from_spec(spec)
-    if module_name_to_be_imported in sys.modules.keys():
-        raise ValueError(f"Could not add dynamically loaded module {module_name_to_be_imported} to modules: It already exists in {sys.modules.keys()}")
-    sys.modules[module_name_to_be_imported] = extmodule
-    spec.loader.exec_module(extmodule)
+    extmodule = importlib.import_module(module_name)
+    sys.modules[module_name] = extmodule
+    LOGGER.info(f"Loaded external module {extmodule}")
+    # spec.loader.exec_module(extmodule)
 
 if __name__ == "__main__":
     lurker_home_dir = _determine_lurker_home()
@@ -54,7 +53,7 @@ if __name__ == "__main__":
     log.init_global_config(lurker_config.LURKER_LOG_LEVEL)
 
     LOGGER.info("Loading action handlers")
-    _load_external_handler_module(lurker_config.LURKER_HANDLER_PATH)
+    _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
     handler_class = ActionHandler.implementation
     handler = handler_class(**lurker_config.LURKER_HANDLER_CONFIG)
     LOGGER.info("Created handlers: %s", type(handler))

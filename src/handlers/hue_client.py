@@ -1,6 +1,6 @@
 import json
 from http.client import HTTPResponse
-from typing import Optional, Union, Collection, Any, Dict
+from typing import Optional, Union, Collection, Any, Dict, Callable
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
@@ -49,6 +49,8 @@ class LightAction:
 
 class HueClient(ActionHandler):
 
+    _special_commands: Dict[str, Callable[[], None]] = {"EXIT": exit}
+
     def __init__(self, host: str, user: str):
         super().__init__()
         self.host = host
@@ -79,6 +81,17 @@ class HueClient(ActionHandler):
                 urlopen(http_request)
             except Exception as e:
                 self._logger.error("Could not send light request to light: request=%s, light_id=%s, msg=%s", http_request, light_id, str(e), exc_info=e)
+
+    def handle(self, action: Action) -> bool:
+        command = action.command
+        if type(command) is str:
+            callable_command = HueClient._special_commands.get(command, None)
+            if callable_command is not None:
+                self._logger.info(f"Handling special command: {command}")
+                callable_command()
+                return True
+
+        return self._handle_internal(action)
 
     def _handle_internal(self, action: Action) -> bool:
         light_action = LightAction(**action.command)

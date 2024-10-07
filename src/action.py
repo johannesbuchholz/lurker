@@ -2,7 +2,7 @@ import abc
 import json
 import os
 from pathlib import Path
-from typing import List, Dict, Optional, Callable, Any
+from typing import List, Dict, Optional, Any
 
 from src import log
 
@@ -80,44 +80,30 @@ class ActionHandler(abc.ABC):
     """
 
     _logger = log.new_logger(__qualname__)
-    _special_commands: Dict[str, Callable[[], None]] = {"EXIT": exit}
     implementation = None
 
     def __init__(self):
         self._logger = log.new_logger(self.__class__.__name__)
 
     def __init_subclass__(cls, **kwargs):
-        if ActionHandler.implementation is None or cls.implementation is FallbackHandler:
+        if ActionHandler.implementation is None or cls.implementation is NOPHandler:
             ActionHandler.implementation = cls
-            ActionHandler._logger.info(f"Registered subclass {cls}")
+            ActionHandler._logger.info(f"Registered action handler {cls}")
         else:
             raise RuntimeError(f"Only one subclass may be registered and {cls.implementation} has already been registered.")
 
-    def handle(self, action: Action) -> bool:
-        command = action.command
-        if type(command) is str:
-            callable_command = ActionHandler._special_commands.get(command, None)
-            if callable_command is not None:
-                self._logger.info(f"Handling special command: {command}")
-                callable_command()
-                return True
-
-        return self._handle_internal(action)
-
-
     @abc.abstractmethod
-    def _handle_internal(self, action: Action) -> bool:
+    def handle(self, action: Action) -> bool:
         """
         :return: True iff the action has been handled successfully.
         """
         pass
 
 
-class FallbackHandler(ActionHandler):
+class NOPHandler(ActionHandler):
 
     def __init__(self):
         super().__init__()
 
-    def _handle_internal(self, action: Action) -> bool:
-        self._logger.info("Received action: %s", action)
+    def handle(self, action: Action) -> bool:
         return True

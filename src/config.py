@@ -13,7 +13,7 @@ LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
 LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
 LURKER_LANGUAGE = "LURKER_LANGUAGE"
 LURKER_SPEECH_CONFIG = "LURKER_SPEECH_CONFIG"
-LURKER_HANDLER_PATH = "LURKER_HANDLER_PATH"
+LURKER_HANDLER_MODULE = "LURKER_HANDLER_MODULE"
 LURKER_HANDLER_CONFIG = "LURKER_HANDLER_CONFIG"
 
 LOGGER = log.new_logger(__name__)
@@ -28,7 +28,7 @@ def _get_envs() -> Dict[str, str]:
         LURKER_OUTPUT_DEVICE: os.environ.get(LURKER_OUTPUT_DEVICE),
         LURKER_LANGUAGE: os.environ.get(LURKER_LANGUAGE),
         LURKER_SPEECH_CONFIG: os.environ.get(LURKER_SPEECH_CONFIG),
-        LURKER_HANDLER_PATH: os.environ.get(LURKER_HANDLER_PATH),
+        LURKER_HANDLER_MODULE: os.environ.get(LURKER_HANDLER_MODULE),
         LURKER_HANDLER_CONFIG: os.environ.get(LURKER_HANDLER_CONFIG),
     }
     return {key: value for key, value in envs.items() if value is not None}
@@ -63,7 +63,7 @@ class LurkerConfig:
     LURKER_MODEL: str = "tiny"
     LURKER_LANGUAGE: str = "en"
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)
-    LURKER_HANDLER_PATH: str = os.getcwd() + "/src/handlers/hue_client.py"
+    LURKER_HANDLER_MODULE: str = "src.handlers.hue_client"
     LURKER_HANDLER_CONFIG: Dict[str, str] = field(default_factory=dict)
 
     def to_pretty_str(self) -> str:
