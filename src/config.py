@@ -68,7 +68,7 @@ class LurkerConfig:
     LURKER_HANDLER_CONFIG: Dict[str, str] = field(default_factory=dict)
 
     def to_pretty_str(self) -> str:
-        key_value_strings = ["{}={}".format(field_name, value) for field_name, value in dataclasses.asdict(self).items()]
+        key_value_strings = [f"{field_name}={value}" for field_name, value in dataclasses.asdict(self).items()]
         return "\n".join(key_value_strings)
 
 def load_lurker_config(config_path: str) -> LurkerConfig:

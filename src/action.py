@@ -73,7 +73,6 @@ class ActionRegistry:
             abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
             loaded_action = ActionRegistry._load_action(str(abs_path))
             actions[action_path.name] = loaded_action
-        self.logger.info(f"Loaded actions: count={len(actions)}, files={list(actions.keys())}")
         self.actions = actions
 
     def find(self, instruction: str) -> Optional[Action]:

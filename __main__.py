@@ -40,28 +40,24 @@ def _load_external_handler_module(module_name: Optional[str]) -> None:
     extmodule = importlib.import_module(module_name)
     sys.modules[module_name] = extmodule
     LOGGER.info(f"Loaded external module {extmodule}")
-    # spec.loader.exec_module(extmodule)
 
 if __name__ == "__main__":
     lurker_home_dir = _determine_lurker_home()
-    LOGGER.info(f"Determined lurker home: {lurker_home_dir}", )
-
-    LOGGER.info("Loading configuration")
     lurker_config: LurkerConfig = config.load_lurker_config(lurker_home_dir + "/config.json")
+    LOGGER.info(f"Determined lurker home: {lurker_home_dir}")
     LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
 
     log.init_global_config(lurker_config.LURKER_LOG_LEVEL)
 
-    LOGGER.info("Loading action handlers")
     _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
     handler_class = ActionHandler.implementation
     handler = handler_class(**lurker_config.LURKER_HANDLER_CONFIG)
-    LOGGER.info("Created handlers: %s", type(handler))
+    LOGGER.info("Loaded action handler: %s", type(handler))
 
-    LOGGER.info("Setting up actions")
     actions_path = lurker_home_dir + "/actions"
     registry = ActionRegistry(actions_path)
     registry.load_actions()
+    LOGGER.info(f"Loaded actions: count={len(registry.actions)}, files={list(registry.actions.keys())}")
 
     orchestrator = Orchestrator(registry, handler, output_device_name=lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(model_path=lurker_config.LURKER_MODEL, spoken_language=lurker_config.LURKER_LANGUAGE)
