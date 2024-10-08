@@ -11,6 +11,8 @@ echo "---------------------------------------------------------------"
 echo "Lurker installer script ${script_version}: SYSTEMD UNIT"
 echo "---------------------------------------------------------------"
 
+${LURKER_STARTUP_CMD:?Missing variable}
+
 echo
 echo "# Checking for required tools"
 if ! type "systemd" "systemctl"; then
@@ -46,14 +48,15 @@ Description=Offline natural speech homeassistant
 After=default.target
 
 [Service]
-Restart=always
+Restart=on-failure
 RestartSec=5
-ExecStart=${LURKER_STARTUP_SCRIPT}
+ExecStart=${LURKER_STARTUP_CMD}
 SuccessExitStatus=SIGKILL
 
 " > "${service_file}"
 
 # enable service
+echo
 echo "# Enable service ${service_name}"
 systemctl enable --user "${service_name}"
 

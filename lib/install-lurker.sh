@@ -92,14 +92,17 @@ mkdir -p "${install_dir}"
 
 # clone repo (first clone to tmp dir and then move to the potentially already existing dir)
 tmp_dir="$(mktemp --directory --tmpdir "install-lurker-docker-${script_version}.XXXXXXXXXXXX")/${script_version}"
+echo
 echo "# Download lurker ${script_version} source code into ${tmp_dir}"
 git -c advice.detachedHead=false clone --quiet --depth 1 --branch "v${script_version}" https://github.com/johannesbuchholz/lurker.git "${tmp_dir}"
 
+echo
 echo "# Move lurker ${script_version} source code to ${install_dir}"
 cp -fr "${tmp_dir}" "${lurker_dir}"
 
 # create configuration templates if not yet present
-echo "Creating configuration templates if not yet present at ${lurker_dir}"
+echo
+echo "# Creating configuration templates if not yet present at ${lurker_dir}"
 cp -nr "${install_dir}/lurker/actions" "${lurker_dir}"
 cp -n "${install_dir}/lurker/config.json" "${lurker_dir}"
 
@@ -107,6 +110,7 @@ cp -n "${install_dir}/lurker/config.json" "${lurker_dir}"
 model_dir="${install_dir}/lurker/models"
 mkdir -p "${model_dir}"
 model_path="${model_dir}/tiny.pt"
+echo
 echo "# Downloading openai-whisper model to ${model_path}"
 if [ -f "${model_path}" ]; then
   echo "Model already exists"
@@ -129,7 +133,7 @@ elif [ -n "${type_python}" ]; then
   python -m venv "${venv_dir}"
   "${venv_dir}/bin/pip" install -r "${install_dir}/requirements.txt"
 else
-  echo "Unexpected state: type_docker=$type_docker, type_python=$type_python"
+  echo "ERROR: Unexpected state: type_docker=$type_docker, type_python=$type_python"
   exit 1
 fi
 
@@ -147,11 +151,12 @@ elif [ -n "${type_python}" ]; then
 ${venv_dir}/bin/python ${install_dir} --lurker-home \${LURKER_HOME}
 "
 else
-  echo "Unexpected state: type_docker=$type_docker, type_python=$type_python"
+  echo "ERROR: Unexpected state: type_docker=$type_docker, type_python=$type_python"
   exit 1
 fi
 
 startup_script_path="${install_dir}/run-lurker.sh"
+echo
 echo "# Placing lurker startup script at ${startup_script_path}"
 export LURKER_CMD
 # shellcheck disable=SC2016
@@ -166,6 +171,6 @@ echo "What now? Prepare fitting configuration and take a look at ${startup_scrip
 systemd_install_script_path="${install_dir}/lib/install-lurker-systemd-unit.sh"
 echo
 echo "# Running subsequent installer script ${systemd_install_script_path}"
-if ! (export LURKER_STARTUP_SCRIPT="/bin/sh -c '${startup_script_path} -m'" && sh "${systemd_install_script_path}"); then
+if ! (export LURKER_STARTUP_CMD="/bin/sh -c '${startup_script_path} -m'" && sh "${systemd_install_script_path}"); then
   echo "ERROR: Could not install systemd unit in order to run lurker at system startup"
 fi
