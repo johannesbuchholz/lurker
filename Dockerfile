@@ -12,13 +12,14 @@ RUN pip install -r requirements.txt
 RUN apt update && apt install -y libportaudio2 alsa-utils
 
 # add lurker user
+RUN addgroup lurker
 RUN adduser --system --ingroup audio lurker
 
 # copy source files
 RUN mkdir "src"
 COPY src src
 RUN chown -R lurker:lurker src
-RUN chmod -R u+ r src
+RUN chmod -R u+r src
 
 COPY __main__.py ./
 RUN chown lurker:lurker __main__.py
