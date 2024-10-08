@@ -16,17 +16,25 @@ RUN adduser --system --ingroup audio lurker
 
 # copy source files
 RUN mkdir "src"
-COPY --chown=lurker:lurker --chmod=r src/ src/
-COPY --chown=lurker:lurker --chmod=rx __main__.py ./
+COPY src src
+RUN chown -R lurker:lurker src
+RUN chmod -R u+ r src
+
+COPY __main__.py ./
+RUN chown lurker:lurker __main__.py
+RUN chmod u+rx __main__.py
 
 # add speech recognition model
 RUN mkdir "models"
 COPY --chown=lurker:lurker --chmod=r lurker/models/tiny.pt models
+RUN chown lurker:lurker models/tiny.pt
+RUN chmod u+r models/tiny.pt
+
 ENV LURKER_MODEL=/lurker/models/tiny.pt
 
 # add empty dir to mount configuration into
-RUN mkdir "home"
+RUN mkdir "lurker"
 
 USER lurker
 ENTRYPOINT ["python", "__main__.py"]
-CMD ["--lurker-home", "/lurker/home"]
+CMD ["--lurker-home", "/lurker/lurker"]

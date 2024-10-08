@@ -138,7 +138,7 @@ if [ -n "${type_docker}" ]; then
   LURKER_CMD="echo \"# Run lurker docker image: lurker:${script_version}\"
 docker run \\
     --device /dev/snd \\
-    --mount type=bind,source=\${LURKER_HOME},target=/lurker/home,readonly \\
+    --mount type=bind,source=\${LURKER_HOME},target=/lurker/lurker,readonly \\
     --rm --name \"lurker\" \\
     lurker:${script_version}
 "
