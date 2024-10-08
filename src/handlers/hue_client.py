@@ -67,7 +67,7 @@ class HueClient(ActionHandler):
             self._logger.error("Could not retrieve lights from %s: %s", self.host, str(e))
             return {}
 
-        self.lights: dict = json.loads(response.read())
+        return json.loads(response.read())
 
     def _light(self, light_action: LightAction):
         self._logger.debug("Sending request: selected_lights=%s, request=%s", light_action.selector, light_action.request)
