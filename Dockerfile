@@ -26,7 +26,7 @@ RUN chmod u+rx __main__.py
 
 # add speech recognition model
 RUN mkdir "models"
-COPY --chown=lurker:lurker --chmod=r lurker/models/tiny.pt models
+COPY lurker/models/tiny.pt models
 RUN chown lurker:lurker models/tiny.pt
 RUN chmod u+r models/tiny.pt
 
