@@ -10,10 +10,13 @@ echo
 echo "---------------------------------------------------------------"
 echo "Lurker installer script ${script_version}: SYSTEMD UNIT"
 echo "---------------------------------------------------------------"
-
-${LURKER_STARTUP_CMD:?Missing variable}
-
 echo
+
+if [ -z "${LURKER_STARTUP_CMD}" ]; then
+  echo "Missing required variable LURKER_STARTUP_CMD"
+  exit 1
+fi
+
 echo "# Checking for required tools"
 if ! type "systemd" "systemctl"; then
   echo "ERROR: systemd is not available"

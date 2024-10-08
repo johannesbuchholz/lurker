@@ -56,6 +56,7 @@ echo
 echo "-------------------------------------------------------------------------"
 echo "Lurker installer script ${script_version}: ${type_python:+PYTHON}${type_docker:+DOCKER}"
 echo "-------------------------------------------------------------------------"
+echo
 
 required_tools="mktemp wget git"
 
@@ -68,7 +69,6 @@ else
   exit 1
 fi
 
-echo
 echo "# Checking for required tools"
 # shellcheck disable=SC2086
 if ! type ${required_tools}; then
