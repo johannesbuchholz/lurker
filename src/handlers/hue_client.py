@@ -17,7 +17,6 @@ class LightSelector:
     def select(self, available_ids: Collection[str]) -> Collection[str]:
         if self.lights == LightSelector.ALL:
             return available_ids
-
         return self.lights
 
     def __str__(self):
@@ -34,7 +33,7 @@ class LightPutRequest:
         self.keyvalues = {"on": on, "sat": sat, "bri": bri, "hue": hue}
 
     def to_http_request(self, host: str, user: str, light_id: str) -> Request:
-        url = "http://{}/api/{}/lights/{}/state".format(host, user, light_id)
+        url = f"http://{host}/api/{user}/lights/{light_id}/state"
         data = json.dumps({k: v for k, v in self.keyvalues.items() if v is not None}).encode("ascii")
         return Request(url, method="PUT", data=data)
 
@@ -55,22 +54,28 @@ class HueClient(ActionHandler):
         super().__init__()
         self.host = host
         self.user = user
-        self.lights = self._retrieve_lights()
+        self.lights = {}
 
     def _retrieve_lights(self) -> Dict[str, Any]:
-        url = "http://{}/api/{}/lights".format(self.host, self.user)
+        url = f"http://{self.host}/api/{self.user}/lights"
         try:
             response: HTTPResponse = urlopen(url)
+            body = response.read()
             if response.status != 200:
-                raise URLError("Response status was not OK (200): response={}".format(response.read()))
+                raise URLError(f"Response status was not OK (200): response={body}")
         except Exception as e:
-            self._logger.error("Could not retrieve lights from %s: %s", self.host, str(e))
+            self._logger.error(f"Could not retrieve lights from {self.host}: {str(e)}")
             return {}
-
-        return json.loads(response.read())
+        self._logger.debug(f"Retrieved light info: {body}")
+        light_dict:dict = json.loads(body)
+        self._logger.info(f"Available lights: {light_dict.keys()}")
+        return light_dict
 
     def _light(self, light_action: LightAction):
-        self._logger.debug("Sending request: selected_lights=%s, request=%s", light_action.selector, light_action.request)
+        if len(self.lights) < 1:
+            self.lights = self._retrieve_lights()
+
+        self._logger.debug(f"Sending request: selected_lights={light_action.selector}, request={light_action.request}",)
         selected_ids = light_action.selector.select(self.lights.keys())
         if len(selected_ids) == 0:
             self._logger.warning("Can not send request: light ids have not been initialized")
@@ -80,7 +85,7 @@ class HueClient(ActionHandler):
             try:
                 urlopen(http_request)
             except Exception as e:
-                self._logger.error("Could not send light request to light: request=%s, light_id=%s, msg=%s", http_request, light_id, str(e), exc_info=e)
+                self._logger.error(f"Could not send light request to light: request={http_request}, light_id={light_id}, msg={str(e)}", exc_info=e)
 
     def handle(self, action: Action) -> bool:
         command = action.command
@@ -90,7 +95,6 @@ class HueClient(ActionHandler):
                 self._logger.info(f"Handling special command: {command}")
                 callable_command()
                 return True
-
         return self._handle_internal(action)
 
     def _handle_internal(self, action: Action) -> bool:

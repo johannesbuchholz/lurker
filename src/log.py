@@ -1,6 +1,6 @@
 import logging
 from logging import Logger
-from typing import Optional
+from typing import Optional, Union
 
 
 def new_logger(name: str, file: Optional[str] = None) -> Logger:
@@ -13,5 +13,5 @@ def new_logger(name: str, file: Optional[str] = None) -> Logger:
     return logger
 
 
-def init_global_config(global_level: str | int, global_format: str = '[%(levelname)8s] %(name)s: %(message)s') -> None:
+def init_global_config(global_level: Union[str, int], global_format: str = '[%(levelname)8s] %(name)s: %(message)s') -> None:
     logging.basicConfig(level=global_level, format=global_format)

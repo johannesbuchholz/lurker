@@ -3,7 +3,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Pattern, Match
+from typing import List, Dict, Optional, Any, Pattern, Match, Union
 
 from src import log
 
@@ -24,7 +24,7 @@ class Action:
             patterns.append(re.compile(p))
         return patterns
 
-    def __init__(self, keys: List[str], command: str | Dict):
+    def __init__(self, keys: List[str], command: Union[str, Dict[str, Any]]):
         self.keys = keys
         self.command = command
         self.patterns: List[Pattern] = self.compile_regexes(self.keys)

@@ -31,7 +31,7 @@ def _play_sound(output_device_name: Optional[str], data_and_samplerate: Tuple[np
             data, samplerate = data_and_samplerate
             sd.play(data, device=output_device_name, samplerate=samplerate)
         except Exception as e:
-            LOGGER.warning("Could not play : %s", str(e))
+            LOGGER.warning(f"Could not play: {str(e)}")
 
 
 def _load_sounds() -> Dict[str, Tuple[np.ndarray, int]]:
