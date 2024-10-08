@@ -127,3 +127,11 @@ These are the most important variables:
 - `LURKER_MODEL`: Denotes the absolute path to an open-ai whisper model that lurker should use instead of downloading one.
 - `LURKER_INPUT_DEVICE`: Denotes the device name or substring lurker will use to record sound.
 - `LURKER_OUTPUT_DEVICE`: Denotes the device name or substring lurker will use when playing sounds.
+
+
+
+# Hue Bridge Specifics
+
+## Hue Bridge API Documentation
+
+https://developers.meethue.com/develop/get-started-2/
