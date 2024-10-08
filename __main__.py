@@ -5,7 +5,7 @@ from typing import Optional
 
 from src import config
 from src import log
-from src.action import ActionRegistry, ActionHandler
+from src.action import ActionRegistry, ActionHandler, NOPHandler
 from src.config import LurkerConfig
 from src.management import Orchestrator
 from src.sound import play_ready
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     log.init_global_config(lurker_config.LURKER_LOG_LEVEL)
 
     _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
-    handler_class = ActionHandler.implementation
+    handler_class = ActionHandler.handler_implementation if ActionHandler.handler_implementation is not None else NOPHandler
     handler = handler_class(**lurker_config.LURKER_HANDLER_CONFIG)
     LOGGER.info("Loaded action handler: %s", type(handler))
 
