@@ -8,7 +8,7 @@
 
 set -e
 
-script_version="0.9.1"
+script_version="0.9.6"
 
 print_help() {
   echo "
