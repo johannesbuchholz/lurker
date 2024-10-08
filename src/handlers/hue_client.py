@@ -54,7 +54,7 @@ class HueClient(ActionHandler):
         super().__init__()
         self.host = host
         self.user = user
-        self.lights = {}
+        self.lights = self._retrieve_lights()
 
     def _retrieve_lights(self) -> Dict[str, Any]:
         url = f"http://{self.host}/api/{self.user}/lights"

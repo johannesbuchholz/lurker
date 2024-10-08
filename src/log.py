@@ -14,4 +14,6 @@ def new_logger(name: str, file: Optional[str] = None) -> Logger:
 
 
 def init_global_config(global_level: Union[str, int], global_format: str = '[%(levelname)8s] %(name)s: %(message)s') -> None:
+    if type(global_level) == str and global_level.isnumeric():
+        global_level = int(global_level)
     logging.basicConfig(level=global_level, format=global_format)
