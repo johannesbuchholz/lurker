@@ -41,6 +41,7 @@ def _load_external_handler_module(module_name: Optional[str]) -> None:
     sys.modules[module_name] = extmodule
     LOGGER.info(f"Loaded external module {extmodule}")
 
+# TODO: Move orchestration of the objects to management.py whenever possible.
 if __name__ == "__main__":
     lurker_home_dir = _determine_lurker_home()
     lurker_config: LurkerConfig = config.load_lurker_config(lurker_home_dir + "/config.json")

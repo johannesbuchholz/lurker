@@ -3,7 +3,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Pattern, Match, Union
+from typing import List, Dict, Optional, Any, Pattern, Match, Union, Tuple
 
 from src import log
 
@@ -75,12 +75,12 @@ class ActionRegistry:
             actions[action_path.name] = loaded_action
         self.actions = actions
 
-    def find(self, instruction: str) -> Optional[Action]:
+    def find(self, instruction: str) -> Optional[Tuple[Action, Match]]:
         for action in self.actions.values():
             match = action.matches(instruction.lower())
             if match is not None:
                 self.logger.info(f"Found matching action for instruction: instruction={instruction}, match={match}")
-                return action
+                return action, match
         return None
 
 

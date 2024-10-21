@@ -15,7 +15,8 @@ class Orchestrator:
 
     # TODO: Add another sound in order to distinguish between successfully finding an action and successfully handling on an action.
     def act(self, instruction: str) -> None:
-        action = self.registry.find(instruction)
+        # TODO: Also pass the match object to the handler (the second tuple value)
+        action, _ = self.registry.find(instruction)
         if action is None:
             self._logger.info(f"Could not find action for instruction '{instruction}'")
             sound.play_negative(self.output_device_name)
