@@ -1,5 +1,5 @@
 # Run lurker on a raspberry pi
-Running the lurker python project directly on a raspberry pi may be difficult depending on the existence of a suiting python version (3.9 to 3.11).
+Running the lurker python project directly on a raspberry pi may be difficult depending on the existence of a suiting python version in [3.9 to 3.11).
 Therefor, setting up a Dockerfile to collect all necessary dependencies seems reasonable instead of crafting a fitting python environment locally.   
 
 The following recipe takes you through the process of adding the required system tools and lets you build and run a lurker.
@@ -22,10 +22,10 @@ sudo apt install git
 ```
 
 ## Configure the system
-Install udiskie for automatic usb-detection.
+Install [udiskie](https://github.com/coldfix/udiskie) for automatic usb-detection.
 > apt install udiskie
  
-Create a systemd service unite file `~/.config/systemd/user/udieskie.service` with the following content:
+Create a systemd service unit file `~/.config/systemd/user/udieskie.service` with the following content:
  ```unit file (systemd)
 [Unit]
 Description=Start udiskie to automount usbdrives
@@ -64,7 +64,7 @@ lurker
 ```
 
 Be sure to plug in a sound input device and set some unique part of its name in `config.json` under `LURKER_INPUT_DEVICE` and `LURKER_OUTPUT_DEVICE`.
-To get an idea what devices are currently plugged in, run `ls /dev/snd/by-id`. for more about sound devices on linux, see https://wiki.archlinux.org/title/Advanced_Linux_Sound_Architecture.
+To get an idea what devices are currently plugged in, run `ls /dev/snd/by-id`. For more information about sound devices on linux, see https://wiki.archlinux.org/title/Advanced_Linux_Sound_Architecture.
 
 ## Alternative 1: Run lurker as a python programm
 
@@ -81,19 +81,25 @@ install `libportaudio2`
 ### Set up python environment
 
 Clone lurker
-> git clone https://github.com/johannesbuchholz/lurker.git
+```sh
+git clone https://github.com/johannesbuchholz/lurker.git
+```
 
-Change directory to the freshly downloaded source
-> cd lurker
-
-Create virtual environment
-> python -m venv venv
+Change directory to the freshly downloaded source and create a virtual environment
+```sh
+cd lurker
+python -m venv venv
+```
 
 Install requirements into virtual environments
-> venv/bin/pip install -r --require-venv requirements.txt
+```sh
+venv/bin/pip install -r --require-venv requirements.txt
+```
 
 Assuming your lurker configuration lies in `~/lurker`, run the python programm with the following command
-> venv/bin/python . --lurker-home ${HOME}/lurker
+```sh
+venv/bin/python . --lurker-home ${HOME}/lurker
+```
 
 ## Alternative 2: Run lurker as a docker image
 
@@ -108,7 +114,7 @@ For example, use the convenience script (be aware of the downsides mentioned on 
  sudo sh ./get-docker.sh
  ```
 
-Add user to docker group
+Add current user to docker group
  ```shell
  newgrp docker
  sudo usermod -aG docker $USER
@@ -118,19 +124,25 @@ Add user to docker group
 ### Build the docker image
 
 Clone lurker
-> git clone https://github.com/johannesbuchholz/lurker.git
+```sh
+git clone https://github.com/johannesbuchholz/lurker.git
+```
 
 Download openai-whisper model from the url provided in whisper source code
-> wget -q --show-progress --progress=bar -O tiny.pt https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt
-   
+```sh
+wget -q --show-progress --progress=bar -O tiny.pt https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt
+```
+
 Build the docker image. This will take some time and about 6GB of disk space.
-> docker build --tag lurker:latest lurker/
+```sh
+docker build --tag lurker:latest lurker/
+```
 
 Assuming your lurker configuration lies in `~/lurker`, run the docker image with the following command
 ```shell
 export LURKER_HOME=${HOME}/lurker && docker run \
 --device /dev/snd \
 --mount type=bind,source="${LURKER_HOME}",target=/lurker/lurker,readonly \
--d --rm --name "lurker" \
+--rm --name "lurker" \
 lurker:latest
 ```
