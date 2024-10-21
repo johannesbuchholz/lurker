@@ -58,13 +58,13 @@ docker build . --tag lurker:latest
 Run the container with `docker run lurker:latest` (the image `johannesbuchholz/lurker:latest` is also available on docker hub but may change at any time). 
 You will need to expose a sound device of your host machine. Additionally, you probably want to mount proper configuration and actions.
 - Sound device: Use [docker option `--device`](https://docs.docker.com/reference/cli/docker/container/run/#device) to expose hardware from the host machine to the docker container.
-- Configuration: Use [docker option `-v` or `--mount`](https://docs.docker.com/reference/cli/docker/container/run/#mount) to mount a set of configuration files to the container. Mount configuration to `/lurker/home` inside the container.
+- Configuration: Use [docker option `-v` or `--mount`](https://docs.docker.com/reference/cli/docker/container/run/#mount) to mount a set of configuration files to the container. Mount configuration to `/lurker/lurker` inside the container.
 
 You may run the docker image in the following way where `${LURKER_HOME}` is a path to your configuration files:
 ```sh
 docker run \
     --device /dev/snd \
-    --mount type=bind,source="${LURKER_HOME}",target=/lurker/home,readonly \
+    --mount type=bind,source="${LURKER_HOME}",target=/lurker/lurker,readonly \
     -d --rm --name "lurker" \
     lurker:latest
 ```

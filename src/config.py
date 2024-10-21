@@ -2,7 +2,7 @@ import dataclasses
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Union
 
 from src import log
 
@@ -46,26 +46,44 @@ def _load_config_file(path: str) -> Dict[str, str]:
 @dataclass(frozen=True)
 class SpeechConfig:
     instruction_queue_length_seconds: float = 3.
+    """Number of seconds of audio data the instruction buffer queue should hold after the keyword has been detected."""
     keyword_queue_length_seconds: float = 1.2
+    """Number of seconds of audio data the keyword buffer queue should hold."""
     min_silence_threshold: int = 600
+    """Absolute amplitude value under which a mean amplitude of an audio snippet is considered as silent and is not passed to the transcription engine."""
     queue_check_interval_seconds: float = 0.1
+    """Duration in seconds to wait in between checks whether an an audio queue should be passed to the transcription engine."""
     speech_bucket_count: int = 60
+    """Number of partitions of an audio queue over which mean amplitudes are computed in order to determine if the respective queue should be sent to the transcription engine."""
     required_leading_silence_ratio: float = 0.1
+    """Ratio of leading silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
     required_speech_ratio: float = 0.15
+    """Ratio of non-silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
     required_trailing_silence_ratio: float = 0.2
+    """Ratio of trailing silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
     ambiance_level_factor: float = 1.5
+    """Factor to determine the dynamic silence-threshold based on the mean amplitudes of past keyword-queue evaluations."""
 
 @dataclass(frozen=True)
 class LurkerConfig:
-    LURKER_LOG_LEVEL: str = "INFO"
+    LURKER_LOG_LEVEL: Union[int, str] = "INFO"
+    """The log level of the lurker application according to the python logging module."""
     LURKER_INPUT_DEVICE: str = None
+    """Name of the device that should be used for recording audio. This might also be a substring of the actual name."""
     LURKER_OUTPUT_DEVICE: str = None
+    """Name of the device that should be used for playing feedback sounds. This might also be a substring of the actual name."""
     LURKER_KEYWORD: str = "hey john"
+    """A word sequence upon which lurker should start recording actions."""
     LURKER_MODEL: str = "tiny"
+    """A model name or an absolute path to a model file that should be used by the transcription engine."""
     LURKER_LANGUAGE: str = "en"
+    """The language of the spoken words that should be transcribed by lurker. Setting this value usually improves transcription time."""
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)
+    """Configuration of audio queues and how to determine if a queue should be handed over to the more expensive transcription process."""
     LURKER_HANDLER_MODULE: str = "src.handlers.hue_client"
+    """Module name containing a single implementation of src.action.ActionHandler to be used for acting on recorded instructions."""
     LURKER_HANDLER_CONFIG: Dict[str, str] = field(default_factory=dict)
+    """Configuration passed to the configured ActionHandler."""
 
     def to_pretty_str(self) -> str:
         key_value_strings = [f"{field_name}={value}" for field_name, value in dataclasses.asdict(self).items()]

@@ -130,7 +130,7 @@ Assuming your lurker configuration lies in `~/lurker`, run the docker image with
 ```shell
 export LURKER_HOME=${HOME}/lurker && docker run \
 --device /dev/snd \
---mount type=bind,source="${LURKER_HOME}",target=/lurker/home,readonly \
+--mount type=bind,source="${LURKER_HOME}",target=/lurker/lurker,readonly \
 -d --rm --name "lurker" \
 lurker:latest
 ```
