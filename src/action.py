@@ -75,7 +75,7 @@ class ActionRegistry:
             actions[action_path.name] = loaded_action
         self.actions = actions
 
-    def find(self, instruction: str) -> Optional[Tuple[Action, Match]]:
+    def find(self, instruction: str) -> Optional[Tuple[Action, Match[str]]]:
         for action in self.actions.values():
             match = action.matches(instruction.lower())
             if match is not None:
@@ -112,8 +112,10 @@ class ActionHandler(abc.ABC):
             raise RuntimeError(f"Only one subclass may be registered and {LoadedHandlerType.cls} has already been registered.")
 
     @abc.abstractmethod
-    def handle(self, action: Action) -> bool:
+    def handle(self, action: Action, key_match: Match[str]) -> bool:
         """
+        :param action: The action object to handle.
+        :param key_match: The match object resulting from successfully matching one of the keys associated with the supplied action.
         :return: True iff the action has been handled successfully.
         """
         pass
@@ -124,5 +126,5 @@ class NOPHandler(ActionHandler):
     def __init__(self):
         super().__init__()
 
-    def handle(self, action: Action) -> bool:
+    def handle(self, action: Action, key_match: Match[str]) -> bool:
         return True

@@ -1,8 +1,7 @@
 {
   "keys": ["all lights on", "the lights on", "make it bright", "licht an"],
   "command": {
-    "lights": "ALL",
-    "request": {
+    "ALL": {
       "on": true
     }
   }

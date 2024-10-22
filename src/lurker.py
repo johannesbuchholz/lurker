@@ -33,15 +33,15 @@ class _Lurker:
 
     # TODO: Add another sound in order to distinguish between successfully finding an action and successfully handling on an action.
     def act(self, instruction: str) -> None:
-        # TODO: Also pass the match object to the handler (the second tuple value)
-        action, _ = self.registry.find(instruction)
-        if action is None:
+        finding = self.registry.find(instruction)
+        if finding is None:
             self._logger.info(f"Could not find action for instruction '{instruction}'")
             sound.play_negative(self.output_device_name)
         else:
-            self._logger.debug(f"Found action for instruction {instruction}: {action}")
+            action, match = finding
+            self._logger.debug(f"Found action for instruction {instruction}: action={action}, match={match}")
             sound.play_positive(self.output_device_name)
-            is_success = self.handler.handle(action)
+            is_success = self.handler.handle(action, match)
             if is_success:
                 self._logger.info(f"Successfully acted on instruction: {instruction}")
             else:

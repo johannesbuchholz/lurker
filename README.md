@@ -89,16 +89,27 @@ All available configuration parameters are defined in `src/config.py`.
 Actions are prepared objects passed to an `ActionHandler` whenever one of the respective key-paragraphs has been recognized in a recorded instruction.
 Lurker may be configured to use a custom implementation the ActionHandler-Interface. For that, take a look at `src/config.py` and configuration variable `LurkerConfig.LURKER_HANDLER_MODULE`.
 
+#### Hue Bridge ActionHandler
 By default, Lurker uses an ActionHandler-implementation sending light requests to a HueBridge in the local network. 
 For examples of how to prepare actions for that Hue-Handler, take a look at the files in `lurker/actions`. 
 
-A sample action might look like this:
+A sample action assigning a specific state to lights with ids `1`, `2` and `4` while turning off light `3` might look like this:
 ```json
 {
   "keys": ["make it bright", "show me the colors"],
   "command": {
-    "lights": [1, 2, 4 ],
-    "request": {"on": true, "bri": 123, "hue": 123, "sat": 123}
+    "1,2,4": {"on": true, "bri": 123, "hue": 123, "sat": 123},
+    "3": {"on":  false}
+  }
+}
+```
+
+Use the special keyword `ALL` for conveniently affect all available lights:
+```json
+{
+  "keys": ["make it dark"],
+  "command": {
+    "ALL": {"on":  false}
   }
 }
 ```
