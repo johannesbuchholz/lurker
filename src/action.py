@@ -83,6 +83,12 @@ class ActionRegistry:
                 return action, match
         return None
 
+class LoadedHandlerType:
+    cls: Optional[type] = None
+
+    @staticmethod
+    def get_implementation() -> type:
+        return NOPHandler if LoadedHandlerType.cls is None else LoadedHandlerType.cls
 
 class ActionHandler(abc.ABC):
     """
@@ -91,7 +97,6 @@ class ActionHandler(abc.ABC):
     """
 
     _logger = log.new_logger(__qualname__)
-    handler_implementation: Optional[type] = None
 
     def __init__(self):
         self._logger = log.new_logger(self.__class__.__name__)
@@ -100,11 +105,11 @@ class ActionHandler(abc.ABC):
         if cls.__module__ == ActionHandler.__module__:
             # ignore implementations from this module
             return
-        if ActionHandler.handler_implementation is None:
-            ActionHandler.handler_implementation = cls
+        if LoadedHandlerType.cls is None:
+            LoadedHandlerType.cls = cls
             ActionHandler._logger.info(f"Registered action handler {cls}")
         else:
-            raise RuntimeError(f"Only one subclass may be registered and {ActionHandler.handler_implementation} has already been registered.")
+            raise RuntimeError(f"Only one subclass may be registered and {LoadedHandlerType.cls} has already been registered.")
 
     @abc.abstractmethod
     def handle(self, action: Action) -> bool:

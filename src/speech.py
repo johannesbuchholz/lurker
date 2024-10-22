@@ -18,19 +18,13 @@ class SpeechToTextListener:
                  transcriber: Transcriber,
                  input_device_name: Optional[str],
                  output_device_name: Optional[str],
-                 instruction_callback: Callable[[str], None],
                  speech_config: SpeechConfig,
                  ):
-        """
-        :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
-        acting on the instruction has been successful.
-        """
         self._logger = log.new_logger(self.__class__.__name__)
         self.transcriber = transcriber
 
         self.input_device_name = input_device_name
         self.output_device_name = output_device_name
-        self.instruction_callback = instruction_callback
 
         self.speech_config = speech_config
 
@@ -45,9 +39,12 @@ class SpeechToTextListener:
 
         self.keyword_queue_bucket_means = deque(maxlen=100)
 
-    def start_listening(self, keyword: str):
+    def start_listening(self, keyword: str, instruction_callback: Callable[[str], None]):
         """
         Blocks this thread.
+        :param keyword: A sequence of words to mark start instruction recording.
+        :param instruction_callback: A callable acting on some instruction string. Returns a boolean to indicate if
+        acting on the instruction has been successful.
         """
         if keyword is None:
             raise ValueError("Keyword can not be None")
@@ -63,7 +60,7 @@ class SpeechToTextListener:
                 instruction = self._record_instruction()
                 self._logger.info("Extracted instruction: %s", instruction)
                 self._clear_queues()
-                self.instruction_callback(instruction)
+                instruction_callback(instruction)
 
 
     def stop_listening(self):
