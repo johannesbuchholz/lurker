@@ -117,7 +117,7 @@ class SpeechToTextListener:
                         self.speech_config.required_trailing_silence_ratio)
                    and (len(self.instruction_queue) < self.instruction_queue.maxlen)):
                 sleep(self.speech_config.queue_check_interval_seconds)
-            recorded_instruction: str = self.transcriber.transcribe(self.instruction_queue)
+            recorded_instruction: str = filter_non_alnum(self.transcriber.transcribe(self.instruction_queue))
             self._logger.debug("Recorded instruction: sample_count={}, text={}".format(len(self.instruction_queue), recorded_instruction))
             return recorded_instruction
 
