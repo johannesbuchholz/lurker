@@ -90,8 +90,8 @@ def start(lurker_home: str) -> None:
 
     actions_path = lurker_home + "/actions"
     registry = ActionRegistry(actions_path)
-    registry.load_actions()
-    LOGGER.info(f"Loaded actions: count={len(registry.actions)}, files={list(registry.actions.keys())}")
+    registry.load_actions_once()
+    registry.start_periodic_reloading_in_background(5)
 
     transcriber = Transcriber(
         model_path=lurker_config.LURKER_MODEL,

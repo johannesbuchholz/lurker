@@ -3,6 +3,8 @@ import json
 import os
 import re
 from pathlib import Path
+from threading import Thread
+from time import sleep
 from typing import List, Dict, Optional, Any, Pattern, Match, Union, Tuple
 
 from src import log
@@ -51,7 +53,7 @@ class ActionRegistry:
     _logger = log.new_logger(__qualname__)
 
     @staticmethod
-    def _load_action(action_path: str) -> Action:
+    def _load_action(action_path: Union[str, Path]) -> Action:
         with open(action_path) as action_file_handle:
             action_dict: dict = json.load(action_file_handle)
             try:
@@ -61,27 +63,50 @@ class ActionRegistry:
 
     def __init__(self, actions_path: str):
         self.actions_path = actions_path
-        self.actions: Dict[str, Action]= {}
-
-    # TODO: Enable periodic reloading or even reloading on usb device events
-    def load_actions(self) -> None:
-        actions = {}
-        if not os.path.exists(self.actions_path):
-            self._logger.warning(f"No actions defined at {self.actions_path}")
-            return
-        for action_path in os.scandir(self.actions_path):
-            abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
-            loaded_action = ActionRegistry._load_action(str(abs_path))
-            actions[action_path.name] = loaded_action
-        self.actions = actions
+        self.actions: Dict[str, Tuple[int, Action]] = {}    # filename -> (modified time, action)
 
     def find(self, instruction: str) -> Optional[Tuple[Action, Match[str]]]:
-        for action in self.actions.values():
+        for _, action in self.actions.values():
             match = action.matches(instruction.lower())
             if match is not None:
                 self._logger.info(f"Found matching action for instruction: instruction={instruction}, match={match}")
                 return action, match
         return None
+
+    def start_periodic_reloading_in_background(self, interval_duration_s) -> None:
+        self._logger.info(f"Starting periodic reloading of new or updated actions: location={self.actions_path}, interval_duration_s={interval_duration_s}")
+        def reloader() -> None:
+            while True:
+                sleep(interval_duration_s)
+                self._reload_actions()
+        Thread(target=reloader, name="lurker_action_reloader", daemon=True).start()
+
+    def load_actions_once(self) -> None:
+        if not os.path.exists(self.actions_path):
+            self._logger.warning(f"No actions defined at {self.actions_path}")
+            return
+        for action_path in os.scandir(self.actions_path):
+            if not action_path.is_file():
+                continue
+            abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
+            loaded_action = ActionRegistry._load_action(abs_path)
+            self.actions[action_path.name] = (int(abs_path.stat().st_mtime), loaded_action)
+        self._logger.info(f"Loaded actions: count={len(self.actions)}, files={list(self.actions.keys())}")
+
+    def _reload_actions(self) -> None:
+        try:
+            self._logger.debug(f"About to reload changed or new actions from {self.actions_path}")
+            for action_path in os.scandir(self.actions_path):
+                if not action_path.is_file():
+                    continue
+                abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
+                mtime: int = int(abs_path.stat().st_mtime)
+                if abs_path.name not in self.actions or self.actions[abs_path.name][0] < mtime:
+                    # file is unknown or touched: reload
+                    self.actions[abs_path.name] = (mtime, ActionRegistry._load_action(abs_path))
+                    self._logger.info(f"Reloaded action {abs_path.name}")
+        except Exception as e:
+            self._logger.warning(f"Could not reload action: {e}", exc_info=e)
 
 
 class LoadedHandlerType:
