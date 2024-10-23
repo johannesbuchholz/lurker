@@ -16,12 +16,12 @@ class Action:
     @staticmethod
     def compile_regexes(keys: List[str]) -> List[Pattern]:
         patterns = []
-        for k in keys:
-            if k.startswith("/") and k.endswith("/"):
-                p = k
+        for key in keys:
+            if key.startswith("/") and key.endswith("/"):
+                pattern_string = key[1:-1]
             else:
-                p = ".*" + k[1:-1] + ".*"
-            patterns.append(re.compile(p))
+                pattern_string = ".*" + key + ".*"
+            patterns.append(re.compile(pattern_string))
         return patterns
 
     def __init__(self, keys: List[str], command: Union[str, Dict[str, Any]]):
@@ -48,7 +48,7 @@ class Action:
 
 class ActionRegistry:
 
-    logger = log.new_logger(__qualname__)
+    _logger = log.new_logger(__qualname__)
 
     @staticmethod
     def _load_action(action_path: str) -> Action:
@@ -57,17 +57,17 @@ class ActionRegistry:
             try:
                 return Action(**action_dict)
             except Exception as e:
-                ActionRegistry.logger.warning(f"Could not load action from %s: {e}")
+                ActionRegistry._logger.warning(f"Could not load action from %s: {e}")
 
     def __init__(self, actions_path: str):
         self.actions_path = actions_path
-        self.actions = {}
+        self.actions: Dict[str, Action]= {}
 
     # TODO: Enable periodic reloading or even reloading on usb device events
     def load_actions(self) -> None:
         actions = {}
         if not os.path.exists(self.actions_path):
-            self.logger.warning(f"No actions defined at {self.actions_path}")
+            self._logger.warning(f"No actions defined at {self.actions_path}")
             return
         for action_path in os.scandir(self.actions_path):
             abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
@@ -79,9 +79,10 @@ class ActionRegistry:
         for action in self.actions.values():
             match = action.matches(instruction.lower())
             if match is not None:
-                self.logger.info(f"Found matching action for instruction: instruction={instruction}, match={match}")
+                self._logger.info(f"Found matching action for instruction: instruction={instruction}, match={match}")
                 return action, match
         return None
+
 
 class LoadedHandlerType:
     cls: Optional[type] = None
@@ -89,6 +90,7 @@ class LoadedHandlerType:
     @staticmethod
     def get_implementation() -> type:
         return NOPHandler if LoadedHandlerType.cls is None else LoadedHandlerType.cls
+
 
 class ActionHandler(abc.ABC):
     """
@@ -98,7 +100,7 @@ class ActionHandler(abc.ABC):
 
     _logger = log.new_logger(__qualname__)
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._logger = log.new_logger(self.__class__.__name__)
 
     def __init_subclass__(cls, **kwargs):
