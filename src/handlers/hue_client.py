@@ -52,7 +52,7 @@ class HueClient(ActionHandler):
 
         self.lights = {}
         self._special_commands: Dict[str, Callable[[Match[str]], bool]] = {
-            "EXIT": exit,
+            "EXIT": lambda key_match: exit(0),
             "SAVE": self._save_current_lights_as_action
         }
 
