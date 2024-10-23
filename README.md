@@ -76,18 +76,18 @@ docker run \
 ```
 
 ## Lurker Home
-Per default, the lurker home path is set to `$HOME/lurker` unless specified via command line option `--lurker-home <path>`.
-The lurker home should point to a directory containing a [configuration](#configuration-file) file at `$LURKER_HOME/config.json` and [actions](#actions) under the directory `$LURKER_HOME/actions`.
+Specify the lurker home path via command line option `--lurker-home <path>`. If not specified, lurker assumes `$HOME/lurker` as its home path.
+The home path may contain a [configuration](#configuration-file) file at `$LURKER_HOME/config.json` and one or more [actions](#actions) under `$LURKER_HOME/actions`.
 
 ### Configuration file
-Lurker may be configured through a config file at `<lurker-home>/config.json`. That [configuration](#configuration-parameters) may be overridden by environment variables.
-For an example configuration, hav ea look at `lurker/config.json`.
+Lurker may be configured through a config file at `<lurker-home>/config.json`. These properties may also be overridden by environment variables.
+For an example configuration, have a look at `lurker/config.json`.
 
 All available configuration parameters are defined in `src/config.py`.
 
 ### Actions
 Actions are prepared objects passed to an `ActionHandler` whenever one of the respective key-paragraphs has been recognized in a recorded instruction.
-Lurker may be configured to use a custom implementation the ActionHandler-Interface. For that, take a look at `src/config.py` and configuration variable `LurkerConfig.LURKER_HANDLER_MODULE`.
+Lurker may be configured to use a custom ActionHandler implementation. For that, take a look at `src/config.py` and property `LurkerConfig.LURKER_HANDLER_MODULE`.
 
 #### Hue Bridge ActionHandler
 By default, Lurker uses an ActionHandler-implementation sending light requests to a HueBridge in the local network. 
@@ -104,7 +104,7 @@ A sample action assigning a specific state to lights with ids `1`, `2` and `4` w
 }
 ```
 
-Use the special keyword `ALL` for conveniently affect all available lights:
+Use the special keyword `ALL` for conveniently affecting all available lights:
 ```json
 {
   "keys": ["make it dark"],

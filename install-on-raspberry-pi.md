@@ -23,8 +23,10 @@ sudo apt install git
 
 ## Configure the system
 Install [udiskie](https://github.com/coldfix/udiskie) for automatic usb-detection.
-> apt install udiskie
- 
+```sh
+apt install udiskie
+```
+
 Create a systemd service unit file `~/.config/systemd/user/udieskie.service` with the following content:
  ```unit file (systemd)
 [Unit]
@@ -73,10 +75,14 @@ We assume, you already have installed a suiting python version.
 ### Install required tools
 
 Install `pip3`
-> sudo apt install python3-pip
+```sh
+sudo apt install python3-pip
+```
 
 install `libportaudio2`
-> sudo apt install libportaudio2
+```sh
+sudo apt install libportaudio2
+```
 
 ### Set up python environment
 
