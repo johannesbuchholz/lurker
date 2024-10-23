@@ -74,6 +74,9 @@ def _load_external_handler_module(module_name: Optional[str]) -> None:
 
 
 def start(lurker_home: str) -> None:
+    """
+    Blocks this thread.
+    """
     lurker_config: LurkerConfig = config.load_lurker_config(lurker_home + "/config.json")
     LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
 
@@ -81,7 +84,8 @@ def start(lurker_home: str) -> None:
     _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
 
     handler_type = LoadedHandlerType.get_implementation()
-    handler = handler_type(**lurker_config.LURKER_HANDLER_CONFIG)
+    handler_config_with_home = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
+    handler = handler_type(**handler_config_with_home)
     LOGGER.info("Loaded action handler: %s", type(handler))
 
     actions_path = lurker_home + "/actions"
