@@ -18,11 +18,17 @@ class LightState:
 
     def to_http_request(self, host: str, user: str, light_id: str) -> Request:
         url = f"http://{host}/api/{user}/lights/{light_id}/state"
-        data = json.dumps({k: v for k, v in self.state.items() if v is not None}).encode("ascii")
+        data = self.to_json().encode("ascii")
         return Request(url, method="PUT", data=data)
 
     def __str__(self):
-        return str({k: v for k, v in self.state.items() if v is not None})
+        return str(self.to_dict())
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict())
+
+    def to_dict(self) -> Dict[str, str]:
+        return {k: v for k, v in self.state.items() if v is not None}
 
 class LightAction:
 
@@ -36,21 +42,40 @@ class LightAction:
     def __repr__(self):
         return self.__str__()
 
-
 class HueClient(ActionHandler):
 
-    _special_commands: Dict[str, Callable[[Match[str]], None]] = {"EXIT": exit}
-
-    def __init__(self, host: str, user: str):
+    def __init__(self, **kwargs):
         super().__init__()
-        self.host = host
-        self.user = user
-        self.lights = self._retrieve_lights()
+        self.host = kwargs["host"]
+        self.user = kwargs["user"]
+        self.actions_path = kwargs["lurker_home"] + "/actions"
 
-    # TODO: Implement this method
-    def _save_current_lights_as_action(self, file_name: str) -> None:
-        raise RuntimeError()
+        self.lights = {}
+        self._special_commands: Dict[str, Callable[[Match[str]], bool]] = {
+            "EXIT": exit,
+            "SAVE": self._save_current_lights_as_action
+        }
 
+    def _save_current_lights_as_action(self, key_match: Match) -> bool:
+        try:
+            action_key = key_match.group(1)
+        except IndexError as e:
+            self._logger.warning(f"Unable to save current light state: Could not extract group '1' in match {key_match}: {e}")
+            return False
+
+        if len(action_key) < 1:
+            self._logger.warning(f"Unable to save current light state: Extracted action key is empty: key_match={key_match}")
+            return False
+
+        file_name_suffix = action_key.replace(" ", "_").lower()
+        lights = self._retrieve_lights()
+        light_action_dict = {light_id: LightState(**light["state"]).to_dict() for light_id, light in lights.items() if "state" in light}
+        action_dict = {"keys": [action_key], "command": light_action_dict}
+        file_path = self.actions_path + f"/{self.__class__.__name__}_saved_{file_name_suffix}.json"
+        with open(file_path, "w") as file_handle:
+            json.dump(action_dict, file_handle, indent=2)
+        self._logger.info(f"Wrote action to {file_path}: {action_dict}")
+        return True
 
     def _retrieve_lights(self) -> Dict[str, Any]:
         url = f"http://{self.host}/api/{self.user}/lights"
@@ -84,11 +109,10 @@ class HueClient(ActionHandler):
     def handle(self, action: Action, key_match: Match[str]) -> bool:
         command = action.command
         if type(command) is str:
-            callable_command = HueClient._special_commands.get(command, None)
-            if callable_command is not None:
-                self._logger.info(f"Handling special command: {command}")
-                callable_command(key_match)
-                return True
+            special_command = self._special_commands.get(command, None)
+            if special_command is not None:
+                self._logger.info(f"Handling special command with matching key: command={command}, key_match={key_match}")
+                return special_command(key_match)
         return self._handle_internal(action)
 
     def _handle_internal(self, action: Action) -> bool:
