@@ -11,17 +11,17 @@ LOGGER = log.new_logger(__name__)
 
 
 def play_ready(output_device_name: Optional[str]) -> None:
-    entry = _SOUNDS.get("ready.wav", ())
+    entry = _LoadedSounds.sounds.get("ready.wav", ())
     _play_sound(output_device_name, entry)
 
 
 def play_positive(output_device_name: Optional[str]) -> None:
-    entry = _SOUNDS.get("positive.wav", ())
+    entry = _LoadedSounds.sounds.get("positive.wav", ())
     _play_sound(output_device_name, entry)
 
 
 def play_negative(output_device_name: Optional[str]):
-    entry = _SOUNDS.get("negative.wav", ())
+    entry = _LoadedSounds.sounds.get("negative.wav", ())
     _play_sound(output_device_name, entry)
 
 
@@ -34,7 +34,8 @@ def _play_sound(output_device_name: Optional[str], data_and_samplerate: Tuple[np
             LOGGER.warning(f"Could not play: {str(e)}")
 
 
-def _load_sounds() -> Dict[str, Tuple[np.ndarray, int]]:
+def load_sounds():
+    LOGGER.info("Loading sounds")
     sounds = {}
     resources_dir = os.scandir(os.path.dirname(__file__) + "/resources")
     for p in resources_dir:
@@ -52,7 +53,8 @@ def _load_sounds() -> Dict[str, Tuple[np.ndarray, int]]:
                     sounds[p.name] = (data, f.getframerate())
             except Exception as e:
                 LOGGER.warning("Could not load sound from %s: %s", p.path, str(e))
-    return sounds
+    _LoadedSounds.sounds = sounds
 
-LOGGER.info("Loading sounds")
-_SOUNDS = _load_sounds()
+
+class _LoadedSounds:
+    sounds: Dict[str, Tuple[np.ndarray, int]] = {}
