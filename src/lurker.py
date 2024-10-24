@@ -80,7 +80,7 @@ def start(lurker_home: str) -> None:
     lurker_config: LurkerConfig = config.load_lurker_config(lurker_home + "/config.json")
     LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
 
-    log.init_global_config(lurker_config.LURKER_LOG_LEVEL)
+    log.init_global_config(lurker_config.LURKER_LOG_LEVEL, log_to_file=True)
     _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
 
     handler_type = LoadedHandlerType.get_implementation()
@@ -110,5 +110,7 @@ def start(lurker_home: str) -> None:
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE
     )
+
+    sound.load_sounds()
 
     lurker.start_listen_loop(lurker_config.LURKER_KEYWORD)

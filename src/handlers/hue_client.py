@@ -104,7 +104,7 @@ class HueClient(ActionHandler):
                 try:
                     urlopen(http_request)
                 except Exception as e:
-                    self._logger.error(f"Could not send light request to light: request={http_request}, light_id={light_id}, msg={str(e)}", exc_info=e)
+                    self._logger.error(f"Could not send light request to light: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
 
     def handle(self, action: Action, key_match: Match[str]) -> bool:
         command = action.command

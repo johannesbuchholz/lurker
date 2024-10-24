@@ -167,7 +167,7 @@ def _has_keyword_queue_leading_silence_followed_by_speech_and_silence(data: Coll
         raise ValueError("Ratios must be in interval [0, 1] and their sum must be less than 1: " + str([required_leading_silence_ratio, required_speech_ratio, required_trailing_silence_ratio]))
 
     arr = np.abs(np.array(data))
-    interval_length = math.ceil(len(arr) / bucket_count)
+    interval_length = math.floor(len(arr) / bucket_count)
 
 
     LOGGER.log(1, "\n" + _queue_to_str(arr, bucket_count, silence_threshold))
@@ -182,7 +182,7 @@ def _has_keyword_queue_leading_silence_followed_by_speech_and_silence(data: Coll
     for i in range(0, bucket_count):
         lower = i * interval_length
         upper = (i + 1) * interval_length
-        if not upper < len(arr):
+        if upper > len(arr):
             break
         bucket_mean = arr[lower: upper].mean()
         if bucket_mean >= silence_threshold:
@@ -233,7 +233,7 @@ def _has_instruction_queue_speech_followed_by_silence(data: Collection[int],
             or required_speech_ratio + required_trailing_silence_ratio > 1):
         raise ValueError("Ratios must be in interval [0, 1] and their sum must be less than 1: " + str([required_speech_ratio, required_trailing_silence_ratio]))
 
-    interval_length = math.ceil(len(data) / bucket_count)
+    interval_length = math.floor(len(data) / bucket_count)
     arr = np.abs(np.array(data))
 
     LOGGER.log(1, "\n" + _queue_to_str(arr, bucket_count, silence_threshold))
@@ -247,7 +247,7 @@ def _has_instruction_queue_speech_followed_by_silence(data: Collection[int],
     for i in range(0, bucket_count):
         lower = i * interval_length
         upper = (i + 1) * interval_length
-        if not upper < len(arr):
+        if upper > len(arr):
             break
         bucket_mean = arr[lower: upper].mean()
         if bucket_mean >= silence_threshold:
@@ -268,19 +268,35 @@ def _has_instruction_queue_speech_followed_by_silence(data: Collection[int],
     return False
 
 
-def _queue_to_str(data: Collection, bucket_count: int, silence_threshold: int, bucket_str_length: int = 2) -> str:
-    interval_length = math.ceil(len(data) / bucket_count)
+def _queue_to_str(data: Collection, bucket_count: int, silence_threshold: int, bucket_str_length: int = 4) -> str:
+    interval_length = math.floor(len(data) / bucket_count)
     arr = np.abs(data)
 
     index_line = "index |".rjust(12)
-    threshold_line = "threshold |".rjust(12)
+    threshold_broken_line = "threshold |".rjust(12)
+    mean_line = "mean |".rjust(12)
+    threshold_line = f"threshold: {silence_threshold}"
     stats_line = "percentiles [10%, 50%, 75%, 90%]: " + str(np.round(np.percentile(arr, q=[10, 50, 75, 90])))
+
+    maximum_mean_value_to_display = 10 ** (bucket_str_length - 1) - 1
+    threshold_break_str = "#" * bucket_str_length
+    threshold_not_broken_str = " " * bucket_str_length
+
     for i in range(bucket_count):
         lower = i * interval_length
         upper = (i + 1) * interval_length
-        if not upper < len(arr):
+        if upper > len(arr):
             break
         mean = round(arr[lower: upper].mean())
         index_line += "{}|".format(str(i).center(bucket_str_length, "-"))
-        threshold_line += "{}|".format("#" * bucket_str_length if mean > silence_threshold else " " * bucket_str_length)
-    return index_line + "\n" + threshold_line + "\n" + stats_line
+        threshold_broken_line += "{}|".format(threshold_break_str if mean > silence_threshold else threshold_not_broken_str)
+        mean_line += "{}|".format(str(min(mean, maximum_mean_value_to_display)).center(bucket_str_length))
+
+    return f"""
+    {index_line}
+    {threshold_broken_line}
+    {mean_line}
+    {threshold_line}
+    {stats_line}
+    """
+
