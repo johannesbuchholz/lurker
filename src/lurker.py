@@ -5,7 +5,6 @@ from typing import Optional
 from src import log, sound, config
 from src.action import ActionRegistry, ActionHandler, LoadedHandlerType
 from src.config import LurkerConfig
-from src.sound import play_ready
 from src.speech import SpeechToTextListener
 from src.transcription import Transcriber
 
@@ -36,11 +35,11 @@ class _Lurker:
         finding = self.registry.find(instruction)
         if finding is None:
             self._logger.info(f"Could not find action for instruction '{instruction}'")
-            sound.play_negative(self.output_device_name)
+            sound.play_no(self.output_device_name)
         else:
             action, match = finding
             self._logger.debug(f"Found action for instruction {instruction}: action={action}, match={match}")
-            sound.play_positive(self.output_device_name)
+            sound.play_ok(self.output_device_name)
             is_success = self.handler.handle(action, match)
             if is_success:
                 self._logger.info(f"Successfully acted on instruction: {instruction}")
@@ -49,7 +48,7 @@ class _Lurker:
 
     def start_listen_loop(self, keyword: str) -> None:
         LOGGER.info("Start listening...")
-        play_ready(self.output_device_name)
+        sound.play_startup(self.output_device_name)
         try:
             self.listener.start_listening(keyword=keyword, instruction_callback=self.act)
         except Exception as e:
