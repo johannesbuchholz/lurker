@@ -68,7 +68,7 @@ def _load_external_handler_module(module_name: Optional[str]) -> None:
     # load module
     extmodule = importlib.import_module(module_name)
     sys.modules[module_name] = extmodule
-    LOGGER.info(f"Loaded external module {extmodule}")
+    LOGGER.debug(f"Loaded external module {extmodule}")
 
 
 def start(lurker_home: str) -> None:

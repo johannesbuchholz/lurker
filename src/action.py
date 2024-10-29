@@ -134,7 +134,7 @@ class ActionHandler(abc.ABC):
             return
         if LoadedHandlerType.cls is None:
             LoadedHandlerType.cls = cls
-            ActionHandler._logger.info(f"Registered action handler {cls}")
+            ActionHandler._logger.debug(f"Registered action handler {cls}")
         else:
             raise RuntimeError(f"Only one subclass may be registered and {LoadedHandlerType.cls} has already been registered.")
 

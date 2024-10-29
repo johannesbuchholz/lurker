@@ -85,7 +85,7 @@ class HueClient(ActionHandler):
             if response.status != 200:
                 raise URLError(f"Response status was not OK (200): response={body}")
         except Exception as e:
-            self._logger.error(f"Could not retrieve lights from {self.host}: {str(e)}", exc_info=e)
+            self._logger.warning(f"Could not retrieve lights from {self.host}: {str(e)}")
             return {}
         self._logger.debug(f"Retrieved light info: {body}")
         light_dict:dict = json.loads(body)
@@ -104,7 +104,7 @@ class HueClient(ActionHandler):
                 try:
                     urlopen(http_request)
                 except Exception as e:
-                    self._logger.error(f"Could not send light request to light: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
+                    self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
 
     def handle(self, action: Action, key_match: Match[str]) -> bool:
         command = action.command
