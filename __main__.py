@@ -4,7 +4,7 @@ import sys
 from src import log
 from src import lurker
 
-__version__ = "0.0.0-PLACEHOLDER"
+__version__ = "0.14.0"
 
 LOGGER = log.new_logger(__name__)
 
