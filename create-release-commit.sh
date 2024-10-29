@@ -70,8 +70,9 @@ if [[ ${commit} ]]; then
   # only commence if working dir is clean
   git diff-index HEAD --quiet --exit-code || (echo "Git working tree is not clean. Exiting..." && exit 1)
 
+  sed "s/^__version__ = .*$/__version__ = \"${version}\"/" __main__.py -i
   sed "s/^script_version=.*$/script_version=\"${version}\"/" lib/*.sh -i
-  git add lib/*.sh
+  git add __main__.py lib/*.sh
   git commit -m "build(release): Release ${version}"
   if [[ ${tag} ]]; then
     git tag -a "v${version}" -m "Release version v${version}"
