@@ -4,6 +4,8 @@ import sys
 from src import log
 from src import lurker
 
+__version__ = "0.0.0-PLACEHOLDER"
+
 LOGGER = log.new_logger(__name__)
 
 # Big by Glenn Chappell 4/93 -- based on Standard
@@ -38,7 +40,7 @@ def _determine_lurker_home() -> str:
 
 if __name__ == "__main__":
     log.init_global_config("INFO", True)
-    LOGGER.info(f"Welcome to\n{_TITLE}")
+    LOGGER.info(f"Welcome to\n{_TITLE}\n{__version__}\n")
     lurker_home = _determine_lurker_home()
     LOGGER.info(f"Determined lurker home: {lurker_home}")
 
