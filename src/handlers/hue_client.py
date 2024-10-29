@@ -85,7 +85,7 @@ class HueClient(ActionHandler):
             if response.status != 200:
                 raise URLError(f"Response status was not OK (200): response={body}")
         except Exception as e:
-            self._logger.error(f"Could not retrieve lights from {self.host}: {str(e)}")
+            self._logger.error(f"Could not retrieve lights from {self.host}: {str(e)}", exc_info=e)
             return {}
         self._logger.debug(f"Retrieved light info: {body}")
         light_dict:dict = json.loads(body)

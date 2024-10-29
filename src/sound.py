@@ -35,7 +35,7 @@ def _play_sound(output_device_name: Optional[str], data: Optional[np.ndarray]) -
         try:
             sd.play(data, device=output_device_name)
         except Exception as e:
-            LOGGER.warning(f"Could not play: {str(e)}")
+            LOGGER.warning(f"Could not play sound: {str(e)}")
 
 
 def load_sounds():
