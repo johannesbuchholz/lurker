@@ -1,11 +1,5 @@
 #!/bin/sh
 
-# Script to download and install lurker to be run as a docker container.
-# This includes
-#   - downloading lurker source code from https://github.com/johannesbuchholz/lurker.git to ~/lurker
-#   - creating entry point scripts and configuration at ~/lurker
-# TODO: Add uninstall script
-
 set -e
 
 script_version="0.13.0"
