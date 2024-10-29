@@ -30,7 +30,6 @@ class _Lurker:
         self.input_device_name = input_device_name
         self.output_device_name = output_device_name
 
-    # TODO: Add another sound in order to distinguish between successfully finding an action and successfully handling on an action.
     def act(self, instruction: str) -> None:
         finding = self.registry.find(instruction)
         if finding is None:
