@@ -2,13 +2,14 @@ import dataclasses
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Union
+from typing import Dict, Union, Optional
 
 from src import log
 
 LURKER_KEYWORD = "LURKER_KEYWORD"
 LURKER_MODEL = "LURKER_MODEL"
 LURKER_LOG_LEVEL = "LURKER_LOG_LEVEL"
+LURKER_LOG_FILE = "LURKER_LOG_FILE"
 LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
 LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
 LURKER_LANGUAGE = "LURKER_LANGUAGE"
@@ -22,6 +23,7 @@ LOGGER = log.new_logger(__name__)
 def _get_envs() -> Dict[str, str]:
     envs = {
         LURKER_LOG_LEVEL: os.environ.get(LURKER_LOG_LEVEL),
+        LURKER_LOG_FILE: os.environ.get(LURKER_LOG_FILE),
         LURKER_MODEL: os.environ.get(LURKER_MODEL),
         LURKER_KEYWORD: os.environ.get(LURKER_KEYWORD),
         LURKER_INPUT_DEVICE: os.environ.get(LURKER_INPUT_DEVICE),
@@ -68,9 +70,11 @@ class SpeechConfig:
 class LurkerConfig:
     LURKER_LOG_LEVEL: Union[int, str] = "INFO"
     """The log level of the lurker application according to the python logging module."""
-    LURKER_INPUT_DEVICE: str = None
+    LURKER_LOG_FILE: Optional[str] = "lurkerlog"
+    """If specified, lurker additionally logs a file with the given name in the current working directory."""
+    LURKER_INPUT_DEVICE: Optional[str] = None
     """Name of the device that should be used for recording audio. This might also be a substring of the actual name."""
-    LURKER_OUTPUT_DEVICE: str = None
+    LURKER_OUTPUT_DEVICE: Optional[str] = None
     """Name of the device that should be used for playing feedback sounds. This might also be a substring of the actual name."""
     LURKER_KEYWORD: str = "hey john"
     """A word sequence upon which lurker should start recording actions."""

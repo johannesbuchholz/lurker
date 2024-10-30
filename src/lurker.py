@@ -2,7 +2,7 @@ import importlib
 import sys
 from typing import Optional
 
-from src import log, sound, config
+from src import log, sound
 from src.action import ActionRegistry, ActionHandler, LoadedHandlerType
 from src.config import LurkerConfig
 from src.speech import SpeechToTextListener
@@ -11,7 +11,7 @@ from src.transcription import Transcriber
 LOGGER = log.new_logger(__name__)
 
 
-class _Lurker:
+class Lurker:
     """
     Ties different services together in order to act upon incoming instructions.
     """
@@ -46,6 +46,11 @@ class _Lurker:
                 self._logger.info(f"Could not act on instruction: {instruction}")
 
     def start_listen_loop(self, keyword: str) -> None:
+        LOGGER.info("Initializing...")#
+        self.registry.load_actions_once()
+        self.registry.start_periodic_reloading_in_background(interval_duration_s=5)
+        sound.load_sounds()
+
         LOGGER.info("Start listening...")
         sound.play_startup(self.output_device_name)
         try:
@@ -71,14 +76,11 @@ def _load_external_handler_module(module_name: Optional[str]) -> None:
     LOGGER.debug(f"Loaded external module {extmodule}")
 
 
-def start(lurker_home: str) -> None:
+def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     """
     Blocks this thread.
     """
-    lurker_config: LurkerConfig = config.load_lurker_config(lurker_home + "/config.json")
-    LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
 
-    log.init_global_config(lurker_config.LURKER_LOG_LEVEL, log_to_file=True)
     _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
 
     handler_type = LoadedHandlerType.get_implementation()
@@ -88,8 +90,6 @@ def start(lurker_home: str) -> None:
 
     actions_path = lurker_home + "/actions"
     registry = ActionRegistry(actions_path)
-    registry.load_actions_once()
-    registry.start_periodic_reloading_in_background(5)
 
     transcriber = Transcriber(
         model_path=lurker_config.LURKER_MODEL,
@@ -101,14 +101,10 @@ def start(lurker_home: str) -> None:
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
         speech_config=lurker_config.LURKER_SPEECH_CONFIG
     )
-    lurker = _Lurker(
+    return Lurker(
         registry=registry,
         handler=handler,
         listener=listener,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE
     )
-
-    sound.load_sounds()
-
-    lurker.start_listen_loop(lurker_config.LURKER_KEYWORD)
