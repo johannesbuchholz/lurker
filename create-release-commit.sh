@@ -15,7 +15,7 @@ print_usage() {
 get_version() {
   major_regex="(BREAKING[-\s]CHANGE:|^.*\!:)"
   minor_regex="^(feat).*:"
-  patch_regex="^(fix|perf|chore).*:"
+  patch_regex="^(fix|chore).*:"
 
   git_describe_version=$(git describe)
   previous_version=$(echo "${git_describe_version}" | cut -d "-" -f1 | tr -d "v")
