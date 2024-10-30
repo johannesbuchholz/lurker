@@ -5,7 +5,7 @@ from src import log
 from src import lurker
 from src.config import load_lurker_config, LurkerConfig
 
-__version__ = "0.14.4"
+__version__ = "0.15.0"
 
 LOGGER = log.new_logger(__name__)
 
