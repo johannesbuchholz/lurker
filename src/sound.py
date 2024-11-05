@@ -12,33 +12,33 @@ LOGGER = log.new_logger(__name__)
 
 def play_ready(output_device_name: Optional[str]) -> None:
     entry = _LoadedSounds.sounds.get("ready.wav", None)
-    _play_sound(output_device_name, entry)
+    _play_sound(output_device_name, entry, False)
 
 
 def play_startup(output_device_name: Optional[str]):
     entry = _LoadedSounds.sounds.get("start.wav", None)
-    _play_sound(output_device_name, entry)
+    _play_sound(output_device_name, entry, False)
 
 
 def play_no(output_device_name: Optional[str]):
     entry = _LoadedSounds.sounds.get("no.wav", None)
-    _play_sound(output_device_name, entry)
+    _play_sound(output_device_name, entry, False)
 
 
 def play_ok(output_device_name: Optional[str]):
     entry = _LoadedSounds.sounds.get("ok.wav", None)
-    _play_sound(output_device_name, entry)
+    _play_sound(output_device_name, entry, False)
 
 
 def play_understood(output_device_name: Optional[str]):
     entry = _LoadedSounds.sounds.get("understood.wav", None)
-    _play_sound(output_device_name, entry)
+    _play_sound(output_device_name, entry, True)
 
 
-def _play_sound(output_device_name: Optional[str], data: Optional[np.ndarray]) -> None:
+def _play_sound(output_device_name: Optional[str], data: Optional[np.ndarray], blocking: bool) -> None:
     if data is not None:
         try:
-            sd.play(data, device=output_device_name)
+            sd.play(data, device=output_device_name, blocking=blocking)
         except Exception as e:
             LOGGER.warning(f"Could not play sound: {str(e)}")
 
