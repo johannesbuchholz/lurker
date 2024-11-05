@@ -38,12 +38,19 @@ class Lurker:
         else:
             action, match = finding
             self._logger.debug(f"Found action for instruction {instruction}: action={action}, match={match}")
-            sound.play_ok(self.output_device_name)
-            is_success = self.handler.handle(action, match)
+            sound.play_understood(self.output_device_name)
+            try:
+                is_success = self.handler.handle(action, match)
+            except Exception as e:
+                self._logger.error(f"Unhandled exception when handling instruction {instruction}: {type(e)} {e}", exc_info=e)
+                is_success = False
+
             if is_success:
                 self._logger.info(f"Successfully acted on instruction: {instruction}")
+                sound.play_ok(self.output_device_name)
             else:
                 self._logger.info(f"Could not act on instruction: {instruction}")
+                sound.play_no(self.output_device_name)
 
     def start_listen_loop(self, keyword: str) -> None:
         LOGGER.info("Initializing...")#

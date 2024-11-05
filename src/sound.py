@@ -30,6 +30,11 @@ def play_ok(output_device_name: Optional[str]):
     _play_sound(output_device_name, entry)
 
 
+def play_understood(output_device_name: Optional[str]):
+    entry = _LoadedSounds.sounds.get("understood.wav", None)
+    _play_sound(output_device_name, entry)
+
+
 def _play_sound(output_device_name: Optional[str], data: Optional[np.ndarray]) -> None:
     if data is not None:
         try:
