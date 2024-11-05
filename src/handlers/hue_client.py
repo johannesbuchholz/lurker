@@ -80,7 +80,7 @@ class HueClient(ActionHandler):
     def _retrieve_lights(self) -> Dict[str, Any]:
         url = f"http://{self.host}/api/{self.user}/lights"
         try:
-            response: HTTPResponse = urlopen(url)
+            response: HTTPResponse = urlopen(url, timeout=8.)
             body = response.read()
             if response.status != 200:
                 raise URLError(f"Response status was not OK (200): response={body}")
@@ -92,19 +92,20 @@ class HueClient(ActionHandler):
         self._logger.info(f"Available lights: {light_dict.keys()}")
         return light_dict
 
-    def _light(self, light_actions: Collection[LightAction]):
+    def _light(self, light_actions: Collection[LightAction]) -> bool:
         self._logger.info(f"Applying light actions: {light_actions}")
         if len(self.lights) < 1:
             self._logger.warning("Can not send request: light ids have not been initialized")
-            return
+            return False
         for action in light_actions:
             for light_id in action.light_ids:
                 http_request = action.state.to_http_request(self.host, self.user, light_id)
                 self._logger.debug(f"Sending request: {http_request.get_method()} {http_request.data}")
                 try:
-                    urlopen(http_request)
+                    urlopen(http_request, timeout=4.)
                 except Exception as e:
                     self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
+        return True
 
     def handle(self, action: Action, key_match: Match[str]) -> bool:
         command = action.command
@@ -128,5 +129,4 @@ class HueClient(ActionHandler):
                 light_ids = [id_str.strip() for id_str in light_id_string.split(LIGHT_ID_STRING_DELIMITER) if len(id_str) > 0 and not id_str.isspace()]
             light_actions.append(LightAction(light_ids=light_ids, state=LightState(**light_request)))
 
-        self._light(light_actions)
-        return True
+        return self._light(light_actions)
