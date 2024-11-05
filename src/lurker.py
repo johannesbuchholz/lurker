@@ -3,7 +3,7 @@ import sys
 from typing import Optional
 
 from src import log, sound
-from src.action import ActionRegistry, ActionHandler, LoadedHandlerType
+from src.action import ActionRegistry, ActionHandler, LoadedHandlerType, NOPHandler
 from src.config import LurkerConfig
 from src.speech import SpeechToTextListener
 from src.transcription import Transcriber
@@ -92,7 +92,12 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
 
     handler_type = LoadedHandlerType.get_implementation()
     handler_config_with_home = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
-    handler = handler_type(**handler_config_with_home)
+    try:
+        handler = handler_type(**handler_config_with_home)
+    except Exception as e:
+        LOGGER.warning(f"Could not instantiate handler {handler_type}: {type(e)} {e} - Using default handler instead.", exc_info=e)
+        handler = NOPHandler()
+
     LOGGER.info("Loaded action handler: %s", type(handler))
 
     actions_path = lurker_home + "/actions"
