@@ -40,11 +40,10 @@ def _determine_lurker_home() -> str:
 
 
 if __name__ == "__main__":
-    print(f"{_TITLE}\n{__version__}\n")
-
     lurker_home = _determine_lurker_home()
     lurker_config: LurkerConfig = load_lurker_config(lurker_home + "/config.json")
-    log.init_global_config("INFO", file_name=lurker_config.LURKER_LOG_FILE)
+    log.init_global_config(lurker_config.LURKER_LOG_LEVEL, file_name=lurker_config.LURKER_LOG_FILE)
+    LOGGER.info(f"{_TITLE}\n{__version__}\n")
 
     LOGGER.info(f"Determined lurker home: {lurker_home}")
     LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
