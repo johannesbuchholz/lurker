@@ -32,6 +32,8 @@ RUN chown lurker:lurker models/tiny.pt
 RUN chmod u+r models/tiny.pt
 
 ENV LURKER_MODEL=/lurker/models/tiny.pt
+# Disable logging to file. We do not know if the attatched volume supports write.
+ENV LURKER_LOG_FILE=""
 
 # add empty dir to mount configuration into
 RUN mkdir "lurker"
