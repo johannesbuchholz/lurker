@@ -23,7 +23,7 @@ find_lurker_home_in_media() {
 
 set -e
 
-script_version="0.15.6"
+script_version="0.15.8"
 
 while getopts ':m' opt; do
   case "${opt}" in
