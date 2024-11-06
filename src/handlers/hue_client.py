@@ -69,6 +69,10 @@ class HueClient(ActionHandler):
 
         file_name_suffix = action_key.replace(" ", "_").lower()
         lights = self._retrieve_lights()
+        if len(lights) < 1:
+            self._logger.warning("No light ids available. Abort saving current light settings.")
+            return False
+
         light_action_dict = {light_id: LightState(**light["state"]).to_dict() for light_id, light in lights.items() if "state" in light}
         action_dict = {"keys": [action_key], "command": light_action_dict}
         file_path = self.actions_path + f"/{self.__class__.__name__}_saved_{file_name_suffix}.json"
