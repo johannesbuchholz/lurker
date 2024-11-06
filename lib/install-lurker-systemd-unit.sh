@@ -55,6 +55,10 @@ Restart=on-failure
 RestartSec=5
 ExecStart=${LURKER_STARTUP_CMD}
 SuccessExitStatus=SIGKILL
+TimeoutStopSec=3
+# Wait until eventual mounting service units have mounted all devices. For better control, remove this line
+# and add a dedicated dependency to that service under WantedBy and After.
+ExecStartPre=/bin/sleep 5
 
 " > "${service_file}"
 
