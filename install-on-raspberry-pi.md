@@ -2,10 +2,10 @@
 Running the lurker python project directly on a raspberry pi may be difficult depending on the existence of a suiting python version in [3.9 to 3.11).
 Therefor, setting up a Dockerfile to collect all necessary dependencies seems reasonable instead of crafting a fitting python environment locally.   
 
-The following recipe takes you through the process of adding the required system tools and lets you build and run a lurker.
+The following recipe takes you through the process of adding the required system tools and lets you build and run lurker.
 There are two alternatives:
-1. Set up and run lurker as a python programm
-2. Build and run lurker inside a docker container
+- Set up and run lurker as a python programm
+- Build and run lurker inside a docker container
 
 In the following, we assume you are running some debian distribution like [raspberri Pi OS](https://www.raspberrypi.com/software/operating-systems/) with an internet connection already set up.
 
@@ -56,7 +56,7 @@ systemctl start --user udieskie.service
 
 ## Prepare lurker configuration
 
-Use the directory `lurker/` from this repository as a starting point and create a directory on an usb stick in the following form
+Use the directory `lurker/` from this repository as a starting point and create a directory on some portable media device in the following form
 ```
 lurker
 ├── actions
@@ -68,9 +68,13 @@ lurker
 Be sure to plug in a sound input device and set some unique part of its name in `config.json` under `LURKER_INPUT_DEVICE` and `LURKER_OUTPUT_DEVICE`.
 To get an idea what devices are currently plugged in, run `ls /dev/snd/by-id`. For more information about sound devices on linux, see https://wiki.archlinux.org/title/Advanced_Linux_Sound_Architecture.
 
-## Alternative 1: Run lurker as a python programm
+## Install lurker
 
-We assume, you already have installed a suiting python version.
+The following two alternatives take you through the manual step-by-step installation process.
+
+### Alternative 1: Run lurker as a python programm
+
+For this, we assume you already installed a suiting python version.
 
 ### Install required tools
 
@@ -84,8 +88,15 @@ install `libportaudio2`
 sudo apt install libportaudio2
 ```
 
-### Set up python environment
+### Set up the python environment
 
+#### By script
+Run the installer script
+```shell
+sh lib/install-lurker.sh -p
+```
+
+#### Manually
 Clone lurker
 ```sh
 git clone https://github.com/johannesbuchholz/lurker.git
@@ -102,6 +113,7 @@ Install requirements into virtual environments
 venv/bin/pip install -r --require-venv requirements.txt
 ```
 
+### Run
 Assuming your lurker configuration lies in `~/lurker`, run the python programm with the following command
 ```sh
 venv/bin/python . --lurker-home ${HOME}/lurker
@@ -129,6 +141,13 @@ Add current user to docker group
 
 ### Build the docker image
 
+#### By script
+Run the installer script
+```shell
+sh lib/install-lurker.sh -d
+```
+
+#### Manually
 Clone lurker
 ```sh
 git clone https://github.com/johannesbuchholz/lurker.git
@@ -144,6 +163,7 @@ Build the docker image. This will take some time and about 6GB of disk space.
 docker build --tag lurker:latest lurker/
 ```
 
+### Run
 Assuming your lurker configuration lies in `~/lurker`, run the docker image with the following command
 ```shell
 export LURKER_HOME=${HOME}/lurker && docker run \
@@ -151,4 +171,21 @@ export LURKER_HOME=${HOME}/lurker && docker run \
 --mount type=bind,source="${LURKER_HOME}",target=/lurker/lurker,readonly \
 --rm --name "lurker" \
 lurker:latest
+```
+
+Adjust the `latest` tag with your installed docker image if needed.
+
+## Start lurker on system startup
+You may run lurker whenever the user logs in.
+When you use the installer script at `lib/install-lurker.sh`, you are asked if you want to install the systemd service right away. 
+
+To set up the auto start, create a systemd service unit file by running the installer script
+```shell
+export LURKER_STARTUP_CMD && sh lib/install-lurker-systemd-unit.sh
+```
+where LURKER_STARTUP_CMD holds the command to run your lurker installation.
+
+For example the above manual python installation may be run with 
+```shell
+/path/to/lurker/source/dir/venv/bin/python . --lurker-home /path/to/lurker/home/dir/lurker
 ```
