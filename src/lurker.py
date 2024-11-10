@@ -1,6 +1,6 @@
 import importlib
 import sys
-from typing import Optional
+from typing import Optional, Union
 
 from src import log, sound
 from src.action import ActionRegistry, ActionHandler, LoadedHandlerType, NOPHandler
@@ -23,7 +23,7 @@ class Lurker:
                  input_device_name: str,
                  output_device_name: str
                  ):
-        self._logger = log.new_logger(self.__class__.  __name__)
+        self._logger = log.new_logger(self.__class__.__name__)
         self.registry = registry
         self.handler = handler
         self.listener = listener
@@ -52,10 +52,10 @@ class Lurker:
                 self._logger.info(f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
                 sound.play_no(self.output_device_name)
 
-    def start_listen_loop(self, keyword: str) -> None:
-        LOGGER.info("Initializing...")#
+    def start_main_loop(self, keyword: str, action_refresh_interval_s: Union[int, str] = 5) -> None:
+        LOGGER.info("Initializing...")
         self.registry.load_actions_once()
-        self.registry.start_periodic_reloading_in_background(interval_duration_s=5)
+        self.registry.start_periodic_reloading_in_background(interval_duration_s=int(action_refresh_interval_s))
         sound.load_sounds()
 
         LOGGER.info("Start listening...")
@@ -91,6 +91,7 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
 
     handler_type = LoadedHandlerType.get_implementation()
+    # inject lurker_home into handler configuration
     handler_config_with_home = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
     try:
         handler = handler_type(**handler_config_with_home)

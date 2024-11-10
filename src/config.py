@@ -16,6 +16,7 @@ LURKER_LANGUAGE = "LURKER_LANGUAGE"
 LURKER_SPEECH_CONFIG = "LURKER_SPEECH_CONFIG"
 LURKER_HANDLER_MODULE = "LURKER_HANDLER_MODULE"
 LURKER_HANDLER_CONFIG = "LURKER_HANDLER_CONFIG"
+LURKER_ACTION_REFRESH_INTERVAL = "LURKER_ACTION_REFRESH_INTERVAL"
 
 LOGGER = log.new_logger(__name__)
 
@@ -32,6 +33,7 @@ def _get_envs() -> Dict[str, str]:
         LURKER_SPEECH_CONFIG: os.environ.get(LURKER_SPEECH_CONFIG),
         LURKER_HANDLER_MODULE: os.environ.get(LURKER_HANDLER_MODULE),
         LURKER_HANDLER_CONFIG: os.environ.get(LURKER_HANDLER_CONFIG),
+        LURKER_ACTION_REFRESH_INTERVAL: os.environ.get(LURKER_ACTION_REFRESH_INTERVAL),
     }
     return {key: value for key, value in envs.items() if value is not None}
 
@@ -44,6 +46,7 @@ def _load_config_file(path: str) -> Dict[str, str]:
         LOGGER.warning("Could not load configuration file from %s: %s", path, e)
         cfg = {}
     return cfg
+
 
 @dataclass(frozen=True)
 class SpeechConfig:
@@ -65,6 +68,7 @@ class SpeechConfig:
     """Ratio of trailing silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
     ambiance_level_factor: float = 1.5
     """Factor to determine the dynamic silence-threshold based on the mean amplitudes of past keyword-queue evaluations."""
+
 
 @dataclass(frozen=True)
 class LurkerConfig:
@@ -88,10 +92,13 @@ class LurkerConfig:
     """Module name containing a single implementation of src.action.ActionHandler to be used for acting on recorded instructions."""
     LURKER_HANDLER_CONFIG: Dict[str, str] = field(default_factory=dict)
     """Configuration passed to the configured ActionHandler."""
+    LURKER_ACTION_REFRESH_INTERVAL: Union[int, str] = 5
+    """Duration in seconds between action reloading attempts."""
 
     def to_pretty_str(self) -> str:
         key_value_strings = [f"{field_name}={value}" for field_name, value in dataclasses.asdict(self).items()]
         return "\n".join(key_value_strings)
+
 
 def load_lurker_config(config_path: str) -> LurkerConfig:
     config_param_dict:dict = _load_config_file(config_path) | _get_envs()

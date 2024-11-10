@@ -9,16 +9,7 @@ __version__ = "0.16.0"
 
 LOGGER = log.new_logger(__name__)
 
-# Big by Glenn Chappell 4/93 -- based on Standard
-# Includes ISO Latin-1
-# Greek characters by Bruce Jakeway <pbjakeway@neumann.uwaterloo.ca>
-# figlet release 2.2 -- November 1996
-# Permission is hereby given to modify this font, as long as the
-# modifier's name is placed on a comment line.
-#
-# Modified by Paul Burton  12/96 to include new parameter
-# supported by FIGlet and FIGWin.  May also be slightly modified for better use
-# of new full-width/kern/smush alternatives, but default output is NOT changed.
+
 _TITLE = r"""
   _                   _               
  | |                 | |              
@@ -49,4 +40,4 @@ if __name__ == "__main__":
     LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
 
     lurker = lurker.get_new(lurker_home=lurker_home, lurker_config=lurker_config)
-    lurker.start_listen_loop(lurker_config.LURKER_KEYWORD)
+    lurker.start_main_loop(lurker_config.LURKER_KEYWORD, lurker_config.LURKER_ACTION_REFRESH_INTERVAL)
