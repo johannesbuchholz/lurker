@@ -8,18 +8,18 @@ print_help() {
   echo "
   Script to download and install lurker to be run as either a docker image or as a python programm.
 
-  Installation happens from source and is placed inside your home directory at to ~/lurker.
+  Installation sources are placed inside your home directory at ${HOME}/lurker.
 
   The installation includes
-  - downloading lurker source code from https://github.com/johannesbuchholz/lurker.git
+  - downloading lurker source code
   - downloading the openai-whisper model 'tiny'
   - creating an entry point script
-  - optionally creating a systemd unit that starts lurker at user login.
+  - optionally creating a systemd unit that starts lurker at user login
 
   Synopsis:
-    install-lurker.sh -d|-p
+    $(basename "$0") -d|-p
     -d  Perform a docker installation. This includes building a lurker docker image from source.
-        Running the generated entry point script will run the created image.
+        Running the generated entry point script will run that image.
     -p  Perform a python installation. This includes building a virtual environment and installing all required dependencies.
         Running the generated entry point script will run the installed python programm.
     Exactly one of the two options must be provided.

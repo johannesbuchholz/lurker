@@ -44,4 +44,4 @@ else
 fi
 
 echo
-echo "Removal of of systemd unit is complete"
+echo "Removal of systemd unit is complete"

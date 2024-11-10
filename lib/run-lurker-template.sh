@@ -5,13 +5,12 @@ print_help() {
   Script to launch lurker.
 
   At startup, lurker will look for configuration in the provided lurker home directory.
-  This script launches lurker to '~/lurker' as its home directory unless using option -m.
+  This script launches lurker using '~/lurker' as its home directory unless option flag -m is set.
 
   Usage: $(basename "$0") [-m]
     -m  Use first match of directory 'lurker' found in /media to be passed to option '--lurker-home' when starting lurker.
-        This is helpful when you want to be able to change configuration without accessing files directly
-        on the host machine, for example when running on a raspberry pi or similar devices.
-        To make best use of this option, be sure that your storage devices is automatically mounted to /media.
+        If no such directory could be found, defaults to '~/lurker' as lurker home.
+        Use this option if you want to change configuration without accessing files directly on the host machine.
 
   Version ${script_version}
   "

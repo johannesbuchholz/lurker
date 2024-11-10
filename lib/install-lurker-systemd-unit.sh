@@ -47,7 +47,7 @@ echo "
 WantedBy=default.target
 
 [Unit]
-Description=Offline natural speech homeassistant
+Description=Offline natural speech instruction handler
 After=default.target
 
 [Service]
@@ -56,8 +56,8 @@ RestartSec=5
 ExecStart=${LURKER_STARTUP_CMD}
 SuccessExitStatus=SIGKILL
 TimeoutStopSec=3
-# Wait until eventual mounting service units have mounted all devices. For better control, remove this line
-# and add a dedicated dependency to that service under WantedBy and After.
+# Wait until eventually installed media-mounting services have mounted device that could contain lurker configuration.
+# For better control, remove this line and add a dedicated dependency to the particular service under WantedBy and After.
 ExecStartPre=/bin/sleep 5
 
 " > "${service_file}"
