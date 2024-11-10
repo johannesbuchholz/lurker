@@ -83,7 +83,7 @@ class ActionRegistry:
 
     def load_actions_once(self) -> None:
         if not os.path.exists(self.actions_path):
-            self._logger.warning(f"No actions defined at {self.actions_path}")
+            self._logger.warning(f"Could not find action path {self.actions_path}")
             return
         for action_path in os.scandir(self.actions_path):
             if not action_path.is_file():
@@ -94,8 +94,11 @@ class ActionRegistry:
         self._logger.info(f"Loaded actions: count={len(self.actions)}, files={list(self.actions.keys())}")
 
     def _reload_actions(self) -> None:
+        self._logger.debug(f"About to reload changed or new actions from {self.actions_path}")
+        if not os.path.exists(self.actions_path):
+            self._logger.warning(f"Could not find action path {self.actions_path}")
+            return
         try:
-            self._logger.debug(f"About to reload changed or new actions from {self.actions_path}")
             for action_path in os.scandir(self.actions_path):
                 if not action_path.is_file():
                     continue
@@ -106,7 +109,7 @@ class ActionRegistry:
                     self.actions[abs_path.name] = (mtime, ActionRegistry._load_action(abs_path))
                     self._logger.info(f"Reloaded action {abs_path.name}")
         except Exception as e:
-            self._logger.warning(f"Could not reload action: {e}", exc_info=e)
+            self._logger.error(f"Could not reload action: {e}", exc_info=e)
 
 
 class LoadedHandlerType:
