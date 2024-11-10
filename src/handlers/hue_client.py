@@ -51,27 +51,27 @@ class HueClient(ActionHandler):
         self.actions_path = kwargs["lurker_home"] + "/actions"
 
         self.lights = {}
-        self._special_commands: Dict[str, Callable[[Match[str]], bool]] = {
+        self._special_commands: Dict[str, Callable[[Match[str]], int]] = {
             "EXIT": lambda key_match: exit(0),
             "SAVE": self._save_current_lights_as_action
         }
 
-    def _save_current_lights_as_action(self, key_match: Match) -> bool:
+    def _save_current_lights_as_action(self, key_match: Match) -> int:
         try:
             action_key = key_match.group(1)
         except IndexError as e:
             self._logger.warning(f"Unable to save current light state: Could not extract group '1' in match {key_match}: {e}")
-            return False
+            return 1
 
         if len(action_key) < 1:
             self._logger.warning(f"Unable to save current light state: Extracted action key is empty: key_match={key_match}")
-            return False
+            return 1
 
         file_name_suffix = action_key.replace(" ", "_").lower()
         lights = self._retrieve_lights()
         if len(lights) < 1:
             self._logger.warning("No light ids available. Abort saving current light settings.")
-            return False
+            return 1
 
         light_action_dict = {light_id: LightState(**light["state"]).to_dict() for light_id, light in lights.items() if "state" in light}
         action_dict = {"keys": [action_key], "command": light_action_dict}
@@ -79,7 +79,7 @@ class HueClient(ActionHandler):
         with open(file_path, "w") as file_handle:
             json.dump(action_dict, file_handle, indent=2)
         self._logger.info(f"Wrote action to {file_path}: {action_dict}")
-        return True
+        return 0
 
     def _retrieve_lights(self) -> Dict[str, Any]:
         url = f"http://{self.host}/api/{self.user}/lights"
@@ -96,11 +96,11 @@ class HueClient(ActionHandler):
         self._logger.info(f"Available lights: {light_dict.keys()}")
         return light_dict
 
-    def _light(self, light_actions: Collection[LightAction]) -> bool:
+    def _light(self, light_actions: Collection[LightAction]) -> int:
         self._logger.info(f"Applying light actions: {light_actions}")
         if len(self.lights) < 1:
             self._logger.warning("Can not send request: light ids have not been initialized")
-            return False
+            return 1
         for action in light_actions:
             for light_id in action.light_ids:
                 http_request = action.state.to_http_request(self.host, self.user, light_id)
@@ -109,9 +109,9 @@ class HueClient(ActionHandler):
                     urlopen(http_request, timeout=4.)
                 except Exception as e:
                     self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
-        return True
+        return 0
 
-    def handle(self, action: Action, key_match: Match[str]) -> bool:
+    def handle(self, action: Action, key_match: Match[str]) -> int:
         command = action.command
         if type(command) is str:
             special_command = self._special_commands.get(command, None)
@@ -120,7 +120,7 @@ class HueClient(ActionHandler):
                 return special_command(key_match)
         return self._handle_internal(action)
 
-    def _handle_internal(self, action: Action) -> bool:
+    def _handle_internal(self, action: Action) -> int:
         if len(self.lights) < 1:
             self.lights = self._retrieve_lights()
 

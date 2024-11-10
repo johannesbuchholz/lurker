@@ -12,7 +12,7 @@ from src import log
 
 class Action:
     """
-    Intended to map speech-to-text translated snippets to some predefined command.
+    A mapping of key paragraphs to a command.
     """
 
     @staticmethod
@@ -26,7 +26,7 @@ class Action:
             patterns.append(re.compile(pattern_string))
         return patterns
 
-    def __init__(self, keys: List[str], command: Union[str, Dict[str, Any]]):
+    def __init__(self, keys: List[str], command: Union[str, int, None, Dict[str, Any]]):
         self.keys = keys
         self.command = command
         self.patterns: List[Pattern] = self.compile_regexes(self.keys)
@@ -139,11 +139,11 @@ class ActionHandler(abc.ABC):
             raise RuntimeError(f"Only one subclass may be registered and {LoadedHandlerType.cls} has already been registered.")
 
     @abc.abstractmethod
-    def handle(self, action: Action, key_match: Match[str]) -> bool:
+    def handle(self, action: Action, key_match: Match[str]) -> int:
         """
         :param action: The action object to handle.
         :param key_match: The match object resulting from successfully matching one of the keys associated with the supplied action.
-        :return: True iff the action has been handled successfully.
+        :return: An exit code of zero iff the action has been handled successfully.
         """
         pass
 
@@ -153,5 +153,5 @@ class NOPHandler(ActionHandler):
     def __init__(self):
         super().__init__()
 
-    def handle(self, action: Action, key_match: Match[str]) -> bool:
-        return True
+    def handle(self, action: Action, key_match: Match[str]) -> int:
+        return 0
