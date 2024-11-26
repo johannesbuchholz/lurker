@@ -90,7 +90,6 @@ sudo apt install libportaudio2
 
 ### Set up the python environment
 
-#### By script
 Run the python installer script
 
 ```shell
