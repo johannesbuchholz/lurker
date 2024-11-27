@@ -1,5 +1,7 @@
 import math
+import time
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from time import sleep
 from typing import Callable, Any, Optional, Collection
 
@@ -14,6 +16,9 @@ from src.transcription import Transcriber
 LOGGER = log.new_logger(__name__)
 
 class SpeechToTextListener:
+
+    _EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="transcription")
+
     def __init__(self,
                  transcriber: Transcriber,
                  input_device_name: Optional[str],
@@ -84,6 +89,8 @@ class SpeechToTextListener:
         with self._start_new_input_audio_stream(self._fill_keyword_queue):
             intermediate_decode: str = ""
             while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
+                sleep(self.speech_config.queue_check_interval_seconds)
+                intermediate_decode = ""
                 self._logger.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
                 is_relevant, queue_mean = _has_keyword_queue_leading_silence_followed_by_speech_and_silence(
                     self.keyword_queue,
@@ -94,15 +101,15 @@ class SpeechToTextListener:
                     self.speech_config.required_trailing_silence_ratio)
                 self.keyword_queue_bucket_means.append(queue_mean)
                 if is_relevant:
-                    transcription = self.transcriber.transcribe(self.keyword_queue)
+                    self._logger.debug("About to transcribe keyword queue")
+                    transcription = self.call_for_transcription(self.keyword_queue, timeout_s=self.speech_config.transcription_timeout_seconds)
                     intermediate_decode = filter_non_alnum(transcription)
-                else:
-                    intermediate_decode = ""
-                sleep(self.speech_config.queue_check_interval_seconds)
-            if keyword in intermediate_decode:
-                self._logger.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
-                return True
-            return False
+                    self._clear_queues()
+
+        if keyword in intermediate_decode:
+            self._logger.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
+            return True
+        return False
 
     def _record_instruction(self) -> str:
         with ((self._start_new_input_audio_stream(self._fill_instruction_queue))):
@@ -117,7 +124,8 @@ class SpeechToTextListener:
                         self.speech_config.required_trailing_silence_ratio)
                    and (len(self.instruction_queue) < self.instruction_queue.maxlen)):
                 sleep(self.speech_config.queue_check_interval_seconds)
-            recorded_instruction: str = filter_non_alnum(self.transcriber.transcribe(self.instruction_queue))
+            self._logger.debug("About to transcribe instruction queue")
+            recorded_instruction: str = filter_non_alnum(self.call_for_transcription(self.instruction_queue, timeout_s=self.speech_config.transcription_timeout_seconds))
             self._logger.debug("Recorded instruction: sample_count={}, text={}".format(len(self.instruction_queue), recorded_instruction))
             return recorded_instruction
 
@@ -126,7 +134,7 @@ class SpeechToTextListener:
         self.instruction_queue.clear()
 
     def _compute_silence_threshold(self, ambiance_level_factor: float) -> int:
-        if len(self.keyword_queue) > 0:
+        if len(self.keyword_queue) > 0 and len(self.keyword_queue_bucket_means) > 0:
             ambiance_level_median = round(np.median(self.keyword_queue_bucket_means))
         else:
             ambiance_level_median = 0
@@ -136,13 +144,25 @@ class SpeechToTextListener:
         self._logger.log(1, f"Compute silence threshold: ambiance_level_median * ambiance_level_factor = {ambiance_level_median} * {ambiance_level_factor} = {factorized_threshold} -> threshold {threshold}")
         return threshold
 
+    def call_for_transcription(self, audio_data, timeout_s) -> str:
+        self._logger.debug(f"Start transcribing with timeout {timeout_s}s")
+        t_start = time.time()
+        future = self._EXECUTOR.submit(self.transcriber.transcribe, audio_data)
+        result = ""
+        try:
+            result = future.result(timeout=timeout_s)
+        except Exception as e:
+            self._logger.error(f"Could not transcribe audio: {type(e)} {str(e)}")
+        if self._logger.isEnabledFor(14):
+            self._logger.log(14, f"Transcription ended with result '{result}' and took {round(time.time() - t_start, 6)}s")
+        return result
 
 def _has_keyword_queue_leading_silence_followed_by_speech_and_silence(data: Collection[int], silence_threshold: int, bucket_count: int,
                                                                       required_leading_silence_ratio: float,
                                                                       required_speech_ratio: float,
                                                                       required_trailing_silence_ratio: float) -> (bool, int):
     """
-    Relevant means that at the start and end of the queue is silent and least an appropriate amount of buckets
+    Relevant means that at the start and end of the queue is silence and least an appropriate amount of buckets
     possesses an average of absolute amplitude above the threshold.
 
 
@@ -155,8 +175,8 @@ def _has_keyword_queue_leading_silence_followed_by_speech_and_silence(data: Coll
                                    ##############     ##############              ##
                                  ##################  ################            #####
                 t -----|---------------------------------------------------------------------|---------->
-                       ^                                                                  ^
-                       queue start                                                        queue end
+                       ^                                                                     ^
+                       queue start                                                           queue end
     :return tuple <is relevant>, <keyword queue abs mean>
     """
     if len(data) < 1:
@@ -169,8 +189,8 @@ def _has_keyword_queue_leading_silence_followed_by_speech_and_silence(data: Coll
     arr = np.abs(np.array(data))
     interval_length = math.floor(len(arr) / bucket_count)
 
-
-    LOGGER.log(1, "\n" + _queue_to_str(arr, bucket_count, silence_threshold))
+    if LOGGER.isEnabledFor(1):
+        LOGGER.log(1, "\n" + _queue_to_str(arr, bucket_count, silence_threshold))
 
     required_leading_silence_buckets: int = round(bucket_count * required_leading_silence_ratio)
     required_buckets_with_speech: int = round(bucket_count * required_speech_ratio)
@@ -236,7 +256,8 @@ def _has_instruction_queue_speech_followed_by_silence(data: Collection[int],
     interval_length = math.floor(len(data) / bucket_count)
     arr = np.abs(np.array(data))
 
-    LOGGER.log(1, "\n" + _queue_to_str(arr, bucket_count, silence_threshold))
+    if LOGGER.isEnabledFor(1):
+        LOGGER.log(1, "\n" + _queue_to_str(arr, bucket_count, silence_threshold))
 
     required_trailing_silence_buckets: int = round(bucket_count * required_trailing_silence_ratio)
     required_buckets_with_speech: int = round(bucket_count * required_speech_ratio)

@@ -22,11 +22,9 @@ class Transcriber:
         audio = np.array(data, dtype=self.bit_depth).astype(np.float32) / 32768.
         result = self.model.transcribe(whisper.pad_or_trim(audio),
                                        condition_on_previous_text=False,
-                                       prepend_punctuations="",
-                                       append_punctuations="",
                                        without_timestamps=True,
+                                       word_timestamps=False,
                                        fp16=False,
-                                       language=self.spoken_language,
-                                       sample_len=8,
+                                       language=self.spoken_language
                                        )
         return result["text"].strip().lower()

@@ -39,11 +39,11 @@ def _get_envs() -> Dict[str, str]:
 
 
 def _load_config_file(path: str) -> Dict[str, str]:
-    try:
+    if os.path.exists(path):
         with open(path) as cfg_file_handle:
             cfg: dict = json.load(cfg_file_handle)
-    except Exception as e:
-        LOGGER.warning("Could not load configuration file from %s: %s", path, e)
+    else:
+        LOGGER.info(f"No configuration file found at {path}")
         cfg = {}
     return cfg
 
@@ -68,6 +68,8 @@ class SpeechConfig:
     """Ratio of trailing silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
     ambiance_level_factor: float = 1.5
     """Factor to determine the dynamic silence-threshold based on the mean amplitudes of past keyword-queue evaluations."""
+    transcription_timeout_seconds: float = 3
+    """Maximum number of seconds to wait for a transcription before aborting."""
 
 
 @dataclass(frozen=True)
