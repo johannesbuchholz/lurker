@@ -4,7 +4,8 @@ from typing import Collection, Any, Dict, Callable, Match, List
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
-from src.action import ActionHandler, Action
+from src.action import ActionHandler
+from src.utils import KeyParagraphMapping
 
 ALL_LIGHTS_ID = "ALL"
 LIGHT_ID_STRING_DELIMITER = ","
@@ -111,8 +112,8 @@ class HueClient(ActionHandler):
                     self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
         return 0
 
-    def handle(self, action: Action, key_match: Match[str]) -> int:
-        command = action.command
+    def handle(self, action: KeyParagraphMapping, key_match: Match[str]) -> int:
+        command = action.value
         if type(command) is str:
             special_command = self._special_commands.get(command, None)
             if special_command is not None:
@@ -120,12 +121,12 @@ class HueClient(ActionHandler):
                 return special_command(key_match)
         return self._handle_internal(action)
 
-    def _handle_internal(self, action: Action) -> int:
+    def _handle_internal(self, action: KeyParagraphMapping) -> int:
         if len(self.lights) < 1:
             self.lights = self._retrieve_lights()
 
         light_actions: List[LightAction] = []
-        for item in action.command.items():
+        for item in action.value.items():
             light_id_string, light_request = item
             if light_id_string == ALL_LIGHTS_ID:
                 light_ids = list(self.lights.keys())

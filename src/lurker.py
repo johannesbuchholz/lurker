@@ -1,6 +1,6 @@
 import importlib
 import sys
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 from src import log, sound
 from src.action import ActionRegistry, ActionHandler, LoadedHandlerType, NOPHandler
@@ -52,7 +52,7 @@ class Lurker:
                 self._logger.info(f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
                 sound.play_no(self.output_device_name)
 
-    def start_main_loop(self, keyword: str, action_refresh_interval_s: Union[int, str] = 5) -> None:
+    def start_main_loop(self, keyword: List[str], action_refresh_interval_s: Union[int, str] = 5) -> None:
         LOGGER.info("Initializing...")
         self.registry.load_actions_once()
         self.registry.start_periodic_reloading_in_background(interval_duration_s=int(action_refresh_interval_s))

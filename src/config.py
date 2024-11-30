@@ -2,7 +2,7 @@ import dataclasses
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Union, Optional
+from typing import Dict, Union, Optional, List, Any
 
 from src import log
 
@@ -38,7 +38,7 @@ def _get_envs() -> Dict[str, str]:
     return {key: value for key, value in envs.items() if value is not None}
 
 
-def _load_config_file(path: str) -> Dict[str, str]:
+def _load_config_file(path: str) -> Dict[str, Any]:
     if os.path.exists(path):
         with open(path) as cfg_file_handle:
             cfg: dict = json.load(cfg_file_handle)
@@ -82,7 +82,7 @@ class LurkerConfig:
     """Name of the device that should be used for recording audio. This might also be a substring of the actual name."""
     LURKER_OUTPUT_DEVICE: Optional[str] = None
     """Name of the device that should be used for playing feedback sounds. This might also be a substring of the actual name."""
-    LURKER_KEYWORD: str = "hey john"
+    LURKER_KEYWORD: List[str] = field(default_factory=lambda : ["hey john"])
     """A word sequence upon which lurker should start recording actions."""
     LURKER_MODEL: str = "tiny"
     """A model name or an absolute path to a model file that should be used by the transcription engine."""
@@ -103,7 +103,17 @@ class LurkerConfig:
 
 
 def load_lurker_config(config_path: str) -> LurkerConfig:
-    config_param_dict:dict = _load_config_file(config_path) | _get_envs()
+    config_param_dict: dict = _load_config_file(config_path) | _get_envs()
+    if LURKER_KEYWORD in config_param_dict:
+        # keyword_param_value may be str, a list from _load_config_file or a string representing a list from _get_envs
+        keyword_param_value = config_param_dict[LURKER_KEYWORD]
+        if type(keyword_param_value) is str:
+            keyword_param_parsed = transform_to_list(keyword_param_value)
+            if type(keyword_param_parsed) is not list:
+                config_param_dict[LURKER_KEYWORD] = [keyword_param_parsed]
+            else:
+                config_param_dict[LURKER_KEYWORD] = keyword_param_parsed
+
     if LURKER_SPEECH_CONFIG in config_param_dict:
         # modify param dict to actually contain the nested dataclass object
         speech_config_param_value = config_param_dict[LURKER_SPEECH_CONFIG]
@@ -120,3 +130,11 @@ def load_lurker_config(config_path: str) -> LurkerConfig:
             config_param_dict[LURKER_HANDLER_CONFIG] = handler_config_param_value
 
     return LurkerConfig(**config_param_dict)
+
+
+def transform_to_list(original: str) -> List[str]:
+    print(f"about to transform: {original}")
+    if original.startswith("[") and original.endswith("]"):
+        return [item.replace("\"", "").replace("'", "").strip() for item in original[1:-1].split(",")]
+    else:
+        return [original]

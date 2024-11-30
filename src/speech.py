@@ -3,7 +3,7 @@ import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from time import sleep
-from typing import Callable, Any, Optional, Collection
+from typing import Callable, Any, Optional, Collection, List
 
 import numpy as np
 import sounddevice as sd
@@ -12,6 +12,7 @@ from src import log, sound
 from src.config import SpeechConfig
 from src.text import filter_non_alnum
 from src.transcription import Transcriber
+from src.utils import KeyParagraphMapping
 
 LOGGER = log.new_logger(__name__)
 
@@ -44,7 +45,7 @@ class SpeechToTextListener:
 
         self.keyword_queue_bucket_means = deque(maxlen=100)
 
-    def start_listening(self, keyword: str, instruction_callback: Callable[[str], None]):
+    def start_listening(self, keyword: List[str], instruction_callback: Callable[[str], None]):
         """
         Blocks this thread.
         :param keyword: A sequence of words to mark start instruction recording.
@@ -59,6 +60,7 @@ class SpeechToTextListener:
         self._logger.info("Start recording using keyword '%s'", keyword)
 
         self.is_listening = True
+        keyword = KeyParagraphMapping(keyword, command=None)
         while self.is_listening:
             if self._wait_for_keyword(keyword):
                 sound.play_ready(self.output_device_name)
@@ -85,10 +87,10 @@ class SpeechToTextListener:
     def _fill_instruction_queue(self, indata: np.ndarray, frames: int, t: Any, status: sd.CallbackFlags) -> None:
         return self.instruction_queue.extend(indata[:, 0])
 
-    def _wait_for_keyword(self, keyword: str) -> bool:
+    def _wait_for_keyword(self, keyword: KeyParagraphMapping) -> bool:
         with self._start_new_input_audio_stream(self._fill_keyword_queue):
             intermediate_decode: str = ""
-            while self.is_listening and (intermediate_decode == "" or keyword not in intermediate_decode):
+            while self.is_listening and (intermediate_decode == "" or not keyword.matches(intermediate_decode)):
                 sleep(self.speech_config.queue_check_interval_seconds)
                 intermediate_decode = ""
                 self._logger.debug("Did not find keyword '%s' in '%s'", keyword, intermediate_decode)
@@ -106,7 +108,7 @@ class SpeechToTextListener:
                     intermediate_decode = filter_non_alnum(transcription)
                     self._clear_queues()
 
-        if keyword in intermediate_decode:
+        if keyword.matches(intermediate_decode):
             self._logger.info("Found keyword '%s' in '%s'", keyword, intermediate_decode)
             return True
         return False

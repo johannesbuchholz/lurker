@@ -6,7 +6,7 @@
   "LURKER_SPEECH_CONFIG": {
     "transcription_timeout_seconds": 3
   },
-  "LURKER_KEYWORD": "hey john",
+  "LURKER_KEYWORD": ["hey john(ny)?", "hey johnson"],
   "LURKER_LANGUAGE": "de",
   "LURKER_LOG_LEVEL": "INFO",
   "LURKER_INPUT_DEVICE": "jabra",
