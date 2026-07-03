@@ -104,7 +104,7 @@ class SpeechToTextListener:
                 self.keyword_queue_bucket_means.append(queue_mean)
                 if is_relevant:
                     self._logger.debug("About to transcribe keyword queue")
-                    transcription = self.call_for_transcription(self.keyword_queue, timeout_s=self.speech_config.transcription_timeout_seconds)
+                    transcription = self._call_for_transcription(self.keyword_queue, timeout_s=self.speech_config.transcription_timeout_seconds)
                     intermediate_decode = filter_non_alnum(transcription)
                     self._clear_queues()
 
@@ -127,9 +127,10 @@ class SpeechToTextListener:
                    and (len(self.instruction_queue) < self.instruction_queue.maxlen)):
                 sleep(self.speech_config.queue_check_interval_seconds)
             self._logger.debug("About to transcribe instruction queue")
-            recorded_instruction: str = filter_non_alnum(self.call_for_transcription(self.instruction_queue, timeout_s=self.speech_config.transcription_timeout_seconds))
+            recorded_instruction: str = filter_non_alnum(self._call_for_transcription(self.instruction_queue, timeout_s=self.speech_config.transcription_timeout_seconds))
             self._logger.debug("Recorded instruction: sample_count={}, text={}".format(len(self.instruction_queue), recorded_instruction))
             return recorded_instruction
+        return ""
 
     def _clear_queues(self) -> None:
         self.keyword_queue.clear()
@@ -146,7 +147,7 @@ class SpeechToTextListener:
         self._logger.log(1, f"Compute silence threshold: ambiance_level_median * ambiance_level_factor = {ambiance_level_median} * {ambiance_level_factor} = {factorized_threshold} -> threshold {threshold}")
         return threshold
 
-    def call_for_transcription(self, audio_data, timeout_s) -> str:
+    def _call_for_transcription(self, audio_data, timeout_s) -> str:
         self._logger.debug(f"Start transcribing with timeout {timeout_s}s")
         t_start = time.time()
         future = self._EXECUTOR.submit(self.transcriber.transcribe, audio_data)
@@ -164,7 +165,7 @@ def _has_keyword_queue_leading_silence_followed_by_speech_and_silence(data: Coll
                                                                       required_speech_ratio: float,
                                                                       required_trailing_silence_ratio: float) -> (bool, int):
     """
-    Relevant means that at the start and end of the queue is silence and least an appropriate amount of buckets
+    Relevant means that at the start and end of the queue is silent and least an appropriate amount of buckets
     possesses an average of absolute amplitude above the threshold.
 
 
