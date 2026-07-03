@@ -1,3 +1,4 @@
-sounddevice==0.5.5
-numpy==2.4.6
-openai-whisper
+vosk
+sounddevice
+webrtcvad
+numpy

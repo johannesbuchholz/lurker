@@ -50,24 +50,12 @@ def _load_config_file(path: str) -> Dict[str, Any]:
 
 @dataclass(frozen=True)
 class SpeechConfig:
-    instruction_queue_length_seconds: float = 3.
-    """Number of seconds of audio data the instruction buffer queue should hold after the keyword has been detected."""
-    keyword_queue_length_seconds: float = 1.2
-    """Number of seconds of audio data the keyword buffer queue should hold."""
-    min_silence_threshold: int = 600
-    """Absolute amplitude value under which a mean amplitude of an audio snippet is considered as silent and is not passed to the transcription engine."""
-    queue_check_interval_seconds: float = 0.1
-    """Duration in seconds to wait in between checks whether an an audio queue should be passed to the transcription engine."""
     speech_bucket_count: int = 60
     """Number of partitions of an audio queue over which mean amplitudes are computed in order to determine if the respective queue should be sent to the transcription engine."""
-    required_leading_silence_ratio: float = 0.1
-    """Ratio of leading silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
-    required_speech_ratio: float = 0.15
-    """Ratio of non-silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
-    required_trailing_silence_ratio: float = 0.2
-    """Ratio of trailing silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
-    ambiance_level_factor: float = 1.5
-    """Factor to determine the dynamic silence-threshold based on the mean amplitudes of past keyword-queue evaluations."""
+    required_trailing_silence_chunks: int = 4
+    """Number of trailing silent chunks required to consider speech ended in order to stop audio streaming to ASR backend."""
+    lingering_speech_chunks: int = 12
+    """Number of trailing chunks still feed to ASR backend after VAD gate turned down."""
     transcription_timeout_seconds: float = 3
     """Maximum number of seconds to wait for a transcription before aborting."""
 
