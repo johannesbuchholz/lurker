@@ -1,4 +1,4 @@
 vosk
 sounddevice
-webrtcvad
 numpy
+webrtcvad-wheels
