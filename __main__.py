@@ -33,11 +33,11 @@ def _determine_lurker_home() -> str:
 if __name__ == "__main__":
     lurker_home = _determine_lurker_home()
     lurker_config: LurkerConfig = load_lurker_config(lurker_home + "/config.json")
-    log.init_global_config(lurker_config.LURKER_LOG_LEVEL, file_name=lurker_config.LURKER_LOG_FILE)
+    log.init_global_config(lurker_config.LURKER_LOG_LEVEL, file_name=lurker_config.LURKER_LOG_FILE, lurker_home=lurker_home)
     LOGGER.info(f"{_TITLE}\n{__version__}\n")
 
     LOGGER.info(f"Determined lurker home: {lurker_home}")
     LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
 
     lurker = lurker.get_new(lurker_home=lurker_home, lurker_config=lurker_config)
-    lurker.start_main_loop(lurker_config.LURKER_KEYWORD, lurker_config.LURKER_ACTION_REFRESH_INTERVAL)
+    lurker.start_main_loop()

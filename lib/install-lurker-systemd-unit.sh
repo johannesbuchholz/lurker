@@ -23,9 +23,17 @@ if ! type "systemd" "systemctl"; then
   exit 1
 fi
 
+if ! (: < /dev/tty) 2>/dev/null; then
+  echo "ERROR: No terminal available to ask for confirmation"
+  exit 1
+fi
+
 echo
 echo "Continue? (y/n)"
-read -r userinput </dev/tty
+if ! read -r userinput </dev/tty; then
+  echo "ERROR: Could not read your confirmation"
+  exit 1
+fi
 if [ ! "${userinput}" = "y" ]; then
   exit 0
 fi

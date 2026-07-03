@@ -1,46 +1,38 @@
-import importlib
-import sys
-from typing import Optional, Union, List
+import os
+import signal
+from dataclasses import dataclass
 
 from src import log, sound
-from src.action import ActionRegistry, ActionHandler, LoadedHandlerType, NOPHandler
+from src.actions.action import ActionGenerator, NOPHandler, DummyHandler, ActionHandler
 from src.config import LurkerConfig
+from src.keyword import Keyword
 from src.speech import SpeechToTextListener
 from src.transcription import Transcriber
 
 LOGGER = log.new_logger(__name__)
 
+@dataclass(frozen=True, slots=True)
+class Actor:
+    """ Bridges ASR output to action execution. """
+    registry: ActionGenerator
+    handler: ActionHandler
+    output_device_name: str | None
 
-class Lurker:
-    """
-    Ties different services together in order to act upon incoming instructions.
-    """
+    _logger = log.new_logger(__qualname__)
 
-    def __init__(self,
-                 registry: ActionRegistry,
-                 handler: ActionHandler,
-                 listener: SpeechToTextListener,
-                 input_device_name: str,
-                 output_device_name: str
-                 ):
-        self._logger = log.new_logger(self.__class__.__name__)
-        self.registry = registry
-        self.handler = handler
-        self.listener = listener
-        self.input_device_name = input_device_name
-        self.output_device_name = output_device_name
+    def act_on_instruction(self, instruction: str) -> None:
+        self._logger.info(f"Trying to find action for instruction '{instruction}'")
+        sound.play_understood(self.output_device_name)
 
-    def act(self, instruction: str) -> None:
-        finding = self.registry.find(instruction)
-        if finding is None:
+        state = self.handler.get_state()
+        lights = self.registry.generate_lights(instruction, state=state)
+        if lights is None or len(lights) < 1:
             self._logger.info(f"Could not find action for instruction '{instruction}'")
             sound.play_no(self.output_device_name)
         else:
-            action, match = finding
-            self._logger.debug(f"Found action for instruction {instruction}: action={action}, match={match}")
-            sound.play_understood(self.output_device_name)
+            self._logger.debug(f"Found action for instruction {instruction}: action={lights}")
             try:
-                handler_exit_code = self.handler.handle(action, match)
+                handler_exit_code = self.handler.handle(lights)
             except Exception as e:
                 self._logger.error(f"Unhandled exception when handling instruction {instruction}: {type(e)} {e}", exc_info=e)
                 handler_exit_code = 1
@@ -49,38 +41,85 @@ class Lurker:
                 self._logger.info(f"Successfully acted on instruction: {instruction}")
                 sound.play_ok(self.output_device_name)
             else:
-                self._logger.info(f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
+                self._logger.info(
+                    f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
                 sound.play_no(self.output_device_name)
 
-    def start_main_loop(self, keyword: List[str], action_refresh_interval_s: Union[int, str] = 5) -> None:
+
+class Lurker:
+    """
+    Ties different services together in order to act upon incoming instructions.
+    """
+
+    def __init__(self,
+                 registry: ActionGenerator,
+                 handler: ActionHandler,
+                 listener: SpeechToTextListener,
+                 input_device_name: str | None,
+                 output_device_name: str | None
+                 ):
+        self._logger = log.new_logger(self.__class__.__name__)
+        self.registry = registry
+        self.handler = handler
+        self.listener = listener
+        self.input_device_name = input_device_name
+        self.output_device_name = output_device_name
+
+    def start_main_loop(self) -> None:
         LOGGER.info("Initializing...")
-        self.registry.load_actions_once()
-        self.registry.start_periodic_reloading_in_background(interval_duration_s=int(action_refresh_interval_s))
         sound.load_sounds()
 
         LOGGER.info("Start listening...")
         sound.play_startup(self.output_device_name)
         try:
-            self.listener.start_listening(keyword=keyword, instruction_callback=self.act)
+            self.listener.start_listening()
+            signal.pause()
         except Exception as e:
             LOGGER.error(f"Fatal error: {e}", exc_info=e)
             exit(1)
 
 
-def _load_external_handler_module(module_name: Optional[str]) -> None:
+def _resolve_speech_model(lurker_home: str, language: str, suffix_filter: str = "") -> str:
+    """Resolve the model matching the language infix with the highest version."""
+    models_dir = os.path.join(lurker_home, "models", "onnx")
+    lang_infix = f"-{language.lower()}-"
+    # alphabetically ascending; since versions sort numerically within a name
+    matches = sorted(os.listdir(models_dir))
+    for entry in matches:
+        if lang_infix not in entry:
+            continue
+        if suffix_filter and not suffix_filter in entry:
+            continue
+        return os.path.join(models_dir, entry)
+    raise ValueError(
+        f"No model found for language '{language}' in {models_dir}: available={list(os.listdir(models_dir))}"
+    )
+
+
+def _resolve_handler(lurker_home: str, lurker_config: LurkerConfig) -> ActionHandler:
     """
-    If the module contains a class extending ActionHandler, that class will trigger
-    __init_subclass__ of ActionHandler and thereby be registered.
+    Resolve the configured action handler from the predefined keywords ``NOOP``, ``DUMMY`` and ``HUE``.
+    Unknown values fall back to ``NOOP`` with a warning.
     """
-    if module_name is None:
-        return
-    elif module_name in sys.modules.keys():
-        LOGGER.warning(f"Could not add dynamically loaded module {module_name} to modules: It already exists in sys.modules.keys()")
-        return
-    # load module
-    extmodule = importlib.import_module(module_name)
-    sys.modules[module_name] = extmodule
-    LOGGER.debug(f"Loaded external module {extmodule}")
+    raw_value = lurker_config.LURKER_HANDLER_MODULE
+    keyword = raw_value.strip().upper()
+    if keyword == "NOOP":
+        return NOPHandler()
+    if keyword == "DUMMY":
+        return DummyHandler(language=lurker_config.LURKER_LANGUAGE)
+    if keyword == "HUE":
+        from src.handlers.hue_client import HueClient
+        handler_config = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
+        try:
+            return HueClient(**handler_config)
+        except Exception as e:
+            LOGGER.warning(f"Could not instantiate handler {type(HueClient)}: {type(e)} {e} - Using NOPHandler instead.",exc_info=e)
+            return NOPHandler()
+    LOGGER.warning(
+        f"LURKER_HANDLER_MODULE value '{raw_value}' is not a predefined handler keyword (NOOP, DUMMY, HUE); "
+        f"using NOPHandler instead."
+    )
+    return NOPHandler()
 
 
 def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
@@ -88,36 +127,37 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     Blocks this thread.
     """
 
-    _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
+    handler = _resolve_handler(lurker_home, lurker_config)
 
-    handler_type = LoadedHandlerType.get_implementation()
-    # inject lurker_home into handler configuration
-    handler_config_with_home = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
-    try:
-        handler = handler_type(**handler_config_with_home)
-    except Exception as e:
-        LOGGER.warning(f"Could not instantiate handler {handler_type}: {type(e)} {e} - Using default handler instead.", exc_info=e)
-        handler = NOPHandler()
+    # resolve llm model
+    embedding_model_path = _resolve_embedding_model_path(lurker_home)
+    action_generator = ActionGenerator(model_path=embedding_model_path, initial_state=handler.get_state())
 
-    LOGGER.info("Loaded action handler: %s", type(handler))
+    model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE, lurker_config.LURKER_SPEECH_MODEL_SUFFIX)
+    keyword = Keyword(lurker_config.LURKER_KEYWORD)
 
-    actions_path = lurker_home + "/actions"
-    registry = ActionRegistry(actions_path)
-
+    actor = Actor(action_generator, handler, lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(
-        model_path=lurker_config.LURKER_MODEL,
-        spoken_language=lurker_config.LURKER_LANGUAGE
+        keyword=keyword,
+        model_dir_path=model_path,
     )
     listener = SpeechToTextListener(
         transcriber=transcriber,
+        instruction_callback=actor.act_on_instruction,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
-        speech_config=lurker_config.LURKER_SPEECH_CONFIG
+        speech_config=lurker_config.LURKER_SPEECH_CONFIG,
     )
+
     return Lurker(
-        registry=registry,
+        registry=action_generator,
         handler=handler,
         listener=listener,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE
     )
+
+
+def _resolve_embedding_model_path(lurker_home: str) -> str:
+    """A separate method for tests to call"""
+    return os.path.join(lurker_home, "models", "onnx", "paraphrase-multilingual-MiniLM-L12-v2")

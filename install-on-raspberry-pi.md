@@ -1,11 +1,8 @@
 # Run lurker on a raspberry pi
-Running the lurker python project directly on a raspberry pi may be difficult depending on the existence of a suiting python version in [3.9 to 3.11).
-Therefor, setting up a Dockerfile to collect all necessary dependencies seems reasonable instead of crafting a fitting python environment locally.   
+Lurker runs as a plain python program, that is, there is no container layer in between.
+The following recipe takes you through the process of adding the required system tools and installing lurker.
 
-The following recipe takes you through the process of adding the required system tools and lets you build and run lurker.
-There are two alternatives:
-- Set up and run lurker as a python programm
-- Build and run lurker inside a docker container
+Lurker requires a python version as declared in `.python-version`, for example 3.11.
 
 In the following, we assume you are running some debian distribution like [raspberri Pi OS](https://www.raspberrypi.com/software/operating-systems/) with an internet connection already set up.
 
@@ -70,11 +67,7 @@ To get an idea what devices are currently plugged in, run `ls /dev/snd/by-id`. F
 
 ## Install lurker
 
-The following two alternatives take you through the manual step-by-step installation process.
-
-### Alternative 1: Run lurker as a python programm
-
-For this, we assume you already installed a suiting python version.
+The following steps take you through the manual step-by-step installation process.
 
 ### Install required tools
 
@@ -93,38 +86,13 @@ sudo apt install libportaudio2
 Run the python installer script
 
 ```shell
-wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker.sh | sh -s -- -p
+wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker.sh | sh
 ```
 
-## Alternative 2: Run lurker as a docker image
-
-### Install docker
-
-Install debian docker as described in https://docs.docker.com/engine/install/debian/
-
-For example, use the convenience script (be aware of the downsides mentioned on the above website):
- ```shell
- curl -fsSL https://get.docker.com -o get-docker.sh
- sudo sh ./get-docker.sh --dry-run
- sudo sh ./get-docker.sh
- ```
-
-Add current user to docker group
- ```shell
- newgrp docker
- sudo usermod -aG docker $USER
- docker info
- ```
-
-### Build and set up the docker image
-Run the docker installer script
-
-```shell
-wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker.sh | sh -s -- -d
-```
+The script creates a virtual environment, downloads the required models to `~/.local/opt/lurker/<version>/lurker/models/onnx` and asks whether to install the systemd service right away.
 
 ## Run
-The installer script created an entry-point script at `$HOME/lurker/<version>/run-lurker.sh`.
+The installer script created an entry-point script at `$HOME/.local/opt/lurker/<version>/run-lurker.sh`.
 Run that script to launch lurker and optionally enable option `-m` to read configuration from a device mounted at `/media`
 
 ## Start lurker on system startup
@@ -139,5 +107,5 @@ where `LURKER_STARTUP_CMD` holds the command to run your lurker installation.
 
 For example, the python installation may be run with 
 ```shell
-$HOME/lurker/<version>/venv/bin/python $HOME/lurker/<version> --lurker-home $HOME/lurker/<version>/lurker
+$HOME/.local/opt/lurker/<version>/venv/bin/python $HOME/.local/opt/lurker/<version> --lurker-home $HOME/.local/opt/lurker/<version>/lurker
 ```

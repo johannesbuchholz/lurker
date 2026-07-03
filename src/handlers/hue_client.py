@@ -1,49 +1,51 @@
 import json
+from collections.abc import Collection
 from http.client import HTTPResponse
-from typing import Collection, Any, Dict, Callable, Match, List
+from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
-from src.action import ActionHandler
-from src.utils import KeyParagraphMapping
+from src.actions.action import ActionHandler
+from src.handlers.lights import Light, State
 
-ALL_LIGHTS_ID = "ALL"
-LIGHT_ID_STRING_DELIMITER = ","
 
-class LightState:
+def _from_api_state(api: dict[str, Any]) -> State:
+    return State(
+        on=api.get("on"),
+        hue=round(api["hue"] * 360 / 65535) if "hue" in api else None,
+        sat=round(api["sat"] * 100 / 254) if "sat" in api else None,
+        bri=round(api["bri"] * 100 / 254) if "bri" in api else None,
+    )
 
-    ALLOWED_LIGHT_KEYS = ["on", "sat", "bri", "hue"]
 
-    def __init__(self, **kwargs):
-        self.state = {k: v for k, v in kwargs.items() if k in LightState.ALLOWED_LIGHT_KEYS}
+def _to_api_state(state: State) -> dict[str, bool | int]:
+    result = {}
+    if state.on is not None:
+        result["on"] = state.on
+    if state.hue is not None:
+        result["hue"] = round(state.hue * 65535 / 360)
+    if state.sat is not None:
+        result["sat"] = round(state.sat * 254 / 100)
+    if state.bri is not None:
+        result["bri"] = max(1, round(state.bri * 254 / 100))
+    return result
 
-    def to_http_request(self, host: str, user: str, light_id: str) -> Request:
-        url = f"http://{host}/api/{user}/lights/{light_id}/state"
-        data = self.to_json().encode("ascii")
-        return Request(url, method="PUT", data=data)
 
-    def __str__(self):
-        return str(self.to_dict())
+def _map_to_lights(raw_lights: dict[str, Any]) -> dict[str, Light]:
+    return {
+        light_id: Light(
+            id=light_id,
+            name=light["name"],
+            state=_from_api_state(light["state"])
+        )
+        for light_id, light in raw_lights.items()
+        if "name" in light and "state" in light
+    }
 
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
-
-    def to_dict(self) -> Dict[str, str]:
-        return {k: v for k, v in self.state.items() if v is not None}
-
-class LightAction:
-
-    def __init__(self, light_ids: Collection[str], state: LightState):
-        self.light_ids = light_ids
-        self.state = state
-
-    def __str__(self):
-        return f"{self.__class__.__name__}[ids={self.light_ids}, state={self.state}]"
-
-    def __repr__(self):
-        return self.__str__()
 
 class HueClient(ActionHandler):
+
+    accepted_type = "hue"
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -52,37 +54,8 @@ class HueClient(ActionHandler):
         self.actions_path = kwargs["lurker_home"] + "/actions"
 
         self.lights = {}
-        self._special_commands: Dict[str, Callable[[Match[str]], int]] = {
-            "EXIT": lambda key_match: exit(0),
-            "SAVE": self._save_current_lights_as_action
-        }
 
-    def _save_current_lights_as_action(self, key_match: Match) -> int:
-        try:
-            action_key = key_match.group(1)
-        except IndexError as e:
-            self._logger.warning(f"Unable to save current light state: Could not extract group '1' in match {key_match}: {e}")
-            return 1
-
-        if len(action_key) < 1:
-            self._logger.warning(f"Unable to save current light state: Extracted action key is empty: key_match={key_match}")
-            return 1
-
-        file_name_suffix = action_key.replace(" ", "_").lower()
-        lights = self._retrieve_lights()
-        if len(lights) < 1:
-            self._logger.warning("No light ids available. Abort saving current light settings.")
-            return 1
-
-        light_action_dict = {light_id: LightState(**light["state"]).to_dict() for light_id, light in lights.items() if "state" in light}
-        action_dict = {"keys": [action_key], "command": light_action_dict}
-        file_path = self.actions_path + f"/{self.__class__.__name__}_saved_{file_name_suffix}.json"
-        with open(file_path, "w") as file_handle:
-            json.dump(action_dict, file_handle, indent=2)
-        self._logger.info(f"Wrote action to {file_path}: {action_dict}")
-        return 0
-
-    def _retrieve_lights(self) -> Dict[str, Any]:
+    def _retrieve_lights(self) -> dict[str, Any]:
         url = f"http://{self.host}/api/{self.user}/lights"
         try:
             response: HTTPResponse = urlopen(url, timeout=8.)
@@ -97,41 +70,52 @@ class HueClient(ActionHandler):
         self._logger.info(f"Available lights: {light_dict.keys()}")
         return light_dict
 
-    def _light(self, light_actions: Collection[LightAction]) -> int:
-        self._logger.info(f"Applying light actions: {light_actions}")
+    def _light(self, lights: Collection[Light]) -> int:
+        self._logger.info(f"Applying light actions: {lights}")
         if len(self.lights) < 1:
             self._logger.warning("Can not send request: light ids have not been initialized")
             return 1
-        for action in light_actions:
-            for light_id in action.light_ids:
-                http_request = action.state.to_http_request(self.host, self.user, light_id)
-                self._logger.debug(f"Sending request: {http_request.get_method()} {http_request.data}")
-                try:
-                    urlopen(http_request, timeout=4.)
-                except Exception as e:
-                    self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
+        for light in lights:
+            http_request = to_http_request(light.state, self.host, self.user, light.id)
+            self._logger.debug(f"Sending request: {http_request.get_method()} {http_request.data}")
+            try:
+                urlopen(http_request, timeout=4.)
+            except Exception as e:
+                self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light.id}, msg={str(e)}", exc_info=e)
         return 0
 
-    def handle(self, action: KeyParagraphMapping, key_match: Match[str]) -> int:
-        command = action.value
-        if type(command) is str:
-            special_command = self._special_commands.get(command, None)
-            if special_command is not None:
-                self._logger.info(f"Handling special command with matching key: command={command}, key_match={key_match}")
-                return special_command(key_match)
-        return self._handle_internal(action)
+    def handle(self, action) -> int:
+        """Accepts a single Light or a collection of Lights."""
+        if isinstance(action, Light):
+            lights = [action]
+        elif isinstance(action, Collection) and all(isinstance(light, Light) for light in action):
+            lights = list(action)
+        else:
+            self._logger.info(f"Skipping non-light action: type={type(action)}, action={action}")
+            return 0
+        return self._handle_internal(lights)
 
-    def _handle_internal(self, action: KeyParagraphMapping) -> int:
+    def _handle_internal(self, lights: list[Light]) -> int:
         if len(self.lights) < 1:
             self.lights = self._retrieve_lights()
+        return self._light(lights)
 
-        light_actions: List[LightAction] = []
-        for item in action.value.items():
-            light_id_string, light_request = item
-            if light_id_string == ALL_LIGHTS_ID:
-                light_ids = list(self.lights.keys())
-            else:
-                light_ids = [id_str.strip() for id_str in light_id_string.split(LIGHT_ID_STRING_DELIMITER) if len(id_str) > 0 and not id_str.isspace()]
-            light_actions.append(LightAction(light_ids=light_ids, state=LightState(**light_request)))
+    def get_state(self) -> dict[str, Any]:
+        """
+        :return: The current state of the lights as JSON string.
+        """
+        self.lights = self._retrieve_lights()
+        return _map_to_lights(self.lights)
 
-        return self._light(light_actions)
+
+def to_http_request(state: State, host: str, user: str, light_id: str) -> Request:
+    url = f"http://{host}/api/{user}/lights/{light_id}/state"
+    data = json.dumps(_to_api_state(state)).encode("ascii")
+    return Request(url, method="PUT", data=data)
+
+
+
+
+
+
+

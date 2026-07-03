@@ -2,17 +2,17 @@ import dataclasses
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Union, Optional, List, Any
+from typing import Any
 
 from src import log
 
 LURKER_KEYWORD = "LURKER_KEYWORD"
-LURKER_MODEL = "LURKER_MODEL"
 LURKER_LOG_LEVEL = "LURKER_LOG_LEVEL"
 LURKER_LOG_FILE = "LURKER_LOG_FILE"
 LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
 LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
 LURKER_LANGUAGE = "LURKER_LANGUAGE"
+LURKER_SPEECH_MODEL_SUFFIX = "LURKER_SPEECH_MODEL_SUFFIX"
 LURKER_SPEECH_CONFIG = "LURKER_SPEECH_CONFIG"
 LURKER_HANDLER_MODULE = "LURKER_HANDLER_MODULE"
 LURKER_HANDLER_CONFIG = "LURKER_HANDLER_CONFIG"
@@ -21,15 +21,15 @@ LURKER_ACTION_REFRESH_INTERVAL = "LURKER_ACTION_REFRESH_INTERVAL"
 LOGGER = log.new_logger(__name__)
 
 
-def _get_envs() -> Dict[str, str]:
+def _get_envs() -> dict[str, str]:
     envs = {
         LURKER_LOG_LEVEL: os.environ.get(LURKER_LOG_LEVEL),
         LURKER_LOG_FILE: os.environ.get(LURKER_LOG_FILE),
-        LURKER_MODEL: os.environ.get(LURKER_MODEL),
         LURKER_KEYWORD: os.environ.get(LURKER_KEYWORD),
         LURKER_INPUT_DEVICE: os.environ.get(LURKER_INPUT_DEVICE),
         LURKER_OUTPUT_DEVICE: os.environ.get(LURKER_OUTPUT_DEVICE),
         LURKER_LANGUAGE: os.environ.get(LURKER_LANGUAGE),
+        LURKER_SPEECH_MODEL_SUFFIX: os.environ.get(LURKER_SPEECH_MODEL_SUFFIX),
         LURKER_SPEECH_CONFIG: os.environ.get(LURKER_SPEECH_CONFIG),
         LURKER_HANDLER_MODULE: os.environ.get(LURKER_HANDLER_MODULE),
         LURKER_HANDLER_CONFIG: os.environ.get(LURKER_HANDLER_CONFIG),
@@ -38,7 +38,7 @@ def _get_envs() -> Dict[str, str]:
     return {key: value for key, value in envs.items() if value is not None}
 
 
-def _load_config_file(path: str) -> Dict[str, Any]:
+def _load_config_file(path: str) -> dict[str, Any]:
     if os.path.exists(path):
         with open(path) as cfg_file_handle:
             cfg: dict = json.load(cfg_file_handle)
@@ -49,53 +49,62 @@ def _load_config_file(path: str) -> Dict[str, Any]:
 
 
 @dataclass(frozen=True)
+class SpeechDetectorConfig:
+    sample_rate: int = 16000
+    """Sample rate for WebRTC VAD. Valid values: 8000, 16000, 32000, 48000."""
+    vad_aggressiveness: int = 2
+    """WebRTC VAD aggressiveness (0-3), higher means more filtering."""
+    energy_factor: float = 2.0
+    """Multiplier above ambient noise level required to consider a chunk as speech."""
+    energy_alpha_attack: float = 0.2
+    """EMA smoothing factor when energy rises above ambient (fast attack). Higher = adapts faster to loud sounds."""
+    energy_alpha_decay: float = 0.005
+    """EMA smoothing factor when energy falls below ambient (slow decay). Lower = ambient stays high longer."""
+
+    def __post_init__(self):
+        valid_rates = [8000, 16000, 32000, 48000]
+        if self.sample_rate not in valid_rates:
+            LOGGER.warning(
+                f"Sample rate {self.sample_rate} not optimal for WebRTC VAD. Valid rates: {valid_rates}"
+            )
+
+
+@dataclass(frozen=True)
 class SpeechConfig:
-    instruction_queue_length_seconds: float = 3.
-    """Number of seconds of audio data the instruction buffer queue should hold after the keyword has been detected."""
-    keyword_queue_length_seconds: float = 1.2
-    """Number of seconds of audio data the keyword buffer queue should hold."""
-    min_silence_threshold: int = 600
-    """Absolute amplitude value under which a mean amplitude of an audio snippet is considered as silent and is not passed to the transcription engine."""
-    queue_check_interval_seconds: float = 0.1
-    """Duration in seconds to wait in between checks whether an an audio queue should be passed to the transcription engine."""
-    speech_bucket_count: int = 60
-    """Number of partitions of an audio queue over which mean amplitudes are computed in order to determine if the respective queue should be sent to the transcription engine."""
-    required_leading_silence_ratio: float = 0.1
-    """Ratio of leading silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
-    required_speech_ratio: float = 0.15
-    """Ratio of non-silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
-    required_trailing_silence_ratio: float = 0.2
-    """Ratio of trailing silent partitions required to consider an audio queue relevant for passing it to the transcription engine."""
-    ambiance_level_factor: float = 1.5
-    """Factor to determine the dynamic silence-threshold based on the mean amplitudes of past keyword-queue evaluations."""
-    transcription_timeout_seconds: float = 3
-    """Maximum number of seconds to wait for a transcription before aborting."""
+    silence_threshold_seconds: float = 1.2
+    """Seconds of silence to accept before stopping to feed audio to ASR backend. Set to negative if you want to only use full results as decided by the ASR-Backend."""
+    prefill_chunks: int = 32
+    """Number of pre-speech audio chunks buffered while gate is DOWN, pushed to ASR when gate opens for context."""
+    frame_ms: int = 20
+    max_open_gate_seconds: float = -1
+    """Maximum time the gate stays open before force-flushing, in seconds."""
+    detector: SpeechDetectorConfig = field(default_factory=SpeechDetectorConfig)
+    """Configuration for speech detection (VAD + energy pre-filter)."""
+    frame_samples: int = int(16000 * (20 / 1000))
 
 
 @dataclass(frozen=True)
 class LurkerConfig:
-    LURKER_LOG_LEVEL: Union[int, str] = "INFO"
+    LURKER_LOG_LEVEL: int | str = "INFO"
     """The log level of the lurker application according to the python logging module."""
-    LURKER_LOG_FILE: Optional[str] = "lurkerlog"
-    """If specified, lurker additionally logs a file with the given name in the current working directory."""
-    LURKER_INPUT_DEVICE: Optional[str] = None
+    LURKER_LOG_FILE: str | None = "lurkerlog"
+    """If specified, lurker additionally logs to a file with the given name. May be an absolute or relative path or a file name."""
+    LURKER_INPUT_DEVICE: str | None = None
     """Name of the device that should be used for recording audio. This might also be a substring of the actual name."""
-    LURKER_OUTPUT_DEVICE: Optional[str] = None
+    LURKER_OUTPUT_DEVICE: str | None = None
     """Name of the device that should be used for playing feedback sounds. This might also be a substring of the actual name."""
-    LURKER_KEYWORD: List[str] = field(default_factory=lambda : ["hey john"])
+    LURKER_KEYWORD: list[str] = field(default_factory=lambda : ["hey john"])
     """A word sequence upon which lurker should start recording actions."""
-    LURKER_MODEL: str = "tiny"
-    """A model name or an absolute path to a model file that should be used by the transcription engine."""
     LURKER_LANGUAGE: str = "en"
     """The language of the spoken words that should be transcribed by lurker. Setting this value usually improves transcription time."""
+    LURKER_SPEECH_MODEL_SUFFIX: str = ""
+    """Optional suffix to filter the model name by, e.g. ``-lgraph``. Empty string disables the filter."""
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)
-    """Configuration of audio queues and how to determine if a queue should be handed over to the more expensive transcription process."""
-    LURKER_HANDLER_MODULE: str = "src.handlers.hue_client"
-    """Module name containing a single implementation of src.action.ActionHandler to be used for acting on recorded instructions."""
-    LURKER_HANDLER_CONFIG: Dict[str, str] = field(default_factory=dict)
+    """Configuration of how Lurker handles the speech to text process."""
+    LURKER_HANDLER_MODULE: str = "HUE"
+    """Handler to act on recorded instructions. Predefined keyword: ``NOOP`` (no-op), ``DUMMY`` (fixed example light state, logs actions), ``HUE`` (Philips Hue bridge). Unknown values fall back to ``NOOP`` with a warning."""
+    LURKER_HANDLER_CONFIG: dict[str, str] = field(default_factory=dict)
     """Configuration passed to the configured ActionHandler."""
-    LURKER_ACTION_REFRESH_INTERVAL: Union[int, str] = 5
-    """Duration in seconds between action reloading attempts."""
 
     def to_pretty_str(self) -> str:
         key_value_strings = [f"{field_name}={value}" for field_name, value in dataclasses.asdict(self).items()]
@@ -132,8 +141,7 @@ def load_lurker_config(config_path: str) -> LurkerConfig:
     return LurkerConfig(**config_param_dict)
 
 
-def transform_to_list(original: str) -> List[str]:
-    print(f"about to transform: {original}")
+def transform_to_list(original: str) -> list[str]:
     if original.startswith("[") and original.endswith("]"):
         return [item.replace("\"", "").replace("'", "").strip() for item in original[1:-1].split(",")]
     else:
