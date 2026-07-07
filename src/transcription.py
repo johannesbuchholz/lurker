@@ -4,7 +4,8 @@ from collections import deque
 from vosk import Model, KaldiRecognizer
 
 
-class VoskASR:
+class Transcriber:
+
     def __init__(self, model_path: str, sample_rate: int = 16000, max_words: int = 200):
         self.model = Model(model_path)
         self.recognizer = KaldiRecognizer(self.model, sample_rate)

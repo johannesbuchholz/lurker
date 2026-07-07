@@ -50,14 +50,24 @@ def _load_config_file(path: str) -> Dict[str, Any]:
 
 @dataclass(frozen=True)
 class SpeechConfig:
-    speech_bucket_count: int = 60
-    """Number of partitions of an audio queue over which mean amplitudes are computed in order to determine if the respective queue should be sent to the transcription engine."""
     required_trailing_silence_chunks: int = 4
     """Number of trailing silent chunks required to consider speech ended in order to stop audio streaming to ASR backend."""
     lingering_speech_chunks: int = 12
     """Number of trailing chunks still feed to ASR backend after VAD gate turned down."""
     transcription_timeout_seconds: float = 3
     """Maximum number of seconds to wait for a transcription before aborting."""
+    sample_rate: int = 16000
+    frame_ms: int = 20
+    vad_aggressiveness: int = 2
+    frame_samples: int = int(sample_rate * (frame_ms / 1000))
+
+    def __post_init__(self):
+        # Validate and adjust sample rate for WebRTC VAD
+        valid_rates = [8000, 16000, 32000, 48000]
+        if self.sample_rate not in valid_rates:
+            LOGGER.warning(
+                f"Sample rate {self.sample_rate} not optimal for WebRTC VAD. Valid rates: {valid_rates}"
+            )
 
 
 @dataclass(frozen=True)
@@ -72,8 +82,6 @@ class LurkerConfig:
     """Name of the device that should be used for playing feedback sounds. This might also be a substring of the actual name."""
     LURKER_KEYWORD: List[str] = field(default_factory=lambda : ["hey john"])
     """A word sequence upon which lurker should start recording actions."""
-    LURKER_MODEL: str = "tiny"
-    """A model name or an absolute path to a model file that should be used by the transcription engine."""
     LURKER_LANGUAGE: str = "en"
     """The language of the spoken words that should be transcribed by lurker. Setting this value usually improves transcription time."""
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)

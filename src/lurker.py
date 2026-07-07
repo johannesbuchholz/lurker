@@ -1,4 +1,5 @@
 import importlib
+import os
 import sys
 from typing import Optional, Union, List
 
@@ -20,8 +21,8 @@ class Lurker:
                  registry: ActionRegistry,
                  handler: ActionHandler,
                  listener: SpeechToTextListener,
-                 input_device_name: str,
-                 output_device_name: str
+                 input_device_name: Optional[str],
+                 output_device_name: Optional[str]
                  ):
         self._logger = log.new_logger(self.__class__.__name__)
         self.registry = registry
@@ -67,6 +68,16 @@ class Lurker:
             exit(1)
 
 
+def _resolve_model(lurker_home: str, language: str) -> str:
+    models_dir = os.path.join(lurker_home, "models", "vosk")
+    lang_infix = f"-{language.lower()}-"
+    listdir = os.listdir(models_dir)
+    for entry in listdir:
+        if lang_infix in entry:
+            return os.path.join(models_dir, entry)
+    raise ValueError(f"No model found for language '{language}' in {models_dir}: available={list(listdir)}")
+
+
 def _load_external_handler_module(module_name: Optional[str]) -> None:
     """
     If the module contains a class extending ActionHandler, that class will trigger
@@ -104,9 +115,9 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     actions_path = lurker_home + "/actions"
     registry = ActionRegistry(actions_path)
 
+    model_path = _resolve_model(lurker_home, lurker_config.LURKER_LANGUAGE)
     transcriber = Transcriber(
-        model_path=lurker_config.LURKER_MODEL,
-        spoken_language=lurker_config.LURKER_LANGUAGE
+        model_path=model_path
     )
     listener = SpeechToTextListener(
         transcriber=transcriber,

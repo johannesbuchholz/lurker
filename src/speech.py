@@ -1,15 +1,15 @@
 from collections import deque
-from dataclasses import dataclass
-from typing import Protocol, Any
+from typing import Callable, List, Optional, Protocol, Any
 
 import numpy as np
 import sounddevice as sd
 import webrtcvad
 
 import log
+from src.config import SpeechConfig
 
 NON_SPEECH_CHUNK_GATE_THRESHOLD = 6
-
+logger = log.new_logger(__qualname__)
 
 class ASRBackend(Protocol):
     def feed_data(self, pcm_bytes: bytes) -> None:
@@ -24,31 +24,8 @@ class ASRBackend(Protocol):
         """
         ...
 
-@dataclass
-class ASRConfig:
-    sample_rate: int = 16000
-    frame_ms: int = 20
-    vad_aggressiveness: int = 2
-    frame_samples: int = None
 
-    def __post_init__(self):
-        # Validate and adjust sample rate for WebRTC VAD
-        valid_rates = [8000, 16000, 32000, 48000]
-        if self.sample_rate not in valid_rates:
-            import log
-            logger = log.new_logger(__qualname__)
-            logger.warning(
-                f"Sample rate {self.sample_rate} not optimal for WebRTC VAD. "
-                f"Using 16000 instead. Valid rates: {valid_rates}"
-            )
-            self.sample_rate = 16000
-
-        # Calculate frame samples if not provided
-        if self.frame_samples is None:
-            self.frame_samples = int(self.sample_rate * (self.frame_ms / 1000))
-
-
-class StreamingVoiceOrchestrator:
+class SpeechToTextListener:
     """
     Mic → VAD (external) → Gate → ASR (abstracted backend)
     """
@@ -59,19 +36,24 @@ class StreamingVoiceOrchestrator:
         DOWN = 0
         UP = 1
 
-    def __init__(self, asr_backend, config=None):
-        self._asr = asr_backend
-        self._capture_config = config or ASRConfig()
+    def __init__(self, transcriber: ASRBackend,
+                 input_device_name: Optional[str] = None,
+                 output_device_name: Optional[str] = None,
+                 speech_config: Optional[SpeechConfig] = None):
+        self._asr = transcriber
+        self._input_device_name = input_device_name
+        self._output_device_name = output_device_name
+        self._capture_config = speech_config or SpeechConfig()
 
         self._gate = self.GateState.DOWN
         self._last_non_speech_chunk_count = 0
         self._lingering_chunks: deque[bytes] = deque(maxlen=8)
         self._audio_stream = None
-        self._vad = webrtcvad.Vad(config.vad_aggressiveness)
+        self._vad = webrtcvad.Vad(self._capture_config.vad_aggressiveness)
 
         self._running = False
 
-    def start(self, device=None):
+    def start_listening(self, keyword: List[str], instruction_callback: Callable[[str], None]):
         if self._running:
             return
 
@@ -82,7 +64,7 @@ class StreamingVoiceOrchestrator:
             channels=1,
             dtype="int16",
             blocksize=self._capture_config.frame_samples,
-            device=device,
+            device=self._input_device_name or None,
             callback=self._process_audio_callback,
         )
         self._audio_stream.start()
