@@ -21,6 +21,12 @@ class ASRBackend(Protocol):
         """
         ...
 
+    def flush(self) -> None:
+        """
+        Flush accumulated transcription at sentence boundary.
+        """
+        ...
+
     def reset(self) -> None:
         """
         Reset internal ASR state (start of new utterance/session).
@@ -50,6 +56,8 @@ class SpeechToTextListener:
 
         self._gate = self.GateState.DOWN
         self._last_non_speech_chunk_count = 0
+        self._gate_chunk_count = 0
+        self._max_open_gate_chunks = int(self._capture_config.max_open_gate_seconds / (self._capture_config.frame_ms / 1000))
         self._lingering_chunks: deque[bytes] = deque(maxlen=8)
         self._audio_stream = None
         self._vad = webrtcvad.Vad(self._capture_config.vad_aggressiveness)
@@ -86,9 +94,10 @@ class SpeechToTextListener:
         +--------+---------+-------------+----------------------------------+
         | DOWN   | yes     | —           | reset ASR, feed lingering+current |
         | DOWN   | no      | —           | append to lingering               |
-        | UP     | yes     | reset       | feed current                      |
-        | UP     | no      | ≤ threshold | feed current (silence context)    |
-        | UP     | no      | > threshold | close gate, append, return        |
+        | UP     | *       | > max       | force flush, close gate           |
+        | UP     | yes     | ≤ max       | feed current, increment           |
+        | UP     | no      | ≤ max       | feed current, inc silence counter |
+        | UP     | no      | > silence   | close gate, append, return        |
         +--------+---------+-------------+----------------------------------+
         """
         if not self._running:
@@ -108,11 +117,15 @@ class SpeechToTextListener:
             return
 
         # gate is UP
+        self._gate_chunk_count += 1
+        if self._gate_chunk_count > self._max_open_gate_chunks:
+            self._close_gate()
+            return
+
         if not is_speech:
             self._last_non_speech_chunk_count += 1
             if self._last_non_speech_chunk_count > NON_SPEECH_CHUNK_GATE_THRESHOLD:
                 self._close_gate()
-                self._lingering_chunks.append(incoming)
                 return
         else:
             self._last_non_speech_chunk_count = 0
@@ -122,9 +135,11 @@ class SpeechToTextListener:
     def _open_gate(self):
         self._gate = self.GateState.UP
         self._last_non_speech_chunk_count = 0
+        self._gate_chunk_count = 0
         self._asr.reset()
 
     def _close_gate(self):
+        self._asr.flush()
         self._gate = self.GateState.DOWN
 
     def _call_vad(self, pcm_bytes: bytes) -> bool:

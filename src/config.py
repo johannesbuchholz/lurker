@@ -59,6 +59,8 @@ class SpeechConfig:
     sample_rate: int = 16000
     frame_ms: int = 20
     vad_aggressiveness: int = 2
+    max_open_gate_seconds: float = 4.0
+    """Maximum time the gate stays open before force-flushing, in seconds."""
     frame_samples: int = int(sample_rate * (frame_ms / 1000))
 
     def __post_init__(self):

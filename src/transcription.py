@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
-import queue
 import threading
 from collections import deque
-from typing import Callable, List
+from typing import Callable
 
 from vosk import Model, KaldiRecognizer
 
@@ -25,27 +24,6 @@ class Transcriber:
         self._callback = callback
         self._keyword = keyword
 
-        self._keyword_candidate_queue: queue.Queue[List[str]] = queue.Queue(maxsize=3)
-        self._keyword_candidate_worker = threading.Thread(target=self._check_for_instructions, daemon=True)
-        self._keyword_candidate_worker.start()
-
-
-    def _check_for_instructions(self) -> None:
-        """
-        Inspects candidates for key word and sends to callback if necessary.
-        1. Polls the next candidate if available, else waits
-        2. Checks if the keyword is present in the current candidate.
-        3. Submits the concatenated Strings after the keyword as the "instruction" to the callback.
-        """
-        while True:
-            candidate = self._keyword_candidate_queue.get()
-            text = " ".join(candidate)
-            end = self._keyword.is_in(text)
-            if end is not None:
-                instruction = text[end:].strip()
-                if instruction:
-                    self._callback(instruction)
-
     def feed_data(self, pcm_bytes: bytes) -> None:
         if self._recognizer.AcceptWaveform(pcm_bytes):
             result_str = self._recognizer.Result()
@@ -57,25 +35,26 @@ class Transcriber:
 
             text = result.get("text", "").strip()
             if text:
-                self._push_text(text)
+                self._transcription.extend(text.split())
+
+    def flush(self) -> None:
+        """
+        Called at sentence boundary (e.g. on silence detection).
+        Checks accumulated transcription for keyword and fires callback if found.
+        """
+        full_text = " ".join(self._transcription)
+        end = self._keyword.is_in(full_text)
+        if end is not None:
+            instruction = full_text[end:].strip()
+            if instruction:
+                threading.Thread(
+                    target=self._callback, args=(instruction,), daemon=True
+                ).start()
+        self._transcription.clear()
 
     def reset(self) -> None:
         self._recognizer.Reset()
         self._transcription.clear()
 
-    def _push_text(self, text: str) -> None:
-        incoming = text.split()
-        if len(incoming) == 0:
-            return
-        self._transcription.extend(incoming)
-        try:
-            self._keyword_candidate_queue.put_nowait(incoming)
-        except queue.Full:
-            self._logger.warning(f"Transcription queue is full: dropping={incoming}")
-            pass
-
     def get_text(self) -> str:
         return " ".join(self._transcription)
-
-    def shutdown(self) -> None:
-        self._keyword_candidate_worker.join(timeout=5)
