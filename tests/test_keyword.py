@@ -1,4 +1,4 @@
-from src.lurker import Keyword
+from src.keyword import Keyword
 
 
 class TestLiteralMatch:

@@ -1,42 +1,16 @@
 import importlib
 import os
-import re
 import sys
-from typing import Optional, Union, List
+from typing import Optional, Union
 
 from src import log, sound
 from src.action import ActionRegistry, ActionHandler, LoadedHandlerType, NOPHandler
 from src.config import LurkerConfig
+from src.keyword import Keyword
 from src.speech import SpeechToTextListener
 from src.transcription import Transcriber
 
 LOGGER = log.new_logger(__name__)
-
-
-class Keyword:
-    def __init__(self, synonyms: List[str]):
-        self._synonyms = synonyms
-        self._literals: List[str] = []
-        self._patterns: List[re.Pattern] = []
-        for synonym in synonyms:
-            if not synonym:
-                continue
-            if synonym.startswith("/") and synonym.endswith("/") and len(synonym) > 1:
-                pattern = synonym[1:-1]
-                if pattern:
-                    self._patterns.append(re.compile(pattern, re.IGNORECASE))
-            else:
-                self._literals.append(synonym.lower())
-
-    def is_in(self, text: str) -> bool:
-        text_lower = text.lower()
-        for literal in self._literals:
-            if literal in text_lower:
-                return True
-        return any(pattern.search(text) for pattern in self._patterns)
-
-    def __repr__(self) -> str:
-        return f"Keyword({self._synonyms!r})"
 
 
 class Lurker:

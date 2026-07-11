@@ -4,7 +4,7 @@ import sys
 from src import log
 from src import lurker
 from src.config import load_lurker_config, LurkerConfig
-from src.lurker import Keyword
+from src.keyword import Keyword
 
 __version__ = "0.18.0"
 

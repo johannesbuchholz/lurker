@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Callable, Optional, Protocol, Any, TYPE_CHECKING
+from typing import Callable, Optional, Protocol, Any
 
 import numpy as np
 import sounddevice as sd
@@ -9,9 +9,7 @@ import webrtcvad
 
 from src import log
 from src.config import SpeechConfig
-
-if TYPE_CHECKING:
-    from src.lurker import Keyword
+from src.keyword import Keyword
 
 NON_SPEECH_CHUNK_GATE_THRESHOLD = 6
 LOGGER = log.new_logger(__name__)

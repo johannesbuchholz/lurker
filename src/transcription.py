@@ -4,14 +4,12 @@ import json
 import queue
 import threading
 from collections import deque
-from typing import Callable, List, TYPE_CHECKING
+from typing import Callable, List
 
 from vosk import Model, KaldiRecognizer
 
 from src import log
-
-if TYPE_CHECKING:
-    from src.lurker import Keyword
+from src.keyword import Keyword
 
 
 class Transcriber:
@@ -28,16 +26,16 @@ class Transcriber:
         self._keyword = keyword
 
         self._keyword_candidate_queue: queue.Queue[List[str]] = queue.Queue(maxsize=3)
-        self._keyword_candidate_worker = threading.Thread(target=self._check_fo_keyword, daemon=True)
+        self._keyword_candidate_worker = threading.Thread(target=self._check_for_instructions, daemon=True)
         self._keyword_candidate_worker.start()
 
 
-    def _check_fo_keyword(self) -> None:
+    def _check_for_instructions(self) -> None:
         """
         Inspects candidates for key word and sends to callback if necessary.
         1. Polls the next candidate if available, else waits
         2. Checks if the keyword is present in the current candidate.
-        3. Submits the concatenated Strings after the keyword to the callback.
+        3. Submits the concatenated Strings after the keyword as the "instruction" to the callback.
         """
         pass
 
