@@ -37,7 +37,14 @@ class Transcriber:
         2. Checks if the keyword is present in the current candidate.
         3. Submits the concatenated Strings after the keyword as the "instruction" to the callback.
         """
-        pass
+        while True:
+            candidate = self._keyword_candidate_queue.get()
+            text = " ".join(candidate)
+            end = self._keyword.is_in(text)
+            if end is not None:
+                instruction = text[end:].strip()
+                if instruction:
+                    self._callback(instruction)
 
     def feed_data(self, pcm_bytes: bytes) -> None:
         if self._recognizer.AcceptWaveform(pcm_bytes):
@@ -71,5 +78,4 @@ class Transcriber:
         return " ".join(self._transcription)
 
     def shutdown(self) -> None:
-        self._keyword_candidate_queue.put(None)
         self._keyword_candidate_worker.join(timeout=5)
