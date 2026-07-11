@@ -42,19 +42,17 @@ class Transcriber:
         Called at sentence boundary (e.g. on silence detection).
         Checks accumulated transcription for keyword and fires callback if found.
         """
-        full_text = " ".join(self._transcription)
+        full_text = self._get_text()
         end = self._keyword.is_in(full_text)
         if end is not None:
             instruction = full_text[end:].strip()
             if instruction:
-                threading.Thread(
-                    target=self._callback, args=(instruction,), daemon=True
-                ).start()
+                threading.Thread(name=instruction, target=self._callback, args=(instruction,), daemon=True).start()
         self._transcription.clear()
 
     def reset(self) -> None:
         self._recognizer.Reset()
         self._transcription.clear()
 
-    def get_text(self) -> str:
+    def _get_text(self) -> str:
         return " ".join(self._transcription)

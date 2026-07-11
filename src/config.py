@@ -54,8 +54,6 @@ class SpeechConfig:
     """Number of trailing silent chunks required to consider speech ended in order to stop audio streaming to ASR backend."""
     lingering_speech_chunks: int = 12
     """Number of trailing chunks still feed to ASR backend after VAD gate turned down."""
-    transcription_timeout_seconds: float = 3
-    """Maximum number of seconds to wait for a transcription before aborting."""
     sample_rate: int = 16000
     frame_ms: int = 20
     vad_aggressiveness: int = 2

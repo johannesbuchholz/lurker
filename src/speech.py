@@ -11,7 +11,6 @@ from src import log
 from src.config import SpeechConfig
 from src.keyword import Keyword
 
-NON_SPEECH_CHUNK_GATE_THRESHOLD = 6
 LOGGER = log.new_logger(__name__)
 
 class ASRBackend(Protocol):
@@ -58,7 +57,7 @@ class SpeechToTextListener:
         self._last_non_speech_chunk_count = 0
         self._gate_chunk_count = 0
         self._max_open_gate_chunks = int(self._capture_config.max_open_gate_seconds / (self._capture_config.frame_ms / 1000))
-        self._lingering_chunks: deque[bytes] = deque(maxlen=8)
+        self._lingering_chunks: deque[bytes] = deque(maxlen=self._capture_config.lingering_speech_chunks)
         self._audio_stream = None
         self._vad = webrtcvad.Vad(self._capture_config.vad_aggressiveness)
 
@@ -97,7 +96,7 @@ class SpeechToTextListener:
         | UP     | *       | > max       | force flush, close gate           |
         | UP     | yes     | ≤ max       | feed current, increment           |
         | UP     | no      | ≤ max       | feed current, inc silence counter |
-        | UP     | no      | > silence   | close gate, append, return        |
+        | UP     | no      | > silence   | close gate, return                |
         +--------+---------+-------------+----------------------------------+
         """
         if not self._running:
@@ -124,7 +123,7 @@ class SpeechToTextListener:
 
         if not is_speech:
             self._last_non_speech_chunk_count += 1
-            if self._last_non_speech_chunk_count > NON_SPEECH_CHUNK_GATE_THRESHOLD:
+            if self._last_non_speech_chunk_count > self._capture_config.required_trailing_silence_chunks:
                 self._close_gate()
                 return
         else:
