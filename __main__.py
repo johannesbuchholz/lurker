@@ -4,6 +4,7 @@ import sys
 from src import log
 from src import lurker
 from src.config import load_lurker_config, LurkerConfig
+from src.lurker import Keyword
 
 __version__ = "0.18.0"
 
@@ -40,4 +41,4 @@ if __name__ == "__main__":
     LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
 
     lurker = lurker.get_new(lurker_home=lurker_home, lurker_config=lurker_config)
-    lurker.start_main_loop(lurker_config.LURKER_KEYWORD, lurker_config.LURKER_ACTION_REFRESH_INTERVAL)
+    lurker.start_main_loop(Keyword(lurker_config.LURKER_KEYWORD), lurker_config.LURKER_ACTION_REFRESH_INTERVAL)

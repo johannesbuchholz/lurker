@@ -1,17 +1,22 @@
+from __future__ import annotations
+
 import json
 import queue
 import threading
 from collections import deque
-from typing import Callable, List
+from typing import Callable, List, TYPE_CHECKING
 
 from vosk import Model, KaldiRecognizer
 
-import log
+from src import log
+
+if TYPE_CHECKING:
+    from src.lurker import Keyword
 
 
 class Transcriber:
 
-    def __init__(self, callback: Callable[[str], None], keyword: List[str], model_path: str, sample_rate: int = 16000, max_words: int = 200):
+    def __init__(self, callback: Callable[[str], None], keyword: Keyword, model_path: str, sample_rate: int = 16000, max_words: int = 200):
         self._logger = log.new_logger(self.__class__.__name__)
 
         self._model = Model(model_path)

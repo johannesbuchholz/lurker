@@ -1,5 +1,6 @@
 import importlib
 import os
+import re
 import sys
 from typing import Optional, Union, List
 
@@ -10,6 +11,32 @@ from src.speech import SpeechToTextListener
 from src.transcription import Transcriber
 
 LOGGER = log.new_logger(__name__)
+
+
+class Keyword:
+    def __init__(self, synonyms: List[str]):
+        self._synonyms = synonyms
+        self._literals: List[str] = []
+        self._patterns: List[re.Pattern] = []
+        for synonym in synonyms:
+            if not synonym:
+                continue
+            if synonym.startswith("/") and synonym.endswith("/") and len(synonym) > 1:
+                pattern = synonym[1:-1]
+                if pattern:
+                    self._patterns.append(re.compile(pattern, re.IGNORECASE))
+            else:
+                self._literals.append(synonym.lower())
+
+    def is_in(self, text: str) -> bool:
+        text_lower = text.lower()
+        for literal in self._literals:
+            if literal in text_lower:
+                return True
+        return any(pattern.search(text) for pattern in self._patterns)
+
+    def __repr__(self) -> str:
+        return f"Keyword({self._synonyms!r})"
 
 
 class Lurker:
@@ -53,7 +80,7 @@ class Lurker:
                 self._logger.info(f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
                 sound.play_no(self.output_device_name)
 
-    def start_main_loop(self, keyword: List[str], action_refresh_interval_s: Union[int, str] = 5) -> None:
+    def start_main_loop(self, keyword: Keyword, action_refresh_interval_s: Union[int, str] = 5) -> None:
         LOGGER.info("Initializing...")
         self.registry.load_actions_once()
         self.registry.start_periodic_reloading_in_background(interval_duration_s=int(action_refresh_interval_s))

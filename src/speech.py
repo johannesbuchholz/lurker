@@ -1,15 +1,20 @@
+from __future__ import annotations
+
 from collections import deque
-from typing import Callable, List, Optional, Protocol, Any
+from typing import Callable, Optional, Protocol, Any, TYPE_CHECKING
 
 import numpy as np
 import sounddevice as sd
 import webrtcvad
 
-import log
+from src import log
 from src.config import SpeechConfig
 
+if TYPE_CHECKING:
+    from src.lurker import Keyword
+
 NON_SPEECH_CHUNK_GATE_THRESHOLD = 6
-logger = log.new_logger(__qualname__)
+LOGGER = log.new_logger(__name__)
 
 class ASRBackend(Protocol):
     def feed_data(self, pcm_bytes: bytes) -> None:
@@ -53,7 +58,7 @@ class SpeechToTextListener:
 
         self._running = False
 
-    def start_listening(self, keyword: List[str], instruction_callback: Callable[[str], None]):
+    def start_listening(self, keyword: Keyword, instruction_callback: Callable[[str], None]):
         if self._running:
             return
 
