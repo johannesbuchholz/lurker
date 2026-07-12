@@ -40,10 +40,23 @@ class Transcriber:
         Called at sentence boundary (e.g. on silence detection).
         Checks accumulated transcription for keyword and fires callback if found.
         """
+        partial_str = self._recognizer.PartialResult()
+        try:
+            partial = json.loads(partial_str)
+        except Exception as e:
+            self._logger.warning(f"Could not read partial result: {partial_str} ({e})", exc_info=True)
+            partial = {}
+        partial_text = partial.get("partial", "").strip()
+        if partial_text:
+            self._transcription.extend(partial_text.split())
+            self._logger.debug(f"Flush: grabbed partial result: \"{partial_text}\"")
+
         full_text = self._get_text()
+        self._logger.debug(f"Flush: \"{full_text}\"")
         end = self._keyword.is_in(full_text)
         if end is not None:
             instruction = full_text[end:].strip()
+            self._logger.debug(f"Keyword found, instruction: \"{instruction}\"")
             if instruction:
                 threading.Thread(name=instruction, target=self._callback, args=(instruction,), daemon=True).start()
         self._transcription.clear()

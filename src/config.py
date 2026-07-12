@@ -48,13 +48,13 @@ def _load_config_file(path: str) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class SpeechConfig:
-    required_trailing_silence_chunks: int = 4
+    required_trailing_silence_chunks: int = 32
     """Number of trailing silent chunks required to consider speech ended in order to stop audio streaming to ASR backend."""
     lingering_speech_chunks: int = 12
     """Number of trailing chunks still feed to ASR backend after VAD gate turned down."""
     sample_rate: int = 16000
     frame_ms: int = 20
-    vad_aggressiveness: int = 2
+    vad_aggressiveness: int = 3
     max_open_gate_seconds: float = 4.0
     """Maximum time the gate stays open before force-flushing, in seconds."""
     frame_samples: int = int(sample_rate * (frame_ms / 1000))
