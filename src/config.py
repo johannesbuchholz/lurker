@@ -88,7 +88,7 @@ class LurkerConfig:
     """Module name containing a single implementation of src.action.ActionHandler to be used for acting on recorded instructions."""
     LURKER_HANDLER_CONFIG: dict[str, str] = field(default_factory=dict)
     """Configuration passed to the configured ActionHandler."""
-    LURKER_ACTION_REFRESH_INTERVAL: int | str = 5
+    LURKER_ACTION_REFRESH_INTERVAL: int | str = 30
     """Duration in seconds between action reloading attempts."""
 
     def to_pretty_str(self) -> str:
