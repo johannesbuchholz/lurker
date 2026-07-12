@@ -1,6 +1,5 @@
 import os
 import wave
-from typing import Dict, Optional
 
 import numpy as np
 import sounddevice as sd
@@ -10,32 +9,32 @@ from src import log
 LOGGER = log.new_logger(__name__)
 
 
-def play_ready(output_device_name: Optional[str]) -> None:
+def play_ready(output_device_name: str | None) -> None:
     entry = _LoadedSounds.sounds.get("ready.wav", None)
     _play_sound(output_device_name, entry, False)
 
 
-def play_startup(output_device_name: Optional[str]):
+def play_startup(output_device_name: str | None):
     entry = _LoadedSounds.sounds.get("start.wav", None)
     _play_sound(output_device_name, entry, False)
 
 
-def play_no(output_device_name: Optional[str]):
+def play_no(output_device_name: str | None):
     entry = _LoadedSounds.sounds.get("no.wav", None)
     _play_sound(output_device_name, entry, False)
 
 
-def play_ok(output_device_name: Optional[str]):
+def play_ok(output_device_name: str | None):
     entry = _LoadedSounds.sounds.get("ok.wav", None)
     _play_sound(output_device_name, entry, False)
 
 
-def play_understood(output_device_name: Optional[str]):
+def play_understood(output_device_name: str | None):
     entry = _LoadedSounds.sounds.get("understood.wav", None)
     _play_sound(output_device_name, entry, True)
 
 
-def _play_sound(output_device_name: Optional[str], data: Optional[np.ndarray], blocking: bool) -> None:
+def _play_sound(output_device_name: str | None, data: np.ndarray | None, blocking: bool) -> None:
     if data is not None:
         try:
             sd.play(data, device=output_device_name, blocking=blocking)
@@ -65,4 +64,4 @@ def load_sounds():
 
 
 class _LoadedSounds:
-    sounds: Dict[str, np.ndarray] = {}
+    sounds: dict[str, np.ndarray] = {}

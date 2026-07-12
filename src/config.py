@@ -2,7 +2,7 @@ import dataclasses
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Union, Optional, List, Any
+from typing import Any
 
 from src import log
 
@@ -21,7 +21,7 @@ LURKER_ACTION_REFRESH_INTERVAL = "LURKER_ACTION_REFRESH_INTERVAL"
 LOGGER = log.new_logger(__name__)
 
 
-def _get_envs() -> Dict[str, str]:
+def _get_envs() -> dict[str, str]:
     envs = {
         LURKER_LOG_LEVEL: os.environ.get(LURKER_LOG_LEVEL),
         LURKER_LOG_FILE: os.environ.get(LURKER_LOG_FILE),
@@ -38,7 +38,7 @@ def _get_envs() -> Dict[str, str]:
     return {key: value for key, value in envs.items() if value is not None}
 
 
-def _load_config_file(path: str) -> Dict[str, Any]:
+def _load_config_file(path: str) -> dict[str, Any]:
     if os.path.exists(path):
         with open(path) as cfg_file_handle:
             cfg: dict = json.load(cfg_file_handle)
@@ -72,15 +72,15 @@ class SpeechConfig:
 
 @dataclass(frozen=True)
 class LurkerConfig:
-    LURKER_LOG_LEVEL: Union[int, str] = "INFO"
+    LURKER_LOG_LEVEL: int | str = "INFO"
     """The log level of the lurker application according to the python logging module."""
-    LURKER_LOG_FILE: Optional[str] = "lurkerlog"
+    LURKER_LOG_FILE: str | None = "lurkerlog"
     """If specified, lurker additionally logs a file with the given name in the current working directory."""
-    LURKER_INPUT_DEVICE: Optional[str] = None
+    LURKER_INPUT_DEVICE: str | None = None
     """Name of the device that should be used for recording audio. This might also be a substring of the actual name."""
-    LURKER_OUTPUT_DEVICE: Optional[str] = None
+    LURKER_OUTPUT_DEVICE: str | None = None
     """Name of the device that should be used for playing feedback sounds. This might also be a substring of the actual name."""
-    LURKER_KEYWORD: List[str] = field(default_factory=lambda : ["hey john"])
+    LURKER_KEYWORD: list[str] = field(default_factory=lambda : ["hey john"])
     """A word sequence upon which lurker should start recording actions."""
     LURKER_LANGUAGE: str = "en"
     """The language of the spoken words that should be transcribed by lurker. Setting this value usually improves transcription time."""
@@ -88,9 +88,9 @@ class LurkerConfig:
     """Configuration of audio queues and how to determine if a queue should be handed over to the more expensive transcription process."""
     LURKER_HANDLER_MODULE: str = "src.handlers.hue_client"
     """Module name containing a single implementation of src.action.ActionHandler to be used for acting on recorded instructions."""
-    LURKER_HANDLER_CONFIG: Dict[str, str] = field(default_factory=dict)
+    LURKER_HANDLER_CONFIG: dict[str, str] = field(default_factory=dict)
     """Configuration passed to the configured ActionHandler."""
-    LURKER_ACTION_REFRESH_INTERVAL: Union[int, str] = 5
+    LURKER_ACTION_REFRESH_INTERVAL: int | str = 5
     """Duration in seconds between action reloading attempts."""
 
     def to_pretty_str(self) -> str:
@@ -128,7 +128,7 @@ def load_lurker_config(config_path: str) -> LurkerConfig:
     return LurkerConfig(**config_param_dict)
 
 
-def transform_to_list(original: str) -> List[str]:
+def transform_to_list(original: str) -> list[str]:
     print(f"about to transform: {original}")
     if original.startswith("[") and original.endswith("]"):
         return [item.replace("\"", "").replace("'", "").strip() for item in original[1:-1].split(",")]

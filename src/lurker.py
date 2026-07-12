@@ -1,7 +1,7 @@
 import importlib
 import os
 import sys
-from typing import Callable, Optional, Union
+from typing import Callable
 
 from src import log, sound
 from src.action import ActionRegistry, ActionHandler, LoadedHandlerType, NOPHandler
@@ -13,7 +13,7 @@ from src.transcription import Transcriber
 LOGGER = log.new_logger(__name__)
 
 
-def _make_act_callback(registry: ActionRegistry, handler: ActionHandler, output_device_name: Optional[str]) -> Callable[[str], None]:
+def _make_act_callback(registry: ActionRegistry, handler: ActionHandler, output_device_name: str | None) -> Callable[[str], None]:
     """
     Builds the callback that bridges ASR output to action execution.
 
@@ -57,9 +57,9 @@ class Lurker:
                  registry: ActionRegistry,
                  handler: ActionHandler,
                  listener: SpeechToTextListener,
-                 input_device_name: Optional[str],
-                 output_device_name: Optional[str],
-                 action_refresh_interval_s: Union[int, str],
+                 input_device_name: str | None,
+                 output_device_name: str | None,
+                 action_refresh_interval_s: int | str,
                  ):
         self._logger = log.new_logger(self.__class__.__name__)
         self.registry = registry
@@ -94,7 +94,7 @@ def _resolve_model(lurker_home: str, language: str) -> str:
     raise ValueError(f"No model found for language '{language}' in {models_dir}: available={list(listdir)}")
 
 
-def _load_external_handler_module(module_name: Optional[str]) -> None:
+def _load_external_handler_module(module_name: str | None) -> None:
     """
     If the module contains a class extending ActionHandler, that class will trigger
     __init_subclass__ of ActionHandler and thereby be registered.

@@ -1,12 +1,12 @@
 import re
 from re import Pattern, Match
-from typing import List, Union, Dict, Any, Optional
+from typing import Any
 
 
 class KeyParagraphMapping:
 
     @staticmethod
-    def compile_regexes(keys: List[str]) -> List[Pattern]:
+    def compile_regexes(keys: list[str]) -> list[Pattern]:
         patterns = []
         for key in keys:
             if key.startswith("/") and key.endswith("/"):
@@ -16,12 +16,12 @@ class KeyParagraphMapping:
             patterns.append(re.compile(pattern_string))
         return patterns
 
-    def __init__(self, keys: List[str], command: Union[str, int, None, Dict[str, Any]]):
+    def __init__(self, keys: list[str], command: str | int | None | dict[str, Any]):
         self.keys = keys
         self.value = command
         self.patterns: List[Pattern] = self.compile_regexes(self.keys)
 
-    def matches(self, snippet: str) -> Optional[Match]:
+    def matches(self, snippet: str) -> Match | None:
         for p in self.patterns:
             match = p.match(snippet)
             if match is not None:

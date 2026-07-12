@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 from collections import deque
-from typing import Optional, Protocol, Any
+from typing import Protocol, Any
 
 import numpy as np
 import sounddevice as sd
@@ -44,9 +42,9 @@ class SpeechToTextListener:
         UP = 1
 
     def __init__(self, transcriber: ASRBackend,
-                 input_device_name: Optional[str] = None,
-                 output_device_name: Optional[str] = None,
-                 speech_config: Optional[SpeechConfig] = None):
+                 input_device_name: str | None = None,
+                 output_device_name: str | None = None,
+                 speech_config: SpeechConfig | None = None):
         self._asr = transcriber
         self._input_device_name = input_device_name
         self._output_device_name = output_device_name

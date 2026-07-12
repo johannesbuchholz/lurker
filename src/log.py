@@ -1,7 +1,6 @@
 import logging
 import os.path
 from logging import Logger, handlers
-from typing import Union, Optional
 
 _FORMATTER = logging.Formatter("%(asctime)s [%(levelname)8s] %(name)s: %(message)s")
 
@@ -9,7 +8,7 @@ def new_logger(name: str) -> Logger:
     return logging.getLogger("Lurker ({})".format(name))
 
 
-def init_global_config(global_level: Union[str, int], file_name: Optional[str] = None) -> None:
+def init_global_config(global_level: str | int, file_name: str | None = None) -> None:
     if type(global_level) == str and global_level.isnumeric():
         global_level = int(global_level)
 

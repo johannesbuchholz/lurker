@@ -1,6 +1,6 @@
 import json
 from http.client import HTTPResponse
-from typing import Collection, Any, Dict, Callable, Match, List
+from typing import Collection, Any, Callable, Match
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
@@ -28,7 +28,7 @@ class LightState:
     def to_json(self) -> str:
         return json.dumps(self.to_dict())
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         return {k: v for k, v in self.state.items() if v is not None}
 
 class LightAction:
@@ -52,7 +52,7 @@ class HueClient(ActionHandler):
         self.actions_path = kwargs["lurker_home"] + "/actions"
 
         self.lights = {}
-        self._special_commands: Dict[str, Callable[[Match[str]], int]] = {
+        self._special_commands: dict[str, Callable[[Match[str]], int]] = {
             "EXIT": lambda key_match: exit(0),
             "SAVE": self._save_current_lights_as_action
         }
@@ -82,7 +82,7 @@ class HueClient(ActionHandler):
         self._logger.info(f"Wrote action to {file_path}: {action_dict}")
         return 0
 
-    def _retrieve_lights(self) -> Dict[str, Any]:
+    def _retrieve_lights(self) -> dict[str, Any]:
         url = f"http://{self.host}/api/{self.user}/lights"
         try:
             response: HTTPResponse = urlopen(url, timeout=8.)
@@ -125,7 +125,7 @@ class HueClient(ActionHandler):
         if len(self.lights) < 1:
             self.lights = self._retrieve_lights()
 
-        light_actions: List[LightAction] = []
+        light_actions: list[LightAction] = []
         for item in action.value.items():
             light_id_string, light_request = item
             if light_id_string == ALL_LIGHTS_ID:

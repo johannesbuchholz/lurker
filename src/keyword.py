@@ -1,12 +1,11 @@
 import re
-from typing import List
 
 
 class Keyword:
-    def __init__(self, synonyms: List[str]):
+    def __init__(self, synonyms: list[str]):
         self._synonyms = synonyms
-        self._literals: List[str] = []
-        self._patterns: List[re.Pattern] = []
+        self._literals: list[str] = []
+        self._patterns: list[re.Pattern] = []
         for synonym in synonyms:
             if not synonym:
                 continue

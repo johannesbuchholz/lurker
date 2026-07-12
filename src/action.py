@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Dict, Optional, Match, Union, Tuple
+from typing import Match
 
 from src import log
 from src.utils import KeyParagraphMapping
@@ -15,7 +15,7 @@ class ActionRegistry:
     _logger = log.new_logger(__qualname__)
 
     @staticmethod
-    def _load_action(action_path: Union[str, Path]) -> KeyParagraphMapping:
+    def _load_action(action_path: str | Path) -> KeyParagraphMapping:
         with open(action_path) as action_file_handle:
             action_dict: dict = json.load(action_file_handle)
             try:
@@ -25,9 +25,9 @@ class ActionRegistry:
 
     def __init__(self, actions_path: str):
         self.actions_path = actions_path
-        self.actions: Dict[str, Tuple[int, KeyParagraphMapping]] = {}    # filename -> (modified time, action)
+        self.actions: dict[str, tuple[int, KeyParagraphMapping]] = {}    # filename -> (modified time, action)
 
-    def find(self, instruction: str) -> Optional[Tuple[KeyParagraphMapping, Match[str]]]:
+    def find(self, instruction: str) -> tuple[KeyParagraphMapping, Match[str]] | None:
         for _, action in self.actions.values():
             match = action.matches(instruction.lower())
             if match is not None:
@@ -75,7 +75,7 @@ class ActionRegistry:
 
 
 class LoadedHandlerType:
-    cls: Optional[type] = None
+    cls: type | None = None
 
     @staticmethod
     def get_implementation() -> type:
