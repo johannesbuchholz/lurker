@@ -101,7 +101,7 @@ class SpeechToTextListener:
 
         incoming = indata.tobytes()
         is_speech = self._call_vad(incoming)
-        LOGGER.trace("chunk: bytes=%d, vad=%s, gate=%s", len(incoming), is_speech, "UP" if self._gate else "DOWN")
+        LOGGER.trace("VAD: %d B vad=%s gate=%s", len(incoming), is_speech, "UP ●" if self._gate else "DOWN ○")
 
         if self._gate == self.GateState.DOWN:
             if is_speech:
@@ -110,40 +110,42 @@ class SpeechToTextListener:
                 for chunk in self._lingering_chunks:
                     self._asr.feed_data(chunk)
                 self._asr.feed_data(incoming)
-                LOGGER.trace("gate UP: pushed %d lingering + 1 current chunk (%d bytes total)", lingering + 1, sum(len(c) for c in self._lingering_chunks) + len(incoming))
+                LOGGER.trace("GATE: opened, pushed %d lingering + 1 current chunk (%d bytes total)", lingering + 1, sum(len(c) for c in self._lingering_chunks) + len(incoming))
             else:
                 self._lingering_chunks.append(incoming)
-                LOGGER.trace("gate DOWN: appended %d bytes to lingering (%d chunks)", len(incoming), len(self._lingering_chunks))
+                LOGGER.trace("LINGER: appended %d bytes (%d chunks)", len(incoming), len(self._lingering_chunks))
             return
 
         # gate is UP
         self._gate_chunk_count += 1
         if self._gate_chunk_count > self._max_open_gate_chunks:
-            LOGGER.trace("gate force-close: exceeded max open gate chunks (%d)", self._max_open_gate_chunks)
+            LOGGER.trace("GATE: force-close, exceeded max open gate chunks (%d)", self._max_open_gate_chunks)
             self._close_gate()
             return
 
         if not is_speech:
             self._last_non_speech_chunk_count += 1
             if self._last_non_speech_chunk_count > self._capture_config.required_trailing_silence_chunks:
-                LOGGER.trace("gate close: trailing silence exceeded (%d > %d)", self._last_non_speech_chunk_count, self._capture_config.required_trailing_silence_chunks)
+                LOGGER.trace("GATE: close, trailing silence exceeded (%d > %d)", self._last_non_speech_chunk_count, self._capture_config.required_trailing_silence_chunks)
                 self._close_gate()
                 return
         else:
             self._last_non_speech_chunk_count = 0
 
         self._asr.feed_data(incoming)
-        LOGGER.trace("fed %d bytes to ASR (silence_count=%d, gate_chunks=%d)", len(incoming), self._last_non_speech_chunk_count, self._gate_chunk_count)
+        LOGGER.trace("FEED: %d B to ASR (silence=%d, chunks=%d)", len(incoming), self._last_non_speech_chunk_count, self._gate_chunk_count)
 
     def _open_gate(self):
         self._gate = self.GateState.UP
         self._last_non_speech_chunk_count = 0
         self._gate_chunk_count = 0
+        LOGGER.debug("OPEN GATE ●")
         self._asr.reset()
 
     def _close_gate(self):
         self._asr.flush()
         self._gate = self.GateState.DOWN
+        LOGGER.debug("CLOSE GATE ○")
 
     def _call_vad(self, pcm_bytes: bytes) -> bool:
         # pcm_bytes always matches frame_samples * 2 — guaranteed by the audio callback's blocksize
