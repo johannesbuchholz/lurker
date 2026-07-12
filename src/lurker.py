@@ -1,5 +1,6 @@
 import importlib
 import os
+import signal
 import sys
 from typing import Callable
 
@@ -79,6 +80,7 @@ class Lurker:
         sound.play_startup(self.output_device_name)
         try:
             self.listener.start_listening()
+            signal.pause()
         except Exception as e:
             LOGGER.error(f"Fatal error: {e}", exc_info=e)
             exit(1)
