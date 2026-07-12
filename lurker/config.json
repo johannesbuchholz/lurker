@@ -3,9 +3,7 @@
     "host": "<host of hue bridge>",
     "user": "<registered user name>"
   },
-  "LURKER_SPEECH_CONFIG": {
-    "transcription_timeout_seconds": 3
-  },
+  "LURKER_SPEECH_CONFIG": {},
   "LURKER_KEYWORD": ["hey john(ny)?", "hey johnson"],
   "LURKER_LANGUAGE": "de",
   "LURKER_LOG_LEVEL": "DEBUG",

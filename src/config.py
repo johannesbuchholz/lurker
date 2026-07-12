@@ -7,7 +7,6 @@ from typing import Any
 from src import log
 
 LURKER_KEYWORD = "LURKER_KEYWORD"
-LURKER_MODEL = "LURKER_MODEL"
 LURKER_LOG_LEVEL = "LURKER_LOG_LEVEL"
 LURKER_LOG_FILE = "LURKER_LOG_FILE"
 LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
@@ -25,7 +24,6 @@ def _get_envs() -> dict[str, str]:
     envs = {
         LURKER_LOG_LEVEL: os.environ.get(LURKER_LOG_LEVEL),
         LURKER_LOG_FILE: os.environ.get(LURKER_LOG_FILE),
-        LURKER_MODEL: os.environ.get(LURKER_MODEL),
         LURKER_KEYWORD: os.environ.get(LURKER_KEYWORD),
         LURKER_INPUT_DEVICE: os.environ.get(LURKER_INPUT_DEVICE),
         LURKER_OUTPUT_DEVICE: os.environ.get(LURKER_OUTPUT_DEVICE),
@@ -129,7 +127,6 @@ def load_lurker_config(config_path: str) -> LurkerConfig:
 
 
 def transform_to_list(original: str) -> list[str]:
-    print(f"about to transform: {original}")
     if original.startswith("[") and original.endswith("]"):
         return [item.replace("\"", "").replace("'", "").strip() for item in original[1:-1].split(",")]
     else:

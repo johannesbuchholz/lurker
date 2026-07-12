@@ -15,13 +15,14 @@ class ActionRegistry:
     _logger = log.new_logger(__qualname__)
 
     @staticmethod
-    def _load_action(action_path: str | Path) -> KeyParagraphMapping:
+    def _load_action(action_path: str | Path) -> KeyParagraphMapping | None:
         with open(action_path) as action_file_handle:
             action_dict: dict = json.load(action_file_handle)
             try:
                 return KeyParagraphMapping(**action_dict)
             except Exception as e:
                 ActionRegistry._logger.warning(f"Could not load action from %s: {e}")
+                return None
 
     def __init__(self, actions_path: str):
         self.actions_path = actions_path
@@ -52,7 +53,8 @@ class ActionRegistry:
                 continue
             abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
             loaded_action = ActionRegistry._load_action(abs_path)
-            self.actions[action_path.name] = (int(abs_path.stat().st_mtime), loaded_action)
+            if loaded_action is not None:
+                self.actions[action_path.name] = (int(abs_path.stat().st_mtime), loaded_action)
         self._logger.info(f"Loaded actions: count={len(self.actions)}, files={list(self.actions.keys())}")
 
     def _reload_actions(self) -> None:
@@ -68,8 +70,13 @@ class ActionRegistry:
                 mtime: int = int(abs_path.stat().st_mtime)
                 if abs_path.name not in self.actions or self.actions[abs_path.name][0] < mtime:
                     # file is unknown or touched: reload
-                    self.actions[abs_path.name] = (mtime, ActionRegistry._load_action(abs_path))
-                    self._logger.info(f"Reloaded action {abs_path.name}")
+                    loaded_action = ActionRegistry._load_action(abs_path)
+                    if loaded_action is not None:
+                        self.actions[abs_path.name] = (mtime, loaded_action)
+                        self._logger.info(f"Reloaded action {abs_path.name}")
+                    else:
+                        self.actions.pop(abs_path.name, None)
+                        self._logger.warning(f"Removed action {abs_path.name} (failed to load)")
         except Exception as e:
             self._logger.error(f"Could not reload action: {e}", exc_info=e)
 
