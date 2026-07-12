@@ -2,6 +2,20 @@ import logging
 import os.path
 from logging import Logger, handlers
 
+
+def _register_trace_level() -> None:
+    trace_level = 5
+    logging.addLevelName(trace_level, "TRACE")
+
+    def trace(self: Logger, msg: str, *args, **kwargs) -> None:
+        if self.isEnabledFor(trace_level):
+            self._log(trace_level, msg, args, **kwargs)
+
+    Logger.trace = trace  # type: ignore[attr-defined]
+
+
+_register_trace_level()
+
 _FORMATTER = logging.Formatter("%(asctime)s [%(levelname)8s] %(name)s: %(message)s")
 
 def new_logger(name: str) -> Logger:
