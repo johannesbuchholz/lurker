@@ -52,10 +52,12 @@ class SpeechDetectorConfig:
     """Sample rate for WebRTC VAD. Valid values: 8000, 16000, 32000, 48000."""
     vad_aggressiveness: int = 3
     """WebRTC VAD aggressiveness (0-3), higher means more filtering."""
-    energy_factor: float = 1.5
+    energy_factor: float = 2.0
     """Multiplier above ambient noise level required to consider a chunk as speech."""
-    energy_alpha: float = 0.05
-    """EMA smoothing factor for ambient noise estimation. Lower = slower adaptation."""
+    energy_alpha_attack: float = 0.2
+    """EMA smoothing factor when energy rises above ambient (fast attack). Higher = adapts faster to loud sounds."""
+    energy_alpha_decay: float = 0.005
+    """EMA smoothing factor when energy falls below ambient (slow decay). Lower = ambient stays high longer."""
 
     def __post_init__(self):
         valid_rates = [8000, 16000, 32000, 48000]
@@ -67,10 +69,10 @@ class SpeechDetectorConfig:
 
 @dataclass(frozen=True)
 class SpeechConfig:
-    required_trailing_silence_chunks: int = -1
+    required_trailing_silence_chunks: int = 64
     """Number of trailing silent chunks required to consider speech ended in order to stop audio streaming to ASR backend. Set to negative if you want to only use full results as decided by the ASR-Backend."""
-    lingering_speech_chunks: int = 12
-    """Number of trailing chunks still feed to ASR backend after VAD gate turned down."""
+    prefill_chunks: int = 32
+    """Number of pre-speech audio chunks buffered while gate is DOWN, pushed to ASR when gate opens for context."""
     frame_ms: int = 20
     max_open_gate_seconds: float = 4.0
     """Maximum time the gate stays open before force-flushing, in seconds."""

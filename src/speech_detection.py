@@ -22,7 +22,8 @@ class SpeechDetector:
     def __init__(self, config: SpeechDetectorConfig):
         self._sample_rate = config.sample_rate
         self._energy_factor = config.energy_factor
-        self._energy_alpha = config.energy_alpha
+        self._energy_alpha_attack = config.energy_alpha_attack
+        self._energy_alpha_decay = config.energy_alpha_decay
         self._ambient_level = 0.0
         self._initialized = False
         self._vad = webrtcvad.Vad(config.vad_aggressiveness)
@@ -39,13 +40,22 @@ class SpeechDetector:
 
         if not is_loud_enough:
             self._update_ambient(energy)
+            LOGGER.trace("ENERGY: rejected (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
             return False
 
         is_vad_speech = self._vad.is_speech(pcm_bytes, sample_rate=self._sample_rate)
         if not is_vad_speech:
             self._update_ambient(energy)
+            LOGGER.trace("VAD: rejected (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
+        else:
+            LOGGER.trace("SPEECH: accepted (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
         return is_vad_speech
 
     def _update_ambient(self, energy: float) -> None:
-        """Track noise floor via exponential moving average."""
-        self._ambient_level = self._energy_alpha * energy + (1 - self._energy_alpha) * self._ambient_level
+        """Track noise floor via asymmetric exponential moving average.
+        Fast attack when energy rises, slow decay when energy falls."""
+        if energy > self._ambient_level:
+            alpha = self._energy_alpha_attack
+        else:
+            alpha = self._energy_alpha_decay
+        self._ambient_level = alpha * energy + (1 - alpha) * self._ambient_level

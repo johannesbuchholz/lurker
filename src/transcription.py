@@ -11,7 +11,7 @@ from src.keyword import Keyword
 
 class Transcriber:
 
-    def __init__(self, callback: Callable[[str], None], keyword: Keyword, model_path: str, sample_rate: int = 16000, max_words: int = 200):
+    def __init__(self, callback: Callable[[str], None], keyword: Keyword, model_path: str, sample_rate: int = 16000, max_words: int = 80):
         self._logger = log.new_logger(self.__class__.__name__)
 
         self._model = Model(model_path)
@@ -41,6 +41,8 @@ class Transcriber:
         """
         Called at sentence boundary (e.g. on silence detection).
         Checks accumulated transcription for keyword and fires callback if found.
+        On keyword match, resets recognizer and clears transcription.
+        Otherwise, transcription persists across gate cycles.
         """
         partial_str = self._recognizer.PartialResult()
         try:
@@ -51,19 +53,19 @@ class Transcriber:
         partial_text = partial.get("partial", "").strip()
         if partial_text:
             self._transcription.extend(partial_text.split())
-            self._logger.debug(f"Flush: grabbed partial result: \"{partial_text}\"")
 
         full_text = self._get_text()
-        self._logger.debug(f"Flush: \"{full_text}\"")
         end = self._keyword.is_in(full_text)
-        if end is not None:
+        instruction = ""
+        has_keyword = end is not None
+        if has_keyword:
             instruction = full_text[end:].strip()
-            self._logger.debug(f"Keyword found, instruction: \"{instruction}\"")
+            self._reset()
             if instruction:
                 threading.Thread(name=instruction, target=self._callback, args=(instruction,), daemon=True).start()
-        self._transcription.clear()
+        self._logger.debug(f"Flush (keyword={has_keyword}): full_text=\"{full_text}\", instruction=\"{instruction}\"")
 
-    def reset(self) -> None:
+    def _reset(self):
         self._recognizer.Reset()
         self._transcription.clear()
 

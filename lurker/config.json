@@ -4,7 +4,7 @@
     "user": "<registered user name>"
   },
   "LURKER_SPEECH_CONFIG": {},
-  "LURKER_KEYWORD": ["hey john(ny)?", "hey johnson"],
+  "LURKER_KEYWORD": ["/john(ny)?/", "johnson", "jenkins"],
   "LURKER_LANGUAGE": "de",
   "LURKER_LOG_LEVEL": "DEBUG",
   "LURKER_INPUT_DEVICE": "logi"

@@ -24,12 +24,6 @@ class ASRBackend(Protocol):
         """
         ...
 
-    def reset(self) -> None:
-        """
-        Reset internal ASR state (start of new utterance/session).
-        """
-        ...
-
 
 class SpeechToTextListener:
     """
@@ -55,7 +49,7 @@ class SpeechToTextListener:
         self._non_speech_chunk_count = 0
         self._gate_chunk_count = 0
         self._max_open_gate_chunks = int(self._capture_config.max_open_gate_seconds / (self._capture_config.frame_ms / 1000))
-        self._lingering_chunks: deque[bytes] = deque(maxlen=self._capture_config.lingering_speech_chunks)
+        self._prefill_chunks: deque[bytes] = deque(maxlen=self._capture_config.prefill_chunks)
         self._audio_stream = None
         self._detector = SpeechDetector(self._capture_config.detector)
 
@@ -89,12 +83,12 @@ class SpeechToTextListener:
         +--------+---------+-------------+----------------------------------+
         | Gate   | Speech  | Counter     | Action                           |
         +--------+---------+-------------+----------------------------------+
-        | DOWN   | yes     | —           | reset ASR, feed lingering+current |
-        | DOWN   | no      | —           | append to lingering               |
-        | UP     | *       | > max       | force flush, close gate           |
-        | UP     | yes     | ≤ max       | feed current, increment           |
-        | UP     | no      | ≤ max       | feed current, inc silence counter |
-        | UP     | no      | > silence   | close gate, return                |
+        | DOWN   | yes     | —           | feed prefill+current to ASR      |
+        | DOWN   | no      | —           | append to prefill buffer         |
+        | UP     | *       | > max       | force flush, close gate          |
+        | UP     | yes     | ≤ max       | feed current, reset silence      |
+        | UP     | no      | ≤ max       | feed current, inc silence counter|
+        | UP     | no      | > silence   | close gate, return               |
         +--------+---------+-------------+----------------------------------+
         """
         if not self._running:
@@ -102,19 +96,18 @@ class SpeechToTextListener:
 
         incoming = indata.tobytes()
         is_speech = self._detector.is_speech(incoming)
-        LOGGER.trace("VAD: %d B vad=%s gate=%s", len(incoming), is_speech, "UP ●" if self._gate else "DOWN ○")
 
         if self._gate == self.GateState.DOWN:
-            if is_speech:
-                self._open_gate()
-                lingering = len(self._lingering_chunks)
-                for chunk in self._lingering_chunks:
-                    self._asr.feed_data(chunk)
-                self._asr.feed_data(incoming)
-                LOGGER.trace("GATE: opened, pushed %d lingering + 1 current chunk (%d bytes total)", lingering + 1, sum(len(c) for c in self._lingering_chunks) + len(incoming))
-            else:
-                self._lingering_chunks.append(incoming)
-                LOGGER.trace("LINGER: appended %d bytes (%d chunks)", len(incoming), len(self._lingering_chunks))
+            if not is_speech:
+                self._prefill_chunks.append(incoming)
+                LOGGER.trace("PREFILL: appended %d bytes (%d chunks)", len(incoming), len(self._prefill_chunks))
+                return
+            self._open_gate()
+            prefill = len(self._prefill_chunks)
+            for chunk in self._prefill_chunks:
+                self._asr.feed_data(chunk)
+            self._asr.feed_data(incoming)
+            LOGGER.trace("GATE: opened, pushed %d prefill + 1 current chunk (%d bytes total)", prefill + 1, sum(len(c) for c in self._prefill_chunks) + len(incoming))
             return
 
         # gate is UP
@@ -126,7 +119,7 @@ class SpeechToTextListener:
 
         if not is_speech:
             self._non_speech_chunk_count += 1
-            if 0 < self._capture_config.required_trailing_silence_chunks < self._non_speech_chunk_count:
+            if self._non_speech_chunk_count > self._capture_config.required_trailing_silence_chunks > 0:
                 LOGGER.trace("GATE: close, trailing silence exceeded (%d > %d)", self._non_speech_chunk_count, self._capture_config.required_trailing_silence_chunks)
                 self._close_gate()
                 return
@@ -134,7 +127,6 @@ class SpeechToTextListener:
             self._non_speech_chunk_count = 0
 
         is_final = self._asr.feed_data(incoming)
-        LOGGER.trace("FEED: %d B to ASR (silence=%d, chunks=%d, final=%s)", len(incoming), self._non_speech_chunk_count, self._gate_chunk_count, is_final)
         if is_final:
             LOGGER.debug("GATE: close, Vosk returned final result")
             self._close_gate()
@@ -144,7 +136,6 @@ class SpeechToTextListener:
         self._non_speech_chunk_count = 0
         self._gate_chunk_count = 0
         LOGGER.debug("OPEN GATE ●")
-        self._asr.reset()
 
     def _close_gate(self):
         self._asr.flush()
