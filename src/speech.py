@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Callable, Optional, Protocol, Any
+from typing import Optional, Protocol, Any
 
 import numpy as np
 import sounddevice as sd
@@ -9,7 +9,6 @@ import webrtcvad
 
 from src import log
 from src.config import SpeechConfig
-from src.keyword import Keyword
 
 LOGGER = log.new_logger(__name__)
 
@@ -63,7 +62,7 @@ class SpeechToTextListener:
 
         self._running = False
 
-    def start_listening(self, keyword: Keyword, instruction_callback: Callable[[str], None]):
+    def start_listening(self):
         if self._running:
             return
 

@@ -1,7 +1,7 @@
 import importlib
 import os
 import sys
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from src import log, sound
 from src.action import ActionRegistry, ActionHandler, LoadedHandlerType, NOPHandler
@@ -11,6 +11,41 @@ from src.speech import SpeechToTextListener
 from src.transcription import Transcriber
 
 LOGGER = log.new_logger(__name__)
+
+
+def _make_act_callback(registry: ActionRegistry, handler: ActionHandler, output_device_name: Optional[str]) -> Callable[[str], None]:
+    """
+    Builds the callback that bridges ASR output to action execution.
+
+    Exists as a factory (rather than a lambda in get_new) because:
+    - The returned closure captures a single logger instance, avoiding per-call logger creation.
+    - A named function provides a meaningful name in stack traces instead of <lambda>.
+    """
+    logger = log.new_logger("act")
+
+    def act(instruction: str) -> None:
+        finding = registry.find(instruction)
+        if finding is None:
+            logger.info(f"Could not find action for instruction '{instruction}'")
+            sound.play_no(output_device_name)
+        else:
+            action, match = finding
+            logger.debug(f"Found action for instruction {instruction}: action={action}, match={match}")
+            sound.play_understood(output_device_name)
+            try:
+                handler_exit_code = handler.handle(action, match)
+            except Exception as e:
+                logger.error(f"Unhandled exception when handling instruction {instruction}: {type(e)} {e}", exc_info=e)
+                handler_exit_code = 1
+
+            if handler_exit_code == 0:
+                logger.info(f"Successfully acted on instruction: {instruction}")
+                sound.play_ok(output_device_name)
+            else:
+                logger.info(f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
+                sound.play_no(output_device_name)
+
+    return act
 
 
 class Lurker:
@@ -23,7 +58,8 @@ class Lurker:
                  handler: ActionHandler,
                  listener: SpeechToTextListener,
                  input_device_name: Optional[str],
-                 output_device_name: Optional[str]
+                 output_device_name: Optional[str],
+                 action_refresh_interval_s: Union[int, str],
                  ):
         self._logger = log.new_logger(self.__class__.__name__)
         self.registry = registry
@@ -31,39 +67,18 @@ class Lurker:
         self.listener = listener
         self.input_device_name = input_device_name
         self.output_device_name = output_device_name
+        self._action_refresh_interval_s = action_refresh_interval_s
 
-    def act(self, instruction: str) -> None:
-        finding = self.registry.find(instruction)
-        if finding is None:
-            self._logger.info(f"Could not find action for instruction '{instruction}'")
-            sound.play_no(self.output_device_name)
-        else:
-            action, match = finding
-            self._logger.debug(f"Found action for instruction {instruction}: action={action}, match={match}")
-            sound.play_understood(self.output_device_name)
-            try:
-                handler_exit_code = self.handler.handle(action, match)
-            except Exception as e:
-                self._logger.error(f"Unhandled exception when handling instruction {instruction}: {type(e)} {e}", exc_info=e)
-                handler_exit_code = 1
-
-            if handler_exit_code == 0:
-                self._logger.info(f"Successfully acted on instruction: {instruction}")
-                sound.play_ok(self.output_device_name)
-            else:
-                self._logger.info(f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
-                sound.play_no(self.output_device_name)
-
-    def start_main_loop(self, keyword: Keyword, action_refresh_interval_s: Union[int, str] = 5) -> None:
+    def start_main_loop(self) -> None:
         LOGGER.info("Initializing...")
         self.registry.load_actions_once()
-        self.registry.start_periodic_reloading_in_background(interval_duration_s=int(action_refresh_interval_s))
+        self.registry.start_periodic_reloading_in_background(interval_duration_s=int(self._action_refresh_interval_s))
         sound.load_sounds()
 
         LOGGER.info("Start listening...")
         sound.play_startup(self.output_device_name)
         try:
-            self.listener.start_listening(keyword=keyword, instruction_callback=self.act)
+            self.listener.start_listening()
         except Exception as e:
             LOGGER.error(f"Fatal error: {e}", exc_info=e)
             exit(1)
@@ -117,19 +132,26 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     registry = ActionRegistry(actions_path)
 
     model_path = _resolve_model(lurker_home, lurker_config.LURKER_LANGUAGE)
+    keyword = Keyword(lurker_config.LURKER_KEYWORD)
+
+    act_callback = _make_act_callback(registry, handler, lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(
-        model_path=model_path
+        callback=act_callback,
+        keyword=keyword,
+        model_path=model_path,
     )
     listener = SpeechToTextListener(
         transcriber=transcriber,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
-        speech_config=lurker_config.LURKER_SPEECH_CONFIG
+        speech_config=lurker_config.LURKER_SPEECH_CONFIG,
     )
+
     return Lurker(
         registry=registry,
         handler=handler,
         listener=listener,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
-        output_device_name=lurker_config.LURKER_OUTPUT_DEVICE
+        output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
+        action_refresh_interval_s=lurker_config.LURKER_ACTION_REFRESH_INTERVAL,
     )
