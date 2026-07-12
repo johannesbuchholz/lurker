@@ -100,27 +100,27 @@ class SpeechToTextListener:
         if self._gate == self.GateState.DOWN:
             if not is_speech:
                 self._prefill_chunks.append(incoming)
-                LOGGER.trace("PREFILL: appended %d bytes (%d chunks)", len(incoming), len(self._prefill_chunks))
+                LOGGER.log(log.TRACE, "PREFILL: appended %d bytes (%d chunks)", len(incoming), len(self._prefill_chunks))
                 return
             self._open_gate()
             prefill = len(self._prefill_chunks)
             for chunk in self._prefill_chunks:
                 self._asr.feed_data(chunk)
             self._asr.feed_data(incoming)
-            LOGGER.trace("GATE: opened, pushed %d prefill + 1 current chunk (%d bytes total)", prefill + 1, sum(len(c) for c in self._prefill_chunks) + len(incoming))
+            LOGGER.log(log.TRACE, "GATE: opened, pushed %d prefill + 1 current chunk (%d bytes total)", prefill + 1, sum(len(c) for c in self._prefill_chunks) + len(incoming))
             return
 
         # gate is UP
         self._gate_chunk_count += 1
         if self._gate_chunk_count > self._max_open_gate_chunks:
-            LOGGER.trace("GATE: force-close, exceeded max open gate chunks (%d)", self._max_open_gate_chunks)
+            LOGGER.log(log.TRACE, "GATE: force-close, exceeded max open gate chunks (%d)", self._max_open_gate_chunks)
             self._close_gate()
             return
 
         if not is_speech:
             self._non_speech_chunk_count += 1
             if self._non_speech_chunk_count > self._capture_config.required_trailing_silence_chunks > 0:
-                LOGGER.trace("GATE: close, trailing silence exceeded (%d > %d)", self._non_speech_chunk_count, self._capture_config.required_trailing_silence_chunks)
+                LOGGER.log(log.TRACE, "GATE: close, trailing silence exceeded (%d > %d)", self._non_speech_chunk_count, self._capture_config.required_trailing_silence_chunks)
                 self._close_gate()
                 return
         else:

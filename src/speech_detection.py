@@ -40,15 +40,15 @@ class SpeechDetector:
 
         if not is_loud_enough:
             self._update_ambient(energy)
-            LOGGER.trace("ENERGY: rejected (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
+            LOGGER.log(log.TRACE, "ENERGY: rejected (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
             return False
 
         is_vad_speech = self._vad.is_speech(pcm_bytes, sample_rate=self._sample_rate)
         if not is_vad_speech:
             self._update_ambient(energy)
-            LOGGER.trace("VAD: rejected (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
+            LOGGER.log(log.TRACE, "VAD: rejected (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
         else:
-            LOGGER.trace("SPEECH: accepted (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
+            LOGGER.log(log.TRACE, "SPEECH: accepted (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
         return is_vad_speech
 
     def _update_ambient(self, energy: float) -> None:
