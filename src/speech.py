@@ -3,17 +3,18 @@ from typing import Protocol, Any
 
 import numpy as np
 import sounddevice as sd
-import webrtcvad
 
 from src import log
 from src.config import SpeechConfig
+from src.speech_detection import SpeechDetector
 
 LOGGER = log.new_logger(__name__)
 
 class ASRBackend(Protocol):
-    def feed_data(self, pcm_bytes: bytes) -> None:
+    def feed_data(self, pcm_bytes: bytes) -> bool:
         """
         Push raw PCM audio into the ASR backend.
+        Returns True when the backend has a final result (utterance complete).
         """
         ...
 
@@ -51,12 +52,12 @@ class SpeechToTextListener:
         self._capture_config = speech_config or SpeechConfig()
 
         self._gate = self.GateState.DOWN
-        self._last_non_speech_chunk_count = 0
+        self._non_speech_chunk_count = 0
         self._gate_chunk_count = 0
         self._max_open_gate_chunks = int(self._capture_config.max_open_gate_seconds / (self._capture_config.frame_ms / 1000))
         self._lingering_chunks: deque[bytes] = deque(maxlen=self._capture_config.lingering_speech_chunks)
         self._audio_stream = None
-        self._vad = webrtcvad.Vad(self._capture_config.vad_aggressiveness)
+        self._detector = SpeechDetector(self._capture_config.detector)
 
         self._running = False
 
@@ -67,7 +68,7 @@ class SpeechToTextListener:
         self._running = True
 
         self._audio_stream = sd.InputStream(
-            samplerate=self._capture_config.sample_rate,
+            samplerate=self._capture_config.detector.sample_rate,
             channels=1,
             dtype="int16",
             blocksize=self._capture_config.frame_samples,
@@ -100,7 +101,7 @@ class SpeechToTextListener:
             return
 
         incoming = indata.tobytes()
-        is_speech = self._call_vad(incoming)
+        is_speech = self._detector.is_speech(incoming)
         LOGGER.trace("VAD: %d B vad=%s gate=%s", len(incoming), is_speech, "UP ●" if self._gate else "DOWN ○")
 
         if self._gate == self.GateState.DOWN:
@@ -124,20 +125,23 @@ class SpeechToTextListener:
             return
 
         if not is_speech:
-            self._last_non_speech_chunk_count += 1
-            if self._last_non_speech_chunk_count > self._capture_config.required_trailing_silence_chunks:
-                LOGGER.trace("GATE: close, trailing silence exceeded (%d > %d)", self._last_non_speech_chunk_count, self._capture_config.required_trailing_silence_chunks)
+            self._non_speech_chunk_count += 1
+            if 0 < self._capture_config.required_trailing_silence_chunks < self._non_speech_chunk_count:
+                LOGGER.trace("GATE: close, trailing silence exceeded (%d > %d)", self._non_speech_chunk_count, self._capture_config.required_trailing_silence_chunks)
                 self._close_gate()
                 return
         else:
-            self._last_non_speech_chunk_count = 0
+            self._non_speech_chunk_count = 0
 
-        self._asr.feed_data(incoming)
-        LOGGER.trace("FEED: %d B to ASR (silence=%d, chunks=%d)", len(incoming), self._last_non_speech_chunk_count, self._gate_chunk_count)
+        is_final = self._asr.feed_data(incoming)
+        LOGGER.trace("FEED: %d B to ASR (silence=%d, chunks=%d, final=%s)", len(incoming), self._non_speech_chunk_count, self._gate_chunk_count, is_final)
+        if is_final:
+            LOGGER.debug("GATE: close, Vosk returned final result")
+            self._close_gate()
 
     def _open_gate(self):
         self._gate = self.GateState.UP
-        self._last_non_speech_chunk_count = 0
+        self._non_speech_chunk_count = 0
         self._gate_chunk_count = 0
         LOGGER.debug("OPEN GATE ●")
         self._asr.reset()
@@ -146,7 +150,3 @@ class SpeechToTextListener:
         self._asr.flush()
         self._gate = self.GateState.DOWN
         LOGGER.debug("CLOSE GATE ○")
-
-    def _call_vad(self, pcm_bytes: bytes) -> bool:
-        # pcm_bytes always matches frame_samples * 2 — guaranteed by the audio callback's blocksize
-        return self._vad.is_speech(pcm_bytes, sample_rate=self._capture_config.sample_rate)

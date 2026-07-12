@@ -47,25 +47,36 @@ def _load_config_file(path: str) -> dict[str, Any]:
 
 
 @dataclass(frozen=True)
-class SpeechConfig:
-    required_trailing_silence_chunks: int = 32
-    """Number of trailing silent chunks required to consider speech ended in order to stop audio streaming to ASR backend."""
-    lingering_speech_chunks: int = 12
-    """Number of trailing chunks still feed to ASR backend after VAD gate turned down."""
+class SpeechDetectorConfig:
     sample_rate: int = 16000
-    frame_ms: int = 20
+    """Sample rate for WebRTC VAD. Valid values: 8000, 16000, 32000, 48000."""
     vad_aggressiveness: int = 3
-    max_open_gate_seconds: float = 4.0
-    """Maximum time the gate stays open before force-flushing, in seconds."""
-    frame_samples: int = int(sample_rate * (frame_ms / 1000))
+    """WebRTC VAD aggressiveness (0-3), higher means more filtering."""
+    energy_factor: float = 1.5
+    """Multiplier above ambient noise level required to consider a chunk as speech."""
+    energy_alpha: float = 0.05
+    """EMA smoothing factor for ambient noise estimation. Lower = slower adaptation."""
 
     def __post_init__(self):
-        # Validate and adjust sample rate for WebRTC VAD
         valid_rates = [8000, 16000, 32000, 48000]
         if self.sample_rate not in valid_rates:
             LOGGER.warning(
                 f"Sample rate {self.sample_rate} not optimal for WebRTC VAD. Valid rates: {valid_rates}"
             )
+
+
+@dataclass(frozen=True)
+class SpeechConfig:
+    required_trailing_silence_chunks: int = -1
+    """Number of trailing silent chunks required to consider speech ended in order to stop audio streaming to ASR backend. Set to negative if you want to only use full results as decided by the ASR-Backend."""
+    lingering_speech_chunks: int = 12
+    """Number of trailing chunks still feed to ASR backend after VAD gate turned down."""
+    frame_ms: int = 20
+    max_open_gate_seconds: float = 4.0
+    """Maximum time the gate stays open before force-flushing, in seconds."""
+    detector: SpeechDetectorConfig = field(default_factory=SpeechDetectorConfig)
+    """Configuration for speech detection (VAD + energy pre-filter)."""
+    frame_samples: int = int(16000 * (20 / 1000))
 
 
 @dataclass(frozen=True)

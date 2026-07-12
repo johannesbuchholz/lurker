@@ -22,18 +22,20 @@ class Transcriber:
         self._callback = callback
         self._keyword = keyword
 
-    def feed_data(self, pcm_bytes: bytes) -> None:
+    def feed_data(self, pcm_bytes: bytes) -> bool:
         if self._recognizer.AcceptWaveform(pcm_bytes):
             result_str = self._recognizer.Result()
             try:
                 result = json.loads(result_str)
             except Exception as e:
                 self._logger.warning(f"Could not read ASR result: {result_str} ({e})", exc_info=True)
-                return
+                return True
 
             text = result.get("text", "").strip()
             if text:
                 self._transcription.extend(text.split())
+            return True
+        return False
 
     def flush(self) -> None:
         """
