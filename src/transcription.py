@@ -1,5 +1,4 @@
 import json
-from typing import override
 
 from vosk import Model, KaldiRecognizer
 
@@ -19,11 +18,9 @@ class Transcriber(ASRBackend):
 
         self._keyword = keyword
 
-    @override
     def feed_data(self, pcm_bytes: bytes) -> bool:
         return self._recognizer.AcceptWaveform(pcm_bytes)
 
-    @override
     def check_for_keyword(self) -> str | None:
         """
         Checks accumulated transcription for keyword and fires callback if found.
