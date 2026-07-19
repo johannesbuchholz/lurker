@@ -38,6 +38,10 @@ class LightAction:
         return self.__str__()
 
 def actions_from_json(json_str: str) -> list[LightAction]:
-    # TODO: implement. use something like LightState(**light_state) where the input json looks like this
-    #  {"0,1,2,3": {"on": true}, "2,3": {"on": false}, "0": {"bri": 50}}`, This should result in 3 LightAction items.
-    pass
+    data = json.loads(json_str)
+    actions = []
+    for light_ids_str, state_dict in data.items():
+        state = LightState(**state_dict)
+        action = LightAction(light_ids_str, state)
+        actions.append(action)
+    return actions

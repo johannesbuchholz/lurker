@@ -27,14 +27,14 @@ def _make_act_callback(registry: ActionGenerator, handler: ActionHandler, output
     def act(instruction: str) -> None:
         sound.play_understood(output_device_name)
         logger.info(f"Trying to find action for instruction '{instruction}'")
-        found_action = registry.generate_lights(instruction)
-        if found_action is None:
+        lights = registry.generate_lights(instruction)
+        if lights is None or len(lights) < 1:
             logger.info(f"Could not find action for instruction '{instruction}'")
             sound.play_no(output_device_name)
         else:
-            logger.debug(f"Found action for instruction {instruction}: action={found_action}")
+            logger.debug(f"Found action for instruction {instruction}: action={lights}")
             try:
-                handler_exit_code = handler.handle(found_action)
+                handler_exit_code = handler.handle(lights)
             except Exception as e:
                 logger.error(f"Unhandled exception when handling instruction {instruction}: {type(e)} {e}", exc_info=e)
                 handler_exit_code = 1
