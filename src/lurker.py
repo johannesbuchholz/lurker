@@ -138,12 +138,12 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
 
     act_callback = _make_act_callback(registry, handler, lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(
-        callback=act_callback,
         keyword=keyword,
         model_path=model_path,
     )
     listener = SpeechToTextListener(
         transcriber=transcriber,
+        instruction_callback=act_callback,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
         speech_config=lurker_config.LURKER_SPEECH_CONFIG,

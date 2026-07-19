@@ -1,6 +1,7 @@
 import logging
+import threading
 from collections import deque
-from typing import Protocol, Any
+from typing import Protocol, Any, Callable
 
 import numpy as np
 import sounddevice as sd
@@ -19,9 +20,10 @@ class ASRBackend(Protocol):
         """
         ...
 
-    def check_for_keyword(self) -> None:
+    def check_for_keyword(self) -> str | None:
         """
         Flush accumulated transcription at sentence boundary.
+        Returns instruction string if keyword found, None otherwise.
         """
         ...
 
@@ -38,10 +40,12 @@ class SpeechToTextListener:
         UP = 1
 
     def __init__(self, transcriber: ASRBackend,
+                 instruction_callback: Callable[[str], None],
                  input_device_name: str | None = None,
                  output_device_name: str | None = None,
                  speech_config: SpeechConfig | None = None):
         self._asr = transcriber
+        self._callback = instruction_callback
         self._input_device_name = input_device_name
         self._output_device_name = output_device_name
         self._capture_config = speech_config or SpeechConfig()
@@ -128,6 +132,11 @@ class SpeechToTextListener:
         LOGGER.debug("OPEN GATE ●")
 
     def _close_gate(self):
-        self._asr.check_for_keyword()
+        instruction = self._asr.check_for_keyword()
         self._gate = self.GateState.DOWN
         LOGGER.debug("CLOSE GATE ○")
+        self._act_on_instruction(instruction)
+
+    def _act_on_instruction(self, instruction: str | None) -> None:
+        if instruction:
+            threading.Thread(name=instruction, target=self._callback, args=(instruction,), daemon=True).start()

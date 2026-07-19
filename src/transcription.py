@@ -1,29 +1,30 @@
 import json
-import threading
-from typing import Callable
+from typing import override
 
 from vosk import Model, KaldiRecognizer
 
 from src import log
 from src.keyword import Keyword
+from src.speech import ASRBackend
 
 
-class Transcriber:
+class Transcriber(ASRBackend):
 
-    def __init__(self, callback: Callable[[str], None], keyword: Keyword, model_path: str, sample_rate: int = 16000):
+    def __init__(self, keyword: Keyword, model_path: str, sample_rate: int = 16000):
         self._logger = log.new_logger(self.__class__.__name__)
 
         self._model = Model(model_path)
         self._recognizer = KaldiRecognizer(self._model, sample_rate)
         self._recognizer.SetWords(True)
 
-        self._callback = callback
         self._keyword = keyword
 
+    @override
     def feed_data(self, pcm_bytes: bytes) -> bool:
         return self._recognizer.AcceptWaveform(pcm_bytes)
 
-    def check_for_keyword(self) -> None:
+    @override
+    def check_for_keyword(self) -> str | None:
         """
         Checks accumulated transcription for keyword and fires callback if found.
         On keyword match, resets recognizer and clears transcription.
@@ -47,11 +48,10 @@ class Transcriber:
             result_to_check = partial_json.get("partial", "").strip()
 
         keyword_end_index = self._keyword.is_in(result_to_check)
-        instruction = ""
+        instruction = None
         has_keyword = keyword_end_index is not None
         if has_keyword:
             instruction = result_to_check[keyword_end_index:].strip()
             self._recognizer.Reset()
-            if instruction:
-                threading.Thread(name=instruction, target=self._callback, args=(instruction,), daemon=True).start()
-        self._logger.debug(f"Checked: has_keyword={has_keyword}, text=\"{result_to_check}\", instruction=\"{instruction}\"")
+        self._logger.debug(f"Checked: has_keyword={has_keyword}, text=\"{result_to_check}\", instruction=\"\"")
+        return instruction
