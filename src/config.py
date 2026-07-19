@@ -69,8 +69,8 @@ class SpeechDetectorConfig:
 
 @dataclass(frozen=True)
 class SpeechConfig:
-    required_trailing_silence_chunks: int = 64
-    """Number of trailing silent chunks required to consider speech ended in order to stop audio streaming to ASR backend. Set to negative if you want to only use full results as decided by the ASR-Backend."""
+    silence_threshold_seconds: float = 1.5
+    """Seconds of silence to accept before stopping to feed audio to ASR backend. Set to negative if you want to only use full results as decided by the ASR-Backend."""
     prefill_chunks: int = 32
     """Number of pre-speech audio chunks buffered while gate is DOWN, pushed to ASR when gate opens for context."""
     frame_ms: int = 20
