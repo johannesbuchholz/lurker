@@ -29,16 +29,7 @@ class Transcriber:
         On keyword match, resets recognizer and clears transcription.
         """
         complete_asr_result: str = self._recognizer.Result()
-        if not complete_asr_result:
-            # full result not available: us current partial result
-            partial_json = {}
-            try:
-                partial_json = json.loads(self._recognizer.PartialResult())
-            except Exception as e:
-                self._logger.warning(f"Could not read partial result: {partial_json} ({e})", exc_info=True)
-            result_to_check = partial_json.get("partial", "").strip()
-            asr_completed = False
-        else:
+        if complete_asr_result:
             # asr thinks, this is a complete result.
             complete_json = {}
             try:
@@ -46,7 +37,14 @@ class Transcriber:
             except Exception as e:
                 self._logger.warning(f"Could not read partial result: {complete_json} ({e})", exc_info=True)
             result_to_check = complete_json.get("text", "").strip()
-            asr_completed = True
+        else:
+            # full result not available: us current partial result
+            partial_json = {}
+            try:
+                partial_json = json.loads(self._recognizer.PartialResult())
+            except Exception as e:
+                self._logger.warning(f"Could not read partial result: {partial_json} ({e})", exc_info=True)
+            result_to_check = partial_json.get("partial", "").strip()
 
         keyword_end_index = self._keyword.is_in(result_to_check)
         instruction = ""
