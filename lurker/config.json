@@ -5,7 +5,7 @@
   },
   "LURKER_SPEECH_CONFIG": {},
   "LURKER_KEYWORD": ["/john(ny)?/", "johnson", "jenkins"],
-  "LURKER_LANGUAGE": "de",
+  "LURKER_LANGUAGE": "en",
   "LURKER_LOG_LEVEL": "DEBUG",
   "LURKER_INPUT_DEVICE": "logi"
 }

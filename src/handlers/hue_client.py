@@ -29,6 +29,7 @@ DUMMY_RESPONSE_JSON = json.loads("""
 }
 """)
 
+
 class HueClient(ActionHandler):
 
     accepted_type = "hue"
@@ -100,7 +101,7 @@ class HueClient(ActionHandler):
         if action is list[LightAction]:
             return self._handle_internal(action)
         else:
-            self._logger.info(f"Skipping non-light action: {action}")
+            self._logger.info(f"Skipping non-light action: type={type(action)}, action={action}")
             return 0
 
     def _handle_internal(self, light_actions: list[LightAction]) -> int:
@@ -117,9 +118,9 @@ class HueClient(ActionHandler):
         else:
             self.lights = self._retrieve_lights()
         state: dict[str, str] = {
-            light_id: LightState(**light["state"]).to_json()
+            light_id: LightState(name=light["name"], **light["state"]).to_json()
             for light_id, light in self.lights.items()
-            if "state" in light
+            if "name" in light and "state" in light
         }
         return json.dumps(state)
 

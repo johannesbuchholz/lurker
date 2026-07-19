@@ -1,25 +1,32 @@
 import abc
 import json
-from typing import cast
 
-from llama_cpp import Llama, LlamaRAMCache, CreateCompletionResponse
+from llama_cpp import Llama, LlamaRAMCache
 
 from src import log
 from src.handlers.lights import LightAction, actions_from_json
 
-PROMPT_TEMPLATE = """<|system|>
-Translate user requests to best matching lighting state.
-Output valid JSON only!
-Json represents light state in HSV and if the light is on/off: 
-{"<id>":{"bri":0-254,"hue":0-65535,"sat":0-254,"on":true|false}}
-Syntax-Example (ids with same state my be grouped by comma):
-{"0": {"bri":90,"hue":420},"1":{"on":false},"2,3":{"bri":254}}
-Interpretation Examples:
-"sunset" -> warm orange, medium brightness
-"relaxing" -> warm dim light
-"movie night" -> dark, only tv lights
-<|user|>
-"""
+SYSTEM_PROMPT = {
+    "role": "system",
+    "content": """
+               Translate user requests to best matching lighting state.
+               
+               JSON represents light state in HSV and on/off:
+               {"<id>":{"bri":0-254,"hue":0-65535,"sat":0-254,"on":bool}}
+               light off -> {"<id>": {"on": false}}
+               dim light -> {"<id>": {"bri": <low value>}}
+               white light -> {"<id>": {"sat": 0, "bri": 254}}
+               
+               Interpretation examples:
+               "sunset" -> warm orange, medium brightness
+               "relaxing" -> warm dim light
+               "movie night" -> dark, only TV lights
+               "all lights" -> affects every available id
+               
+               Only state changed lights and changed field values.
+               Output valid JSON only!
+               """
+}
 
 USER_PROMPT = """
 Current state: {current_state}
@@ -28,14 +35,13 @@ User request: {request}
 
 
 class ActionGenerator:
-
     _logger = log.new_logger(__qualname__)
 
     def __init__(self, model_path: str):
         self._logger = log.new_logger(self.__class__.__name__)
         self._model = Llama(model_path=model_path,
                             cache=LlamaRAMCache(),
-                            n_ctx=256, n_threads=4, n_gpu_layers=0, n_batch=512, verbose=False)
+                            n_ctx=512, n_threads=4, n_gpu_layers=0, n_batch=512, verbose=False)
         self._warmup()
 
     def generate_lights(self, instruction: str, state: str | None = None) -> list[LightAction]:
@@ -57,19 +63,24 @@ class ActionGenerator:
         return USER_PROMPT.format(current_state=current_state, request=instruction)
 
     def _call_llm(self, user_content: str) -> str:
-        prompt = PROMPT_TEMPLATE + user_content + "\n<|assistant|>"
-        self._logger.debug(f"Prompting for: {prompt}")
-        response: CreateCompletionResponse = cast(CreateCompletionResponse,
-                                                  self._model.create_completion(
-                                                      prompt=prompt,
-                                                      temperature=0.1,
-                                                      max_tokens=512
-                                                  ))
-        return response["choices"][0]["text"]
+        messages = [
+            SYSTEM_PROMPT,
+            {
+                "role": "user",
+                "content": user_content
+            },
+        ]
+        self._logger.debug(f"Prompting: {messages}")
+        response = self._model.create_chat_completion(
+            messages=messages,
+            temperature=0.1,
+            max_tokens=256,
+        )
+        return response["choices"][0]["message"]["content"]
 
     def _warmup(self) -> None:
-        self._model.create_completion(
-            prompt=PROMPT_TEMPLATE,
+        self._model.create_chat_completion(
+            messages=[SYSTEM_PROMPT],
             temperature=0.1,
             max_tokens=1
         )

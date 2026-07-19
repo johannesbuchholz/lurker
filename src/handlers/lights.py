@@ -7,8 +7,8 @@ class LightState:
 
     ALLOWED_LIGHT_KEYS = ["on", "sat", "bri", "hue"]
 
-    def __init__(self, **kwargs):
-        self.state = {k: v for k, v in kwargs.items() if k in LightState.ALLOWED_LIGHT_KEYS}
+    def __init__(self, name: str | None = None, **kwargs):
+        self.state = {"name": name} | {k: v for k, v in kwargs.items() if k in LightState.ALLOWED_LIGHT_KEYS}
 
     def to_http_request(self, host: str, user: str, light_id: str) -> Request:
         url = f"http://{host}/api/{user}/lights/{light_id}/state"
