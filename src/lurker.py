@@ -27,7 +27,8 @@ def _make_act_callback(registry: ActionGenerator, handler: ActionHandler, output
     def act(instruction: str) -> None:
         sound.play_understood(output_device_name)
         logger.info(f"Trying to find action for instruction '{instruction}'")
-        lights = registry.generate_lights(instruction)
+        state = handler.get_state(dummy=True)
+        lights = registry.generate_lights(instruction, state=state)
         if lights is None or len(lights) < 1:
             logger.info(f"Could not find action for instruction '{instruction}'")
             sound.play_no(output_device_name)

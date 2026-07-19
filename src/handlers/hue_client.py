@@ -9,6 +9,25 @@ from src.handlers.lights import LightState, LightAction
 
 ALL_LIGHTS_ID = "ALL"
 LIGHT_ID_STRING_DELIMITER = ","
+DUMMY_RESPONSE_JSON = json.loads("""
+{
+  "1": {
+    "state": { "on": true, "bri": 128, "hue": 8000, "sat": 200 },
+    "name": "Living Room Lamp",
+    "type": "Extended color light"
+  },
+  "2": {
+    "state": { "on": true, "bri": 254, "hue": 40000, "sat": 100 },
+    "name": "Desk Lamp",
+    "type": "Extended color light"
+  },
+  "3": {
+    "state": { "on": false, "bri": 0, "hue": 0, "sat": 0 },
+    "name": "Bedroom Light",
+    "type": "Extended color light"
+  }
+}
+""")
 
 class HueClient(ActionHandler):
 
@@ -88,3 +107,25 @@ class HueClient(ActionHandler):
         if len(self.lights) < 1:
             self.lights = self._retrieve_lights()
         return self._light(light_actions)
+
+    def get_state(self, dummy: bool = False) -> str:
+        """
+        :return: The current state of the lights as JSON string.
+        """
+        if dummy:
+            self.lights = DUMMY_RESPONSE_JSON
+        else:
+            self.lights = self._retrieve_lights()
+        state: dict[str, str] = {
+            light_id: LightState(**light["state"]).to_json()
+            for light_id, light in self.lights.items()
+            if "state" in light
+        }
+        return json.dumps(state)
+
+
+
+
+
+
+

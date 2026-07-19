@@ -7,24 +7,23 @@ from llama_cpp import Llama, LlamaRAMCache, CreateCompletionResponse
 from src import log
 from src.handlers.lights import LightAction, actions_from_json
 
-PROMPT_TEMPLATE = """<system>
+PROMPT_TEMPLATE = """<|system|>
 Translate user requests to best matching lighting state.
 Output valid JSON only!
-Json represents light state in HSV: 
+Json represents light state in HSV and if the light is on/off: 
 {"<id>":{"bri":0-254,"hue":0-65535,"sat":0-254,"on":true|false}}
-Syntax-Example:
+Syntax-Example (ids with same state my be grouped by comma):
 {"0": {"bri":90,"hue":420},"1":{"on":false},"2,3":{"bri":254}}
 Interpretation Examples:
 "sunset" -> warm orange, medium brightness
 "relaxing" -> warm dim light
 "movie night" -> dark, only tv lights
-<user>
-{user_content}
-<assistant>"""
+<|user|>
+"""
 
 USER_PROMPT = """
 Current state: {current_state}
-User instruction: {instruction}
+User request: {request}
 """
 
 
@@ -36,11 +35,15 @@ class ActionGenerator:
         self._logger = log.new_logger(self.__class__.__name__)
         self._model = Llama(model_path=model_path,
                             cache=LlamaRAMCache(),
-                            n_ctx=128, n_threads=4, n_gpu_layers=0, n_batch=128, verbose=False)
+                            n_ctx=256, n_threads=4, n_gpu_layers=0, n_batch=512, verbose=False)
         self._warmup()
 
-    def generate_lights(self, instruction: str, current_state: str = "{}") -> list[LightAction]:
-        user_content = self._user_content(current_state, instruction)
+    def generate_lights(self, instruction: str, state: str | None = None) -> list[LightAction]:
+        if not state:
+            self._logger.warning(f"No current state given for instruction '{instruction}'")
+            return []
+
+        user_content = self._user_content(state, instruction)
         content = self._call_llm(user_content)
         self._logger.debug(f"LLM response: {content}")
         try:
@@ -51,23 +54,23 @@ class ActionGenerator:
 
     @staticmethod
     def _user_content(current_state: str, instruction: str) -> str:
-        return USER_PROMPT.format(current_state=current_state, instruction=instruction)
+        return USER_PROMPT.format(current_state=current_state, request=instruction)
 
     def _call_llm(self, user_content: str) -> str:
-        prompt = PROMPT_TEMPLATE.format(user_content=user_content)
+        prompt = PROMPT_TEMPLATE + user_content + "\n<|assistant|>"
+        self._logger.debug(f"Prompting for: {prompt}")
         response: CreateCompletionResponse = cast(CreateCompletionResponse,
                                                   self._model.create_completion(
                                                       prompt=prompt,
-                                                      temperature=0.,
-                                                      max_tokens=128,
-                                                      stream=False
+                                                      temperature=0.1,
+                                                      max_tokens=512
                                                   ))
         return response["choices"][0]["text"]
 
     def _warmup(self) -> None:
         self._model.create_completion(
             prompt=PROMPT_TEMPLATE,
-            temperature=0.,
+            temperature=0.1,
             max_tokens=1
         )
 
@@ -110,6 +113,13 @@ class ActionHandler(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def get_state(self) -> str:
+        """
+        :return: The state of the objects this handler operates as JSON string.
+        """
+        pass
+
 
 class NOPHandler(ActionHandler):
 
@@ -118,3 +128,6 @@ class NOPHandler(ActionHandler):
 
     def handle(self, action) -> int:
         return 0
+
+    def get_state(self) -> str:
+        return "{}"

@@ -1,5 +1,4 @@
 import logging
-import threading
 from collections import deque
 from typing import Protocol, Any, Callable
 
@@ -138,5 +137,6 @@ class SpeechToTextListener:
         self._act_on_instruction(instruction)
 
     def _act_on_instruction(self, instruction: str | None) -> None:
+        """Blocks until callback returns."""
         if instruction:
-            threading.Thread(name=instruction, target=self._callback, args=(instruction,), daemon=True).start()
+            self._callback(instruction)
