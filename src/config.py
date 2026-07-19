@@ -50,7 +50,7 @@ def _load_config_file(path: str) -> dict[str, Any]:
 class SpeechDetectorConfig:
     sample_rate: int = 16000
     """Sample rate for WebRTC VAD. Valid values: 8000, 16000, 32000, 48000."""
-    vad_aggressiveness: int = 3
+    vad_aggressiveness: int = 2
     """WebRTC VAD aggressiveness (0-3), higher means more filtering."""
     energy_factor: float = 2.0
     """Multiplier above ambient noise level required to consider a chunk as speech."""

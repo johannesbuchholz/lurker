@@ -28,7 +28,7 @@ class SpeechDetector:
         self._initialized = False
         self._vad = webrtcvad.Vad(config.vad_aggressiveness)
 
-    def is_speech(self, pcm_bytes: bytes) -> bool:
+    def is_speech(self, pcm_bytes: bytes, update_ambient: bool = True) -> bool:
         energy = _compute_energy(pcm_bytes)
 
         if not self._initialized:
@@ -39,13 +39,13 @@ class SpeechDetector:
         is_loud_enough = energy > threshold
 
         if not is_loud_enough:
-            self._update_ambient(energy)
+            if update_ambient:
+                self._update_ambient(energy)
             LOGGER.log(log.TRACE, "ENERGY: rejected (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
             return False
 
         is_vad_speech = self._vad.is_speech(pcm_bytes, sample_rate=self._sample_rate)
         if not is_vad_speech:
-            self._update_ambient(energy)
             LOGGER.log(log.TRACE, "VAD: rejected (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)
         else:
             LOGGER.log(log.TRACE, "SPEECH: accepted (energy=%.1f, threshold=%.1f, ambient=%.1f)", energy, threshold, self._ambient_level)

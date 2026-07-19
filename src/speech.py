@@ -84,7 +84,7 @@ class SpeechToTextListener:
             return
 
         incoming = indata.tobytes()
-        is_speech = self._detector.is_speech(incoming)
+        is_speech = self._detector.is_speech(incoming, self._gate == self.GateState.DOWN)
 
         if self._gate == self.GateState.DOWN:
             if is_speech:
