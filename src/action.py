@@ -1,6 +1,5 @@
 import abc
 
-from cuda.bindings.driver import Any
 from llama_cpp import Llama
 
 from src import log
@@ -64,5 +63,5 @@ class NOPHandler(ActionHandler):
     def __init__(self):
         super().__init__()
 
-    def handle(self, action: Any) -> int:
+    def handle(self, action) -> int:
         return 0
