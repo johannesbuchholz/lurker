@@ -96,13 +96,11 @@ class LurkerConfig:
     LURKER_LANGUAGE: str = "en"
     """The language of the spoken words that should be transcribed by lurker. Setting this value usually improves transcription time."""
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)
-    """Configuration of audio queues and how to determine if a queue should be handed over to the more expensive transcription process."""
+    """Configuration of how Lurker handles the speech to text process."""
     LURKER_HANDLER_MODULE: str = "src.handlers.hue_client"
     """Module name containing a single implementation of src.action.ActionHandler to be used for acting on recorded instructions."""
     LURKER_HANDLER_CONFIG: dict[str, str] = field(default_factory=dict)
     """Configuration passed to the configured ActionHandler."""
-    LURKER_ACTION_REFRESH_INTERVAL: int | str = 30
-    """Duration in seconds between action reloading attempts."""
 
     def to_pretty_str(self) -> str:
         key_value_strings = [f"{field_name}={value}" for field_name, value in dataclasses.asdict(self).items()]

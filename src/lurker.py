@@ -5,7 +5,7 @@ import sys
 from typing import Callable
 
 from src import log, sound
-from src.action import ActionRegistry, ActionHandler, LoadedHandlerType, NOPHandler
+from src.action import ActionGenerator, LoadedHandlerType, NOPHandler, ActionHandler
 from src.config import LurkerConfig
 from src.keyword import Keyword
 from src.speech import SpeechToTextListener
@@ -14,7 +14,7 @@ from src.transcription import Transcriber
 LOGGER = log.new_logger(__name__)
 
 
-def _make_act_callback(registry: ActionRegistry, handler: ActionHandler, output_device_name: str | None) -> Callable[[str], None]:
+def _make_act_callback(registry: ActionGenerator, handler: ActionHandler, output_device_name: str | None) -> Callable[[str], None]:
     """
     Builds the callback that bridges ASR output to action execution.
 
@@ -27,7 +27,7 @@ def _make_act_callback(registry: ActionRegistry, handler: ActionHandler, output_
     def act(instruction: str) -> None:
         sound.play_understood(output_device_name)
         logger.info(f"Trying to find action for instruction '{instruction}'")
-        found_action = registry.find(instruction)
+        found_action = registry.generate_lights(instruction)
         if found_action is None:
             logger.info(f"Could not find action for instruction '{instruction}'")
             sound.play_no(output_device_name)
@@ -55,12 +55,11 @@ class Lurker:
     """
 
     def __init__(self,
-                 registry: ActionRegistry,
+                 registry: ActionGenerator,
                  handler: ActionHandler,
                  listener: SpeechToTextListener,
                  input_device_name: str | None,
-                 output_device_name: str | None,
-                 action_refresh_interval_s: int | str,
+                 output_device_name: str | None
                  ):
         self._logger = log.new_logger(self.__class__.__name__)
         self.registry = registry
@@ -68,12 +67,9 @@ class Lurker:
         self.listener = listener
         self.input_device_name = input_device_name
         self.output_device_name = output_device_name
-        self._action_refresh_interval_s = action_refresh_interval_s
 
     def start_main_loop(self) -> None:
         LOGGER.info("Initializing...")
-        self.registry.load_actions_once()
-        self.registry.start_periodic_reloading_in_background(interval_duration_s=int(self._action_refresh_interval_s))
         sound.load_sounds()
 
         LOGGER.info("Start listening...")
@@ -86,7 +82,7 @@ class Lurker:
             exit(1)
 
 
-def _resolve_model(lurker_home: str, language: str) -> str:
+def _resolve_speech_model(lurker_home: str, language: str) -> str:
     models_dir = os.path.join(lurker_home, "models", "vosk")
     lang_infix = f"-{language.lower()}-"
     listdir = os.listdir(models_dir)
@@ -128,15 +124,14 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
         LOGGER.warning(f"Could not instantiate handler {handler_type}: {type(e)} {e} - Using default handler instead.", exc_info=e)
         handler = NOPHandler()
 
-    LOGGER.info("Loaded action handler: %s", type(handler))
+    # resolve llm model
+    llm_model_path = os.path.join(lurker_home, "models", "llm", "granite-4.0-350m-Q4_K_M.gguf")
+    action_generator = ActionGenerator(model_path=llm_model_path)
 
-    actions_path = lurker_home + "/actions"
-    registry = ActionRegistry(actions_path)
-
-    model_path = _resolve_model(lurker_home, lurker_config.LURKER_LANGUAGE)
+    model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE)
     keyword = Keyword(lurker_config.LURKER_KEYWORD)
 
-    act_callback = _make_act_callback(registry, handler, lurker_config.LURKER_OUTPUT_DEVICE)
+    act_callback = _make_act_callback(action_generator, handler, lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(
         keyword=keyword,
         model_path=model_path,
@@ -150,10 +145,9 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     )
 
     return Lurker(
-        registry=registry,
+        registry=action_generator,
         handler=handler,
         listener=listener,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
-        output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
-        action_refresh_interval_s=lurker_config.LURKER_ACTION_REFRESH_INTERVAL,
+        output_device_name=lurker_config.LURKER_OUTPUT_DEVICE
     )

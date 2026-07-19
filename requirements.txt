@@ -2,3 +2,4 @@ vosk
 sounddevice
 numpy
 webrtcvad-wheels
+llama-cpp-python

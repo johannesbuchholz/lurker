@@ -1,30 +1,21 @@
 import abc
-import json
-from pathlib import Path
+
+from cuda.bindings.driver import Any
+from llama_cpp import Llama
 
 from src import log
-from src.utils import Action
+from src.handlers.lights import LightAction
 
 
-class ActionRegistry:
+class ActionGenerator:
 
     _logger = log.new_logger(__qualname__)
 
-    @staticmethod
-    def _load_action(action_path: str | Path) -> Action | None:
-        with open(action_path) as action_file_handle:
-            action_dict: dict = json.load(action_file_handle)
-            try:
-                return Action(**action_dict)
-            except Exception as e:
-                ActionRegistry._logger.warning(f"Could not load action from %s: {e}")
-                return None
+    def __init__(self, model_path: str):
+        self._logger = log.new_logger(self.__class__.__name__)
+        self._model = Llama(model_path=model_path, n_ctx=512, n_threads=4, verbose=False)
 
-    def __init__(self, actions_path: str):
-        self.actions_path = actions_path
-        self.actions: dict[str, tuple[int, Action]] = {}    # filename -> (modified time, action)
-
-    def find(self, instruction: str) -> Action | None:
+    def generate_lights(self, instruction: str) -> list[LightAction]:
         # TODO: Implement using granite 350 llm
         pass
 
@@ -60,7 +51,7 @@ class ActionHandler(abc.ABC):
             raise RuntimeError(f"Only one subclass may be registered and {LoadedHandlerType.cls} has already been registered.")
 
     @abc.abstractmethod
-    def handle(self, action: Action) -> int:
+    def handle(self, action) -> int:
         """
         :param action: The action object to handle.
         :return: An exit code of zero iff the action has been handled successfully.
@@ -73,5 +64,5 @@ class NOPHandler(ActionHandler):
     def __init__(self):
         super().__init__()
 
-    def handle(self, action: Action) -> int:
+    def handle(self, action: Any) -> int:
         return 0

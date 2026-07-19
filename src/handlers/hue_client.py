@@ -1,47 +1,14 @@
 import json
 from http.client import HTTPResponse
-from typing import Collection, Any, Callable, Match
+from typing import Collection, Any, Match
 from urllib.error import URLError
-from urllib.request import urlopen, Request
+from urllib.request import urlopen
 
 from src.action import ActionHandler
-from src.utils import Action
+from src.handlers.lights import LightState, LightAction
 
 ALL_LIGHTS_ID = "ALL"
 LIGHT_ID_STRING_DELIMITER = ","
-
-class LightState:
-
-    ALLOWED_LIGHT_KEYS = ["on", "sat", "bri", "hue"]
-
-    def __init__(self, **kwargs):
-        self.state = {k: v for k, v in kwargs.items() if k in LightState.ALLOWED_LIGHT_KEYS}
-
-    def to_http_request(self, host: str, user: str, light_id: str) -> Request:
-        url = f"http://{host}/api/{user}/lights/{light_id}/state"
-        data = self.to_json().encode("ascii")
-        return Request(url, method="PUT", data=data)
-
-    def __str__(self):
-        return str(self.to_dict())
-
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict())
-
-    def to_dict(self) -> dict[str, str]:
-        return {k: v for k, v in self.state.items() if v is not None}
-
-class LightAction:
-
-    def __init__(self, light_ids: Collection[str], state: LightState):
-        self.light_ids = light_ids
-        self.state = state
-
-    def __str__(self):
-        return f"{self.__class__.__name__}[ids={self.light_ids}, state={self.state}]"
-
-    def __repr__(self):
-        return self.__str__()
 
 class HueClient(ActionHandler):
 
@@ -54,10 +21,6 @@ class HueClient(ActionHandler):
         self.actions_path = kwargs["lurker_home"] + "/actions"
 
         self.lights = {}
-        self._special_commands: dict[str, Callable[[Match[str]], int]] = {
-            "EXIT": lambda key_match: exit(0),
-            "SAVE": self._save_current_lights_as_action
-        }
 
     def _save_current_lights_as_action(self, key_match: Match) -> int:
         try:
@@ -114,24 +77,14 @@ class HueClient(ActionHandler):
                     self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
         return 0
 
-    def handle(self, action: Action) -> int:
-        if action.type == HueClient.accepted_type:
+    def handle(self, action) -> int:
+        if action is list[LightAction]:
             return self._handle_internal(action)
         else:
-            # ignore action
+            self._logger.info(f"Skipping non-light action: {action}")
             return 0
 
-    def _handle_internal(self, action: Action) -> int:
+    def _handle_internal(self, light_actions: list[LightAction]) -> int:
         if len(self.lights) < 1:
             self.lights = self._retrieve_lights()
-
-        light_actions: list[LightAction] = []
-        for item in action.payload.items():
-            light_id_string, light_request = item
-            if light_id_string == ALL_LIGHTS_ID:
-                light_ids = list(self.lights.keys())
-            else:
-                light_ids = [id_str.strip() for id_str in light_id_string.split(LIGHT_ID_STRING_DELIMITER) if len(id_str) > 0 and not id_str.isspace()]
-            light_actions.append(LightAction(light_ids=light_ids, state=LightState(**light_request)))
-
         return self._light(light_actions)
