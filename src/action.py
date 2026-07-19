@@ -5,6 +5,17 @@ from llama_cpp import Llama
 from src import log
 from src.handlers.lights import LightAction
 
+PROMPT_TEMPLATE = """
+Translate the user instruction to the best matching lighting state. Output valid JSON only!
+Json structure represents light state in HSV: 
+{"<light id>": {"bri": <brightness int 0-254>, "heu": <int 0-65535>, "sat": <int 0-254>, "on" <bool>}
+Example (Comma IDs target multiple lights):
+{"0": {"bri":90,"hue":420},"1":{"on":false},"2,3":{"bri":254}}
+Current state:
+{current_state}
+User instruction:
+{instruction}
+"""
 
 class ActionGenerator:
 
@@ -12,7 +23,7 @@ class ActionGenerator:
 
     def __init__(self, model_path: str):
         self._logger = log.new_logger(self.__class__.__name__)
-        self._model = Llama(model_path=model_path, n_ctx=512, n_threads=4, verbose=False)
+        self._model = Llama(model_path=model_path, n_ctx=512, n_threads=4, n_gpu_layers=0, n_batch=256, verbose=False)
 
     def generate_lights(self, instruction: str) -> list[LightAction]:
         # TODO: Implement using granite 350 llm
