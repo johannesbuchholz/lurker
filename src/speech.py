@@ -48,7 +48,7 @@ class SpeechToTextListener:
 
         self._gate = self.GateState.DOWN
         self._non_speech_chunk_count = 0
-        self._gate_chunk_count = 0
+        self._open_gate_chunk_count = 0
         self._max_open_gate_chunks = int(self._capture_config.max_open_gate_seconds / (self._capture_config.frame_ms / 1000))
         self._silence_chunk_threshold = int(self._capture_config.silence_threshold_seconds / (self._capture_config.frame_ms / 1000))
         self._prefill_chunks: deque[bytes] = deque(maxlen=self._capture_config.prefill_chunks)
@@ -99,8 +99,8 @@ class SpeechToTextListener:
                 LOGGER.log(log.TRACE, "PREFILL: appended %d bytes (%d chunks)", len(incoming), len(self._prefill_chunks))
         else:
             # gate is UP
-            self._gate_chunk_count += 1
-            if self._gate_chunk_count > self._max_open_gate_chunks:
+            self._open_gate_chunk_count += 1
+            if self._open_gate_chunk_count > self._max_open_gate_chunks:
                 LOGGER.debug("GATE: force-close, exceeded max open gate chunks (%d)", self._max_open_gate_chunks)
                 self._close_gate()
                 return
@@ -124,7 +124,7 @@ class SpeechToTextListener:
     def _open_gate(self):
         self._gate = self.GateState.UP
         self._non_speech_chunk_count = 0
-        self._gate_chunk_count = 0
+        self._open_gate_chunk_count = 0
         LOGGER.debug("OPEN GATE ●")
 
     def _close_gate(self):
