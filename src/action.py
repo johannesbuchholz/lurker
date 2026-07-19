@@ -1,47 +1,33 @@
 import abc
-import json
+from typing import Any
 
 from llama_cpp import Llama, LlamaRAMCache
 
 from src import log
-from src.handlers.lights import LightAction, actions_from_json
+from src.handlers.lights import LightAction, actions_from_json, LightState
 
-SYSTEM_PROMPT = {
-    "role": "system",
-    "content": """
-               Translate user requests to best matching lighting state.
-               
-               JSON represents light state in HSV and on/off:
-               {"<id>":{"bri":0-254,"hue":0-65535,"sat":0-254,"on":bool}}
-               light off -> {"<id>": {"on": false}}
-               dim light -> {"<id>": {"bri": <low value>}}
-               white light -> {"<id>": {"sat": 0, "bri": 254}}
-               
-               Interpretation examples:
-               "sunset" -> warm orange, medium brightness
-               "relaxing" -> warm dim light
-               "movie night" -> dark, only TV lights
-               "all lights" -> affects every available id
-               
-               Only state changed lights and changed field values.
-               Output valid JSON only!
-               """
-}
-
-USER_PROMPT = """
-Current state: {current_state}
-User request: {request}
+SYSTEM_PROMPT = """
+Extract affected lights and action from a user request.
+Schema:
+{"lights": [<affected light names>], "action": <the user requested modification>}
+Output valid JSON only!
+Only state lights that are requested to change. Always fill "lights" and "action".
+Available modification types (action): ON, OFF, BRIGHTER, WARMER, CHANGE_COLOR, OTHER
+Available light names:
 """
 
 
 class ActionGenerator:
     _logger = log.new_logger(__qualname__)
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, state: dict[str, Any]):
         self._logger = log.new_logger(self.__class__.__name__)
         self._model = Llama(model_path=model_path,
                             cache=LlamaRAMCache(),
-                            n_ctx=512, n_threads=4, n_gpu_layers=0, n_batch=512, verbose=False)
+                            n_ctx=256, n_threads=4, n_gpu_layers=0, n_batch=256, verbose=False)
+        if len(state) < 1:
+            self._logger.warning("No state given ActionGenerator!")
+        self.light_names: list[str] = [v.name for _, v in state.items() if isinstance(v, LightState) and v.name is not None]
         self._warmup()
 
     def generate_lights(self, instruction: str, state: str | None = None) -> list[LightAction]:
@@ -49,25 +35,26 @@ class ActionGenerator:
             self._logger.warning(f"No current state given for instruction '{instruction}'")
             return []
 
-        user_content = self._user_content(state, instruction)
-        content = self._call_llm(user_content)
+        content = self._call_llm(instruction)
         self._logger.debug(f"LLM response: {content}")
         try:
             return actions_from_json(content)
-        except json.JSONDecodeError as e:
+        except Exception as e:
             self._logger.warning(f"Failed to parse LLM response as JSON: raw={content}, error={e}")
             return []
 
-    @staticmethod
-    def _user_content(current_state: str, instruction: str) -> str:
-        return USER_PROMPT.format(current_state=current_state, request=instruction)
+    def _system_message(self) -> dict[str, str]:
+        return {
+            "role": "system",
+            "content": SYSTEM_PROMPT + "\n" + ", ".join(self.light_names)
+        }
 
-    def _call_llm(self, user_content: str) -> str:
+    def _call_llm(self, instruction: str) -> str:
         messages = [
-            SYSTEM_PROMPT,
+            self._system_message(),
             {
                 "role": "user",
-                "content": user_content
+                "content": instruction
             },
         ]
         self._logger.debug(f"Prompting: {messages}")
@@ -80,7 +67,7 @@ class ActionGenerator:
 
     def _warmup(self) -> None:
         self._model.create_chat_completion(
-            messages=[SYSTEM_PROMPT],
+            messages=[self._system_message()],
             temperature=0.1,
             max_tokens=1
         )
@@ -125,7 +112,7 @@ class ActionHandler(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_state(self) -> str:
+    def get_state(self) -> dict[str, Any]:
         """
         :return: The state of the objects this handler operates as JSON string.
         """
@@ -140,5 +127,5 @@ class NOPHandler(ActionHandler):
     def handle(self, action) -> int:
         return 0
 
-    def get_state(self) -> str:
-        return "{}"
+    def get_state(self) -> dict[str, Any]:
+        return {}

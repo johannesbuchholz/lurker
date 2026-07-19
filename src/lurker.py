@@ -127,7 +127,7 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
 
     # resolve llm model
     llm_model_path = os.path.join(lurker_home, "models", "llm", "granite-4.0-350m-Q4_K_M.gguf")
-    action_generator = ActionGenerator(model_path=llm_model_path)
+    action_generator = ActionGenerator(model_path=llm_model_path, state=handler.get_state(dummy=True))
 
     model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE)
     keyword = Keyword(lurker_config.LURKER_KEYWORD)

@@ -109,7 +109,7 @@ class HueClient(ActionHandler):
             self.lights = self._retrieve_lights()
         return self._light(light_actions)
 
-    def get_state(self, dummy: bool = False) -> str:
+    def get_state(self, dummy: bool = False) -> dict[str, Any]:
         """
         :return: The current state of the lights as JSON string.
         """
@@ -117,12 +117,11 @@ class HueClient(ActionHandler):
             self.lights = DUMMY_RESPONSE_JSON
         else:
             self.lights = self._retrieve_lights()
-        state: dict[str, str] = {
-            light_id: LightState(name=light["name"], **light["state"]).to_json()
+        return {
+            light_id: LightState(name=light["name"], **light["state"])
             for light_id, light in self.lights.items()
             if "name" in light and "state" in light
         }
-        return json.dumps(state)
 
 
 
