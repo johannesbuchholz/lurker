@@ -50,5 +50,5 @@ class Transcriber(ASRBackend):
         if has_keyword:
             instruction = result_to_check[keyword_end_index:].strip()
             self._recognizer.Reset()
-        self._logger.debug(f"Checked: has_keyword={has_keyword}, text=\"{result_to_check}\", instruction=\"\"")
+        self._logger.debug(f"Checked: has_keyword={has_keyword}, text=\"{result_to_check}\", instruction=\"{instruction}\"")
         return instruction
