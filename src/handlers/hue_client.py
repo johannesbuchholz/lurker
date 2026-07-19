@@ -5,7 +5,7 @@ from urllib.error import URLError
 from urllib.request import urlopen, Request
 
 from src.action import ActionHandler
-from src.utils import KeyParagraphMapping
+from src.utils import Action
 
 ALL_LIGHTS_ID = "ALL"
 LIGHT_ID_STRING_DELIMITER = ","
@@ -44,6 +44,8 @@ class LightAction:
         return self.__str__()
 
 class HueClient(ActionHandler):
+
+    accepted_type = "hue"
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -112,21 +114,19 @@ class HueClient(ActionHandler):
                     self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light_id}, msg={str(e)}", exc_info=e)
         return 0
 
-    def handle(self, action: KeyParagraphMapping, key_match: Match[str]) -> int:
-        command = action.value
-        if type(command) is str:
-            special_command = self._special_commands.get(command, None)
-            if special_command is not None:
-                self._logger.info(f"Handling special command with matching key: command={command}, key_match={key_match}")
-                return special_command(key_match)
-        return self._handle_internal(action)
+    def handle(self, action: Action) -> int:
+        if action.type == HueClient.accepted_type:
+            return self._handle_internal(action)
+        else:
+            # ignore action
+            return 0
 
-    def _handle_internal(self, action: KeyParagraphMapping) -> int:
+    def _handle_internal(self, action: Action) -> int:
         if len(self.lights) < 1:
             self.lights = self._retrieve_lights()
 
         light_actions: list[LightAction] = []
-        for item in action.value.items():
+        for item in action.payload.items():
             light_id_string, light_request = item
             if light_id_string == ALL_LIGHTS_ID:
                 light_ids = list(self.lights.keys())

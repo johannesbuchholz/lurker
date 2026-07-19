@@ -1,13 +1,9 @@
 import abc
 import json
-import os
 from pathlib import Path
-from threading import Thread
-from time import sleep
-from typing import Match
 
 from src import log
-from src.utils import KeyParagraphMapping
+from src.utils import Action
 
 
 class ActionRegistry:
@@ -15,70 +11,23 @@ class ActionRegistry:
     _logger = log.new_logger(__qualname__)
 
     @staticmethod
-    def _load_action(action_path: str | Path) -> KeyParagraphMapping | None:
+    def _load_action(action_path: str | Path) -> Action | None:
         with open(action_path) as action_file_handle:
             action_dict: dict = json.load(action_file_handle)
             try:
-                return KeyParagraphMapping(**action_dict)
+                return Action(**action_dict)
             except Exception as e:
                 ActionRegistry._logger.warning(f"Could not load action from %s: {e}")
                 return None
 
     def __init__(self, actions_path: str):
         self.actions_path = actions_path
-        self.actions: dict[str, tuple[int, KeyParagraphMapping]] = {}    # filename -> (modified time, action)
+        self.actions: dict[str, tuple[int, Action]] = {}    # filename -> (modified time, action)
 
-    def find(self, instruction: str) -> tuple[KeyParagraphMapping, Match[str]] | None:
-        for _, action in self.actions.values():
-            match = action.matches(instruction.lower())
-            if match is not None:
-                self._logger.info(f"Found matching action for instruction: instruction={instruction}, match={match}")
-                return action, match
-        return None
+    def find(self, instruction: str) -> Action | None:
+        # TODO: Implement using granite 350 llm
+        pass
 
-    def start_periodic_reloading_in_background(self, interval_duration_s) -> None:
-        self._logger.info(f"Starting periodic reloading of new or updated actions: location={self.actions_path}, interval_duration_s={interval_duration_s}")
-        def reloader() -> None:
-            while True:
-                sleep(interval_duration_s)
-                self._reload_actions()
-        Thread(target=reloader, name="lurker_action_reloader", daemon=True).start()
-
-    def load_actions_once(self) -> None:
-        if not os.path.exists(self.actions_path):
-            self._logger.warning(f"Could not find action path {self.actions_path}")
-            return
-        for action_path in os.scandir(self.actions_path):
-            if not action_path.is_file():
-                continue
-            abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
-            loaded_action = ActionRegistry._load_action(abs_path)
-            if loaded_action is not None:
-                self.actions[action_path.name] = (int(abs_path.stat().st_mtime), loaded_action)
-        self._logger.info(f"Loaded actions: count={len(self.actions)}, files={list(self.actions.keys())}")
-
-    def _reload_actions(self) -> None:
-        self._logger.debug(f"About to reload changed or new actions from {self.actions_path}")
-        if not os.path.exists(self.actions_path):
-            self._logger.warning(f"Could not find action path {self.actions_path}")
-            return
-        try:
-            for action_path in os.scandir(self.actions_path):
-                if not action_path.is_file():
-                    continue
-                abs_path: Path = Path(self.actions_path).joinpath(action_path.path)
-                mtime: int = int(abs_path.stat().st_mtime)
-                if abs_path.name not in self.actions or self.actions[abs_path.name][0] < mtime:
-                    # file is unknown or touched: reload
-                    loaded_action = ActionRegistry._load_action(abs_path)
-                    if loaded_action is not None:
-                        self.actions[abs_path.name] = (mtime, loaded_action)
-                        self._logger.info(f"Reloaded action {abs_path.name}")
-                    else:
-                        self.actions.pop(abs_path.name, None)
-                        self._logger.warning(f"Removed action {abs_path.name} (failed to load)")
-        except Exception as e:
-            self._logger.error(f"Could not reload action: {e}", exc_info=e)
 
 
 class LoadedHandlerType:
@@ -111,10 +60,9 @@ class ActionHandler(abc.ABC):
             raise RuntimeError(f"Only one subclass may be registered and {LoadedHandlerType.cls} has already been registered.")
 
     @abc.abstractmethod
-    def handle(self, action: KeyParagraphMapping, key_match: Match[str]) -> int:
+    def handle(self, action: Action) -> int:
         """
         :param action: The action object to handle.
-        :param key_match: The match object resulting from successfully matching one of the keys associated with the supplied action.
         :return: An exit code of zero iff the action has been handled successfully.
         """
         pass
@@ -125,5 +73,5 @@ class NOPHandler(ActionHandler):
     def __init__(self):
         super().__init__()
 
-    def handle(self, action: KeyParagraphMapping, key_match: Match[str]) -> int:
+    def handle(self, action: Action) -> int:
         return 0

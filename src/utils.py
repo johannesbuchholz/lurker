@@ -1,35 +1,12 @@
-import re
-from re import Pattern, Match
+from dataclasses import dataclass
 from typing import Any
 
 
-class KeyParagraphMapping:
+@dataclass(frozen=True)
+class Action:
 
-    @staticmethod
-    def compile_regexes(keys: list[str]) -> list[Pattern]:
-        patterns = []
-        for key in keys:
-            if key.startswith("/") and key.endswith("/"):
-                pattern_string = key[1:-1]
-            else:
-                pattern_string = ".*" + key + ".*"
-            patterns.append(re.compile(pattern_string))
-        return patterns
+    type: str
+    """The type of this action. Handlers may decide to accept or reject an action based on this type."""
+    payload: dict[str, Any]
+    """The payload of the action. May be deserialized into a proper object."""
 
-    def __init__(self, keys: list[str], command: str | int | None | dict[str, Any]):
-        self.keys = keys
-        self.value = command
-        self.patterns: List[Pattern] = self.compile_regexes(self.keys)
-
-    def matches(self, snippet: str) -> Match | None:
-        for p in self.patterns:
-            match = p.match(snippet)
-            if match is not None:
-                return match
-        return None
-
-    def __repr__(self):
-        return str(self.keys)
-
-    def __str__(self):
-        return f"{self.__class__.__name__}[keys: {self.keys}, command: {self.value}]"

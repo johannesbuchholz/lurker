@@ -25,16 +25,16 @@ def _make_act_callback(registry: ActionRegistry, handler: ActionHandler, output_
     logger = log.new_logger("act")
 
     def act(instruction: str) -> None:
-        finding = registry.find(instruction)
-        if finding is None:
+        sound.play_understood(output_device_name)
+        logger.info(f"Trying to find action for instruction '{instruction}'")
+        found_action = registry.find(instruction)
+        if found_action is None:
             logger.info(f"Could not find action for instruction '{instruction}'")
             sound.play_no(output_device_name)
         else:
-            action, match = finding
-            logger.debug(f"Found action for instruction {instruction}: action={action}, match={match}")
-            sound.play_understood(output_device_name)
+            logger.debug(f"Found action for instruction {instruction}: action={found_action}")
             try:
-                handler_exit_code = handler.handle(action, match)
+                handler_exit_code = handler.handle(found_action)
             except Exception as e:
                 logger.error(f"Unhandled exception when handling instruction {instruction}: {type(e)} {e}", exc_info=e)
                 handler_exit_code = 1
