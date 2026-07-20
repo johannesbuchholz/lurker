@@ -1,7 +1,13 @@
 import abc
 from typing import Any
 
+import onnxruntime as ort
+from tokenizers.tokenizers import Tokenizer
+
 from src import log
+from src.actions import models
+from src.actions.embedding import Embedder
+from src.actions.models import Embedded, Light, Scene, Intent
 from src.handlers.lights import LightAction, LightState
 
 
@@ -12,11 +18,26 @@ class ActionGenerator:
         self._logger = log.new_logger(self.__class__.__name__)
         if len(state) < 1:
             self._logger.warning("No state given ActionGenerator!")
-        self.light_state: dict[str, LightState] = {k : v for k, v in state.items() if isinstance(v, LightState) and v.name is not None}
+        light_state: list[LightState] = [v for _, v in state.items() if isinstance(v, LightState)]
+        self.embedder: Embedder = Embedder(
+            tokenizer=Tokenizer.from_file(f"{model_path}/tokenizer.json"),
+            session=ort.InferenceSession(f"{model_path}/model_O4.onnx", providers=["CPUExecutionProvider"])
+        )
+        self.lights, self.scenes, self.intents = self._init_embeddings(light_state)
 
     def generate_lights(self, instruction: str) -> list[LightAction]:
+        # TODO: Implement workflow according to plan.md
         self._logger.warning("NOT YET IMPLEMENTED")
         return []
+
+    def _init_embeddings(self, light_state: list[LightState]) -> tuple[
+        list[Embedded[Light]], list[Embedded[Scene]], list[Embedded[Intent]]]:
+        lights = models.as_lights(light_state)
+        return (
+            models.embed_items(self.embedder.embed_passage, lights),
+            models.embed_items(self.embedder.embed_passage, models.SCENES),
+            models.embed_items(self.embedder.embed_passage, models.INTENTS)
+        )
 
 
 class LoadedHandlerType:

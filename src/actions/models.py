@@ -1,17 +1,12 @@
 from dataclasses import dataclass
-from typing import TypeVar, Generic, Callable, Protocol
+from typing import TypeVar, Generic, Callable
 
 import numpy as np
 from numpy.typing import NDArray
 
 from src.handlers.lights import LightState
 
-
-class Describable(Protocol):
-    descriptions: tuple[str, ...]
-
-
-T = TypeVar("T", bound=Describable)
+T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,14 +52,14 @@ class Light:
     state: LightState
 
 
-def embed(embedder: Callable[[str], NDArray[np.float32]], items: list[T]) -> list[Embedded[T]]:
+def embed_items(embedder: Callable[[str], NDArray[np.float32]], items: list[T]) -> list[Embedded[T]]:
     return [
         Embedded(item=item, embeddings=tuple(embedder(description) for description in item.descriptions), )
         for item in items
     ]
 
 
-def get_lights(list_states: list[LightState]) -> list[Light]:
+def as_lights(list_states: list[LightState]) -> list[Light]:
     result = []
     for state in list_states:
         light_name = state.name
