@@ -5,7 +5,7 @@ import sys
 from typing import Callable
 
 from src import log, sound
-from src.action import ActionGenerator, LoadedHandlerType, NOPHandler, ActionHandler
+from src.actions.action import ActionGenerator, LoadedHandlerType, NOPHandler, ActionHandler
 from src.config import LurkerConfig
 from src.keyword import Keyword
 from src.speech import SpeechToTextListener

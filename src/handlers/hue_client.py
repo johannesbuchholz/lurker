@@ -4,7 +4,7 @@ from typing import Collection, Any, Match
 from urllib.error import URLError
 from urllib.request import urlopen
 
-from src.action import ActionHandler
+from src.actions.action import ActionHandler
 from src.handlers.lights import LightState, LightAction
 
 ALL_LIGHTS_ID = "ALL"
