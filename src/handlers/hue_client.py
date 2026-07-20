@@ -2,7 +2,7 @@ import json
 from http.client import HTTPResponse
 from typing import Collection, Any, Match
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 from src.actions.action import ActionHandler
 from src.handlers.lights import LightState, LightAction
@@ -30,6 +30,18 @@ DUMMY_RESPONSE_JSON = json.loads("""
 """)
 
 
+def _map_to_light_states(raw_lights: dict[str, Any]) -> dict[str, LightState]:
+    return {
+        light_id: LightState(
+            id=light_id,
+            name=light["name"],
+            **{k: v for k, v in light["state"].items() if k in LightState.ALLOWED_LIGHT_KEYS}
+        )
+        for light_id, light in raw_lights.items()
+        if "name" in light and "state" in light
+    }
+
+
 class HueClient(ActionHandler):
 
     accepted_type = "hue"
@@ -54,12 +66,15 @@ class HueClient(ActionHandler):
             return 1
 
         file_name_suffix = action_key.replace(" ", "_").lower()
-        lights = self._retrieve_lights()
-        if len(lights) < 1:
+        self.lights = self._retrieve_lights()
+        if len(self.lights) < 1:
             self._logger.warning("No light ids available. Abort saving current light settings.")
             return 1
 
-        light_action_dict = {light_id: LightState(**light["state"]).to_dict() for light_id, light in lights.items() if "state" in light}
+        light_action_dict = {
+            light_id: state.to_dict()
+            for light_id, state in _map_to_light_states(self.lights).items()
+        }
         action_dict = {"keys": [action_key], "command": light_action_dict}
         file_path = self.actions_path + f"/{self.__class__.__name__}_saved_{file_name_suffix}.json"
         with open(file_path, "w") as file_handle:
@@ -89,7 +104,7 @@ class HueClient(ActionHandler):
             return 1
         for action in light_actions:
             for light_id in action.light_ids:
-                http_request = action.state.to_http_request(self.host, self.user, light_id)
+                http_request = to_http_request(action.state, self.host, self.user, light_id)
                 self._logger.debug(f"Sending request: {http_request.get_method()} {http_request.data}")
                 try:
                     urlopen(http_request, timeout=4.)
@@ -117,11 +132,13 @@ class HueClient(ActionHandler):
             self.lights = DUMMY_RESPONSE_JSON
         else:
             self.lights = self._retrieve_lights()
-        return {
-            light_id: LightState(name=light["name"], **light["state"])
-            for light_id, light in self.lights.items()
-            if "name" in light and "state" in light
-        }
+        return _map_to_light_states(self.lights)
+
+
+def to_http_request(light_state: LightState, host: str, user: str, light_id: str) -> Request:
+    url = f"http://{host}/api/{user}/lights/{light_id}/state"
+    data = light_state.to_json().encode("ascii")
+    return Request(url, method="PUT", data=data)
 
 
 

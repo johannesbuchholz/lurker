@@ -1,20 +1,18 @@
 import json
+from dataclasses import dataclass
 from typing import Collection
-from urllib.request import Request
 
 
+@dataclass(frozen=True, slots=True)
 class LightState:
-
     ALLOWED_LIGHT_KEYS = ["on", "sat", "bri", "hue"]
 
-    def __init__(self, name: str | None = None, **kwargs):
-        self.name = name
-        self.state = {"name": name} | {k: v for k, v in kwargs.items() if k in LightState.ALLOWED_LIGHT_KEYS}
-
-    def to_http_request(self, host: str, user: str, light_id: str) -> Request:
-        url = f"http://{host}/api/{user}/lights/{light_id}/state"
-        data = self.to_json().encode("ascii")
-        return Request(url, method="PUT", data=data)
+    id: str
+    name: str
+    on: bool | None = None
+    hue: int | None = None
+    sat: int | None = None
+    bri: int | None = None
 
     def __str__(self):
         return str(self.to_dict())
@@ -22,8 +20,8 @@ class LightState:
     def to_json(self) -> str:
         return json.dumps(self.to_dict())
 
-    def to_dict(self) -> dict[str, str]:
-        return {k: v for k, v in self.state.items() if v is not None}
+    def to_dict(self) -> dict[str, bool | int]:
+        return {k: v for k, v in {"on": self.on, "hue": self.hue, "sat": self.sat, "bri": self.bri}.items() if v is not None}
 
 
 class LightAction:
