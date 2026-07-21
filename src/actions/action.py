@@ -19,7 +19,7 @@ class ActionGenerator:
         if len(initial_state) < 1:
             self._logger.warning("No state given ActionGenerator!")
         light_state: list[LightState] = [v for _, v in initial_state.items() if isinstance(v, LightState)]
-        self.embedder: Embedder = Embedder(
+        self._embedder: Embedder = Embedder(
             tokenizer=Tokenizer.from_file(f"{model_path}/tokenizer.json"),
             session=ort.InferenceSession(f"{model_path}/model_O4.onnx", providers=["CPUExecutionProvider"])
         )
@@ -36,15 +36,16 @@ class ActionGenerator:
         return []
 
     def _get_intent(self, instruction: str) -> Intent | None:
-        return embedding.best_match(self.intents, instruction, threshold=0.66)
+        query_emb = self._embedder.embed(instruction)
+        return embedding.best_match(self.intents, query_emb, threshold=0.5)
 
     def _init_embeddings(self, light_state: list[LightState]) \
             -> tuple[list[Embedded[Light]], list[Embedded[Scene]], list[Embedded[Intent]]]:
         lights = models.as_lights(light_state)
         return (
-            embedding.embed_items(self.embedder, lights),
-            embedding.embed_items(self.embedder, models.SCENES),
-            embedding.embed_items(self.embedder, models.INTENTS)
+            embedding.embed_items(self._embedder, lights),
+            embedding.embed_items(self._embedder, models.SCENES),
+            embedding.embed_items(self._embedder, models.INTENTS)
         )
 
 

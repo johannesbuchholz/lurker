@@ -79,31 +79,55 @@ INTENTS: list[Intent] = [
     Intent(
         name="power",
         descriptions=(
-            "Toggle. On or off. Switch. Enabled or disabled.",
-            "Einschalten oder ausschalten. An oder aus. Schalter umlegen.",
+            "Turn the light on.",
+            "Turn the light off.",
+            "Switch the lamp on.",
+            "Switch the lamp off.",
+            "Enable the light.",
+            "Disable the light.",
+            "Activate the lamp.",
+            "Deactivate the lamp.",
         ),
     ),
+
     Intent(
         name="brightness",
         descriptions=(
-            "Dim or brighten. Adjust intensity. How much light is produced.",
-            "Dunkler oder heller. Intensität anpassen. Wie viel Licht erzeugt wird.",
+            "Make the light brighter.",
+            "Make the light darker.",
+            "Increase the brightness.",
+            "Decrease the brightness.",
+            "Dim the light.",
+            "Turn the light intensity up.",
+            "Turn the light intensity down.",
+            "Adjust how bright the lamp is.",
         ),
     ),
+
     Intent(
         name="color",
         descriptions=(
-            "Hue and saturation. Set a specific color. Tint and vividness.",
-            "Farbton. Sättigung. Farbtiefe. Eine bestimmte Farbe einstellen.",
-            "red, orange, yellow, green, blue, purple, pink, white, warm white, cold white",
-            "rot, orange, gelb, grün, blau, lila, rosa, weiß, warmweiß, kaltweiß",
+            "Change the light color.",
+            "Set the lamp to a specific color.",
+            "Make the light red.",
+            "Make the light blue.",
+            "Choose a different color.",
+            "Change the hue of the light.",
+            "Set a warm white color.",
+            "Set a cold white color.",
         ),
     ),
+
     Intent(
         name="scene",
         descriptions=(
-            "Scene. Coordinated mood for an activity. Multiple lights into one atmosphere. Predefined arrangement. For a specific cause.",
-            "Abgestimmte Stimmung für eine Aktivität. Mehrere Lichter zu einem Ambiente. Vordefinierte Anordnung. Für einen bestimmten Zweck",
+            "Activate a lighting scene.",
+            "Set a predefined light scene.",
+            "Create an atmosphere with multiple lights.",
+            "Choose a mood lighting preset.",
+            "Start movie mode.",
+            "Start reading mode.",
+            "Set the room atmosphere.",
         ),
     ),
 ]

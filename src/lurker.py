@@ -126,7 +126,7 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
         handler = NOPHandler()
 
     # resolve llm model
-    llm_model_path = os.path.join(lurker_home, "models", "onnx", "intfloat.multilingual-e5-small")
+    llm_model_path = os.path.join(lurker_home, "models", "onnx", "paraphrase-multilingual-MiniLM-L12-v2")
     action_generator = ActionGenerator(model_path=llm_model_path, initial_state=handler.get_state(dummy=True))
 
     model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE)
