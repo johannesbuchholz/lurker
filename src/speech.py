@@ -103,7 +103,7 @@ class SpeechToTextListener:
         else:
             # gate is UP
             self._open_gate_chunk_count += 1
-            if self._open_gate_chunk_count > self._max_open_gate_chunks:
+            if self._open_gate_chunk_count > self._max_open_gate_chunks > 0:
                 LOGGER.debug("GATE: force-close, exceeded max open gate chunks (%d)", self._max_open_gate_chunks)
                 self._close_gate()
                 return

@@ -95,6 +95,8 @@ INTENTS: list[Intent] = [
         descriptions=(
             "Hue and saturation. Set a specific color. Tint and vividness.",
             "Farbton. Sättigung. Farbtiefe. Eine bestimmte Farbe einstellen.",
+            "red, orange, yellow, green, blue, purple, pink, white, warm white, cold white",
+            "rot, orange, gelb, grün, blau, lila, rosa, weiß, warmweiß, kaltweiß",
         ),
     ),
     Intent(

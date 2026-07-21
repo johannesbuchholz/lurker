@@ -69,12 +69,12 @@ class SpeechDetectorConfig:
 
 @dataclass(frozen=True)
 class SpeechConfig:
-    silence_threshold_seconds: float = 1.5
+    silence_threshold_seconds: float = 1.2
     """Seconds of silence to accept before stopping to feed audio to ASR backend. Set to negative if you want to only use full results as decided by the ASR-Backend."""
     prefill_chunks: int = 32
     """Number of pre-speech audio chunks buffered while gate is DOWN, pushed to ASR when gate opens for context."""
     frame_ms: int = 20
-    max_open_gate_seconds: float = 4.0
+    max_open_gate_seconds: float = -1
     """Maximum time the gate stays open before force-flushing, in seconds."""
     detector: SpeechDetectorConfig = field(default_factory=SpeechDetectorConfig)
     """Configuration for speech detection (VAD + energy pre-filter)."""
