@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import TypeVar, Generic
+from typing import cast
 
 import numpy as np
 import onnxruntime as ort
@@ -40,7 +41,7 @@ class Embedder:
 
         # Run the transformer model.
         # Output is one vector per token, not one vector for the whole sentence.
-        token_embeddings = self.session.run(None, inputs)[0]
+        token_embeddings = cast(NDArray[np.float32], self.session.run(None, inputs)[0])
 
         # Mean-pool token vectors into one sentence vector.
         # Attention mask ignores padding tokens.
