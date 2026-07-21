@@ -8,7 +8,11 @@ T = TypeVar("T")
 
 @dataclass(frozen=True, slots=True)
 class Describable:
+    name: str
     descriptions: tuple[str, ...]
+
+    def __str__(self):
+        return self.name
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,7 +24,6 @@ class Intent(Describable):
     BRIGHTNESS
     SCENE
     """
-    name: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,21 +38,18 @@ class Scene(Describable):
     CALM
     SLEEPING
     """
-    name: str
 
 
 @dataclass(frozen=True, slots=True)
 class Light(Describable):
     id: str
-    name: str
     state: LightState
 
 
 def as_lights(list_states: list[LightState]) -> list[Light]:
     result = []
     for state in list_states:
-        light_name = state.name
-        light = Light(name=light_name, descriptions=_generate_light_descriptions(light_name), state=state)
+        light = Light(id=state.id, name=state.name, descriptions=_generate_light_descriptions(state.name), state=state)
         result.append(light)
     return result
 
@@ -79,41 +79,29 @@ INTENTS: list[Intent] = [
     Intent(
         name="power",
         descriptions=(
-            "Turn lights on or off",
-            "Change the power state of one or more lights",
-            "Switch a lamp or group of lights between on and off",
-            "Enable or disable lighting",
-            "Control whether lights are illuminated or turned off",
+            "Toggle. On or off. Switch. Enabled or disabled.",
+            "Einschalten oder ausschalten. An oder aus. Schalter umlegen.",
         ),
     ),
     Intent(
         name="brightness",
         descriptions=(
-            "Adjust the brightness level of lights",
-            "Make lights brighter or dimmer",
-            "Change the intensity of lighting",
-            "Set or modify the light brightness",
-            "Increase or decrease how much light a lamp produces",
+            "Dim or brighten. Adjust intensity. How much light is produced.",
+            "Dunkler oder heller. Intensität anpassen. Wie viel Licht erzeugt wird.",
         ),
     ),
     Intent(
         name="color",
         descriptions=(
-            "Change the color of lights",
-            "Set lights to a specific color",
-            "Adjust the hue or saturation of lighting",
-            "Create colored lighting effects",
-            "Change the appearance of lights using different colors",
+            "Hue and saturation. Set a specific color. Tint and vividness.",
+            "Farbton. Sättigung. Farbtiefe. Eine bestimmte Farbe einstellen.",
         ),
     ),
     Intent(
         name="scene",
         descriptions=(
-            "Activate a lighting scene or atmosphere",
-            "Set a coordinated lighting mood for an activity or situation",
-            "Apply a predefined lighting arrangement",
-            "Create an overall room atmosphere using multiple lights",
-            "Change several lights together to create a specific mood",
+            "Scene. Coordinated mood for an activity. Multiple lights into one atmosphere. Predefined arrangement. For a specific cause.",
+            "Abgestimmte Stimmung für eine Aktivität. Mehrere Lichter zu einem Ambiente. Vordefinierte Anordnung. Für einen bestimmten Zweck",
         ),
     ),
 ]
@@ -122,64 +110,50 @@ SCENES: list[Scene] = [
     Scene(
         name="movie_night",
         descriptions=(
-            "Dark cinematic lighting for watching movies",
-            "A cinema atmosphere with comfortable low lighting",
-            "Relaxing evening lighting for watching a film",
-            "Dim ambient lights suitable for television or movies",
+            "Dark cinematic lighting for watching movies. A cinema atmosphere with comfortable low lighting. Relaxing evening lighting for watching a film. Dim ambient lights suitable for television or movies.",
+            "Dunkles kinomäßiges Licht fürs Film schauen. Eine Kinoatmosphäre mit angenehmer schwacher Beleuchtung. Entspannte Abendbeleuchtung für einen Filmabend. Gedämpftes Umgebungslicht geeignet für Fernsehen oder Filme.",
         ),
     ),
     Scene(
         name="sunset",
         descriptions=(
-            "Warm orange evening lighting",
-            "Soft golden light similar to sunset",
-            "Relaxing warm colors for an evening atmosphere",
-            "Orange and warm ambient lighting",
+            "Warm orange evening lighting. Soft golden light similar to sunset. Relaxing warm colors for an evening atmosphere. Orange and warm ambient lighting.",
+            "Warmes oranges Abendlicht. Sanftes goldenes Licht ähnlich wie bei Sonnenuntergang. Entspannte warme Farben für eine Abendatmosphäre. Orange und warme Umgebungsbeleuchtung.",
         ),
     ),
     Scene(
         name="morning_mood",
         descriptions=(
-            "Bright refreshing light for the morning",
-            "Wake up lighting that feels natural and energizing",
-            "Clear bright lighting for starting the day",
-            "Fresh daylight-like room illumination",
+            "Bright refreshing light for the morning. Wake up lighting that feels natural and energizing. Clear bright lighting for starting the day. Fresh daylight-like room illumination.",
+            "Helles erfrischendes Licht für den Morgen. Weckbeleuchtung die sich natürlich und belebend anfühlt. Klares helles Licht zum Tagesbeginn. Frische tageslichtähnliche Raumbeleuchtung.",
         ),
     ),
     Scene(
         name="work",
         descriptions=(
-            "Focused lighting for working or studying",
-            "Bright practical lighting",
-            "Clear task lighting for productivity",
-            "Office-style illumination",
+            "Focused lighting for working or studying. Bright practical lighting. Clear task lighting for productivity. Office-style illumination.",
+            "Konzentriertes Licht für Arbeit oder Studium. Helles zweckmäßiges Licht. Klares Arbeitslicht für Produktivität. Büroartige Beleuchtung.",
         ),
     ),
     Scene(
         name="cozy",
         descriptions=(
-            "Warm comfortable relaxing lighting",
-            "Soft ambient light for a cozy atmosphere",
-            "Calm intimate lighting for relaxing",
-            "Comfortable low brightness warm lighting",
+            "Warm comfortable relaxing lighting. Soft ambient light for a cozy atmosphere. Calm intimate lighting for relaxing. Comfortable low brightness warm lighting.",
+            "Warmes gemütliches entspannendes Licht. Sanftes Umgebungslicht für eine gemütliche Atmosphäre. Ruhige intime Beleuchtung zum Entspannen. Gemütliches warmes Licht mit niedriger Helligkeit.",
         ),
     ),
     Scene(
         name="calm",
         descriptions=(
-            "Peaceful relaxing ambient lighting",
-            "Soft lighting for relaxation and calm",
-            "Gentle comfortable room illumination",
-            "A quiet soothing lighting atmosphere",
+            "Peaceful relaxing ambient lighting. Soft lighting for relaxation and calm. Gentle comfortable room illumination. A quiet soothing lighting atmosphere.",
+            "Friedliche entspannende Umgebungsbeleuchtung. Sanftes Licht für Entspannung und Ruhe. Sanfte gemütliche Raumbeleuchtung. Eine ruhige beruhigende Lichtatmosphäre.",
         ),
     ),
     Scene(
         name="sleeping",
         descriptions=(
-            "Very dim lighting for bedtime",
-            "Night lighting suitable for sleeping",
-            "Minimal soft illumination before sleep",
-            "Dark relaxing bedroom lighting",
+            "Very dim lighting for bedtime. Night lighting suitable for sleeping. Minimal soft illumination before sleep. Dark relaxing bedroom lighting.",
+            "Sehr gedämpftes Licht für die Schlafenszeit. Nachtbeleuchtung geeignet zum Schlafen. Minimale sanfte Beleuchtung vor dem Schlafengehen. Dunkle entspannende Schlafzimmerbeleuchtung.",
         ),
     ),
 ]

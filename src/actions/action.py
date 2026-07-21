@@ -14,24 +14,29 @@ from src.handlers.lights import LightAction, LightState
 class ActionGenerator:
     _logger = log.new_logger(__qualname__)
 
-    def __init__(self, model_path: str, state: dict[str, Any]):
+    def __init__(self, model_path: str, initial_state: dict[str, Any]):
         self._logger = log.new_logger(self.__class__.__name__)
-        if len(state) < 1:
+        if len(initial_state) < 1:
             self._logger.warning("No state given ActionGenerator!")
-        light_state: list[LightState] = [v for _, v in state.items() if isinstance(v, LightState)]
+        light_state: list[LightState] = [v for _, v in initial_state.items() if isinstance(v, LightState)]
         self.embedder: Embedder = Embedder(
             tokenizer=Tokenizer.from_file(f"{model_path}/tokenizer.json"),
             session=ort.InferenceSession(f"{model_path}/model_O4.onnx", providers=["CPUExecutionProvider"])
         )
         self.lights, self.scenes, self.intents = self._init_embeddings(light_state)
 
-    def generate_lights(self, instruction: str) -> list[LightAction]:
+    def generate_lights(self, instruction: str, state: dict[str, Any]) -> list[LightAction]:
+        intent = self._get_intent(instruction)
+        if intent is None:
+            self._logger.info(f"Intent of '{instruction}' not found")
+            return []
         # TODO: Implement workflow according to plan.md
+        self._logger.debug(f"Intent of '{instruction}': {intent}")
         self._logger.warning("NOT YET IMPLEMENTED")
         return []
 
     def _get_intent(self, instruction: str) -> Intent | None:
-        return embedding.best_match(self.intents, instruction)
+        return embedding.best_match(self.intents, instruction, threshold=0.66)
 
     def _init_embeddings(self, light_state: list[LightState]) \
             -> tuple[list[Embedded[Light]], list[Embedded[Scene]], list[Embedded[Intent]]]:

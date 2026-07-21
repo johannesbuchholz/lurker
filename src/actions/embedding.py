@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import TypeVar, Generic
 from typing import cast
@@ -7,7 +8,10 @@ import onnxruntime as ort
 from numpy.typing import NDArray
 from tokenizers import Tokenizer
 
+from src import log
 from src.actions.models import Describable
+
+LOGGER = log.new_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +72,9 @@ class Embedded(Generic[T]):
         query_emb = self._embedder.embed_query(query)
         return float(max(query_emb @ desc_emb for desc_emb in self.embeddings))
 
+    def __str__(self):
+        return str(self.item)
+
 
 def embed_items(embedder: Embedder, items: list[T]) -> list[Embedded[T]]:
     return [
@@ -81,10 +88,12 @@ def embed_items(embedder: Embedder, items: list[T]) -> list[Embedded[T]]:
 
 
 def best_match(items: list[Embedded[T]], query: str, threshold: float = 0.5) -> T | None:
-    best_emb, best_score = max(
-        ((e, e.best_embedding_score_for(query)) for e in items),
-        key=lambda x: x[1],
-    )
+    scores: list[tuple[Embedded[T], float]] = [(e, e.best_embedding_score_for(query)) for e in items]
+    best_emb, best_score = max(scores, key=lambda x: x[1])
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        sorted_scores = sorted(scores, reverse=True, key=lambda x: x[1])
+        sorted_scores_s = "\n".join([f"{emb}: {score}" for emb, score in sorted_scores])
+        LOGGER.debug(f"Best match for '{query}' (threshold={threshold}):\n{sorted_scores_s}")
     if best_score < threshold:
         return None
     return best_emb.item
