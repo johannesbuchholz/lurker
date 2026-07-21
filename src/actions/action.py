@@ -5,9 +5,9 @@ import onnxruntime as ort
 from tokenizers.tokenizers import Tokenizer
 
 from src import log
-from src.actions import models
-from src.actions.embedding import Embedder
-from src.actions.models import Embedded, Light, Scene, Intent
+from src.actions import models, embedding
+from src.actions.embedding import Embedder, Embedded
+from src.actions.models import Light, Scene, Intent
 from src.handlers.lights import LightAction, LightState
 
 
@@ -30,13 +30,16 @@ class ActionGenerator:
         self._logger.warning("NOT YET IMPLEMENTED")
         return []
 
-    def _init_embeddings(self, light_state: list[LightState]) -> tuple[
-        list[Embedded[Light]], list[Embedded[Scene]], list[Embedded[Intent]]]:
+    def _get_intent(self, instruction: str) -> Intent | None:
+        return embedding.best_match(self.intents, instruction)
+
+    def _init_embeddings(self, light_state: list[LightState]) \
+            -> tuple[list[Embedded[Light]], list[Embedded[Scene]], list[Embedded[Intent]]]:
         lights = models.as_lights(light_state)
         return (
-            models.embed_items(self.embedder.embed_passage, lights),
-            models.embed_items(self.embedder.embed_passage, models.SCENES),
-            models.embed_items(self.embedder.embed_passage, models.INTENTS)
+            embedding.embed_items(self.embedder, lights),
+            embedding.embed_items(self.embedder, models.SCENES),
+            embedding.embed_items(self.embedder, models.INTENTS)
         )
 
 

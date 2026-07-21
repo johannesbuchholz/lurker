@@ -1,8 +1,5 @@
 from dataclasses import dataclass
-from typing import TypeVar, Generic, Callable
-
-import numpy as np
-from numpy.typing import NDArray
+from typing import TypeVar
 
 from src.handlers.lights import LightState
 
@@ -10,13 +7,12 @@ T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
-class Embedded(Generic[T]):
-    item: T
-    embeddings: tuple[NDArray[np.float32], ...]
+class Describable:
+    descriptions: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
-class Intent:
+class Intent(Describable):
     """
     Candidates:
     POWER
@@ -25,11 +21,10 @@ class Intent:
     SCENE
     """
     name: str
-    descriptions: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
-class Scene:
+class Scene(Describable):
     """
     Candidates:
     MOVIE_NIGHT
@@ -41,22 +36,13 @@ class Scene:
     SLEEPING
     """
     name: str
-    descriptions: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
-class Light:
+class Light(Describable):
     id: str
     name: str
-    descriptions: tuple[str, ...]
     state: LightState
-
-
-def embed_items(embedder: Callable[[str], NDArray[np.float32]], items: list[T]) -> list[Embedded[T]]:
-    return [
-        Embedded(item=item, embeddings=tuple(embedder(description) for description in item.descriptions), )
-        for item in items
-    ]
 
 
 def as_lights(list_states: list[LightState]) -> list[Light]:
