@@ -60,7 +60,7 @@ class Embedded(Generic[T]):
     embeddings: tuple[NDArray[np.float32], ...]
     _embedder: Embedder
 
-    def score_for(self, query_emb: NDArray[np.float32], include_top_ratio: float = 0.33) -> float:
+    def score_for(self, query_emb: NDArray[np.float32], include_top_ratio: float = 0.5) -> float:
         """Mean score across all top descriptions."""
         scores = np.array(
             [query_emb @ desc_emb for desc_emb in self.embeddings],

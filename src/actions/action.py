@@ -26,7 +26,8 @@ class ActionGenerator:
         self.lights, self.scenes, self.intents = self._init_embeddings(light_state)
 
     def generate_lights(self, instruction: str, state: dict[str, Any]) -> list[LightAction]:
-        intent = self._get_intent(instruction)
+        names = ",".join(self._extract_light_names(state))
+        intent = self._get_intent(f"Available lights: {names}. Instruction: {instruction}")
         if intent is None:
             self._logger.info(f"Intent of '{instruction}' not found")
             return []
@@ -48,6 +49,9 @@ class ActionGenerator:
             embedding.embed_items(self._embedder, models.INTENTS)
         )
 
+    @staticmethod
+    def _extract_light_names(state: dict[str, Any]) -> list[str]:
+        return [v.name for _, v in state.items() if isinstance(v, LightState)]
 
 class LoadedHandlerType:
     cls: type | None = None
