@@ -6,8 +6,8 @@ from tokenizers.tokenizers import Tokenizer
 
 from src import log
 from src.actions import models, embedding
-from src.actions.embedding import Embedder, Embedded
-from src.actions.models import Light, Scene, Intent
+from src.actions.embedding import Embedder
+from src.actions.models import Intent
 from src.handlers.lights import LightAction, LightState
 
 
@@ -18,36 +18,25 @@ class ActionGenerator:
         self._logger = log.new_logger(self.__class__.__name__)
         if len(initial_state) < 1:
             self._logger.warning("No state given ActionGenerator!")
-        light_state: list[LightState] = [v for _, v in initial_state.items() if isinstance(v, LightState)]
         self._embedder: Embedder = Embedder(
             tokenizer=Tokenizer.from_file(f"{model_path}/tokenizer.json"),
             session=ort.InferenceSession(f"{model_path}/model_O4.onnx", providers=["CPUExecutionProvider"])
         )
-        self.lights, self.scenes, self.intents = self._init_embeddings(light_state)
 
     def generate_lights(self, instruction: str, state: dict[str, Any]) -> list[LightAction]:
-        names = ",".join(self._extract_light_names(state))
-        intent = self._get_intent(f"Available lights: {names}. Instruction: {instruction}")
+        intent = self._get_intent(instruction)
         if intent is None:
             self._logger.info(f"Intent of '{instruction}' not found")
             return []
+        names = ",".join(self._extract_light_names(state))
         # TODO: Implement workflow according to plan.md
         self._logger.debug(f"Intent of '{instruction}': {intent}")
         self._logger.warning("NOT YET IMPLEMENTED")
         return []
 
     def _get_intent(self, instruction: str) -> Intent | None:
-        query_emb = self._embedder.embed(instruction)
-        return embedding.best_match(self.intents, query_emb, threshold=0.5)
-
-    def _init_embeddings(self, light_state: list[LightState]) \
-            -> tuple[list[Embedded[Light]], list[Embedded[Scene]], list[Embedded[Intent]]]:
-        lights = models.as_lights(light_state)
-        return (
-            embedding.embed_items(self._embedder, lights),
-            embedding.embed_items(self._embedder, models.SCENES),
-            embedding.embed_items(self._embedder, models.INTENTS)
-        )
+        match = embedding.best_match(models.INTENTS, self._embedder, instruction, threshold=0.5)
+        return match if isinstance(match, Intent) else None
 
     @staticmethod
     def _extract_light_names(state: dict[str, Any]) -> list[str]:

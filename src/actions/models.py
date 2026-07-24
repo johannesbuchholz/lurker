@@ -1,9 +1,9 @@
-from dataclasses import dataclass
-from typing import TypeVar
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
 
 from src.handlers.lights import LightState
-
-T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,13 +17,8 @@ class Describable:
 
 @dataclass(frozen=True, slots=True)
 class Intent(Describable):
-    """
-    Candidates:
-    POWER
-    COLOR
-    BRIGHTNESS
-    SCENE
-    """
+    pattern: re.Pattern | None = None
+    nested: tuple[Intent, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,45 +70,64 @@ def _generate_light_descriptions(name: str) -> tuple[str, ...]:
     return tuple(dict.fromkeys(descriptions))
 
 
+OFF_PATTERN = re.compile(
+    r"\b(turn|switch)\b.*\boff\b"
+    r"|\bschalte\b.*\baus\b"
+    r"|\bmach\b.*\baus\b"
+    r"|\bmache\b.*\baus\b"
+    r"|\b(?:licht|lampe|light|lamp|alle(?:s|n)?\s+(?:licht(?:er)?|lampe))\s+(?:off|aus)\b"
+    r"|\b(?:deactivate|ausschalten|abschalten)\b",
+    re.IGNORECASE,
+)
+ON_PATTERN = re.compile(
+    r"\b(turn|switch)\b.*\bon\b"
+    r"|\bschalte\b.*\b(an|ein)\b"
+    r"|\bmach\b.*\ban\b"
+    r"|\bmache\b.*\ban\b"
+    r"|\b(?:licht|lampe|light|lamp|alle(?:s|n)?\s+(?:licht(?:er)?|lampe))\s+(?:on|an|ein)\b"
+    r"|\b(?:activate|einschalten|anschalten)\b",
+    re.IGNORECASE,
+)
+
 INTENTS: list[Intent] = [
     Intent(
-        name="power",
-        descriptions=(
-            "Completely switch the state of the light - no in between. Just on or off.",
-            "Turn one or multiple light sources completely on or off.",
-            "Enable or Disable one or multiple light sources completely.",
-            "Activate or Deactivate one or multiple light sources completely.",
-        ),
+        name="off",
+        descriptions = (),
+        pattern=OFF_PATTERN,
     ),
-
     Intent(
-        name="brightness",
-        descriptions=(
-            "About slightly changing the intensity of light state: Dimming or increasing.",
-            "Make the light that is already on slightly brighter or darker.",
-            "Adjust the brightness of the light that is already on - change only the light strength.",
-            "Increase or decrease the intensity of on or multiple lights that are already on",
-        ),
-    ),
-
-    Intent(
-        name="color",
-        descriptions=(
-            "About changing the color and chromatic appearance of one or multiple lights.",
-            "Set the color or heu of one or multiple lights to a specific color.",
-            "Set the warmth of one or multiple lights to a specific value.",
-            "Set the coldness of one or multiple lights to a specific value.",
-        ),
-    ),
-
-    Intent(
-        name="scene",
-        descriptions=(
-            "About changing the overall mood of a place - not just darkness or brightness",
-            "Create an atmosphere with one or multiple lights serving a purpose that is not turning everything on or off",
-            "Set the lights to underline and support a specific intent like watching a movie, going to sleep, studying or cleaning",
-            "Modify the available lights to achieve a very specific lighting atmosphere",
-        ),
+        name="on",
+        descriptions=(),
+        pattern=ON_PATTERN,
+        nested=(
+            Intent(
+                name="brightness",
+                descriptions=(
+                    "About slightly changing the intensity of light state: Dimming or increasing power.",
+                    "Make the light slightly brighter or darker.",
+                    "Adjust the brightness",
+                    "Increase or decrease the intensity of on or multiple lights",
+                )
+            ),
+            Intent(
+                name="color",
+                descriptions=(
+                    "About changing the color and chromatic appearance of one or multiple lights.",
+                    "Set the color or heu of one or multiple lights to a specific color.",
+                    "Set the warmth of one or multiple lights to a specific value.",
+                    "Set the coldness of one or multiple lights to a specific value.",
+                ),
+            ),
+            Intent(
+                name="scene",
+                descriptions=(
+                    "Create an directly specified atmosphere with one or multiple lights",
+                    "Set the lights to underline and support a specific intent like watching a movie, going to sleep, studying or cleaning",
+                    "Modify the lights to achieve a very specific lighting mood",
+                    "Set up lights to resemble a feeling like coziness, coldness, focus or warmth",
+                ),
+            ),
+        )
     ),
 ]
 

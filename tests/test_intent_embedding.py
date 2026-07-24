@@ -1,8 +1,9 @@
+import pytest
 from onnxruntime import InferenceSession
 from tokenizers import Tokenizer
 
-from src.actions.embedding import Embedder, Embedded, embed_items, best_match
-from src.actions.models import Intent, INTENTS
+from src.actions.embedding import Embedder, best_match
+from src.actions.models import INTENTS
 
 MODEL_PATH = "lurker/models/onnx/intfloat.multilingual-e5-small"
 
@@ -14,39 +15,49 @@ def _make_embedder() -> Embedder:
     )
 
 
-EMBEDDER = None
+EMBEDDER: Embedder = _make_embedder()
+
+OFF_QUERIES: list[str] = [
+    "turn the lights off",
+    "light off",
+    "turn everything off",
+    "deactivate all lights",
+    "schalte alle lichter im flur aus",
+    "mach das küchenlicht aus",
+    "schalte alle lichter aus",
+    "switch off all lights",
+    "mach das licht aus",
+]
+
+ON_QUERIES: list[str] = [
+    "switch on all lights",
+    "schalte das licht im wohnzimmern an",
+    "mach die lampe auf dem nacht tisch an",
+    "turn on the lights",
+    "schalte die lichter ein",
+    "activate all lights",
+]
 
 
-def _get_embedder() -> Embedder:
-    global EMBEDDER
-    if EMBEDDER is None:
-        EMBEDDER = _make_embedder()
-    return EMBEDDER
+@pytest.mark.parametrize("query", OFF_QUERIES, ids=OFF_QUERIES)
+def test_off_intent_matches(query: str) -> None:
+    match = best_match(INTENTS, EMBEDDER, query, threshold=0.0)
+    assert match is not None, f"No match for '{query}'"
+    assert match.name == "off"
 
 
-def _embed_intents() -> list[Embedded[Intent]]:
-    return embed_items(_get_embedder(), INTENTS)
+@pytest.mark.parametrize("query", ON_QUERIES, ids=ON_QUERIES)
+def test_on_intent_matches(query: str) -> None:
+    match = best_match(INTENTS, EMBEDDER, query, threshold=0.0)
+    assert match is not None, f"No match for '{query}'"
+    assert match.name in ("on", "brightness", "color", "scene")
 
 
-INTENT_QUERIES: dict[str, list[str]] = {
-    "power": [
-        "schalte alle lichter im flur aus",
-        "mach das küchenlicht aus",
-        "schalte das licht im wohnzimmern an",
-        "schalte alle lichter aus",
-        "mach die lampe auf dem nacht tisch an",
+class TestOffPattern:
+    @pytest.mark.parametrize("query", OFF_QUERIES, ids=OFF_QUERIES)
+    def test_off_regex(self, query: str) -> None:
+        assert INTENTS[0].pattern.search(query.lower())
 
-    ],
-}
-
-
-class TestIntentEmbedding:
-    """Each Intent's descriptions should score highest for clearly intended instructions."""
-
-    def test_power_queries_match_power_intent(self):
-        embedded_intents = _embed_intents()
-        for query in INTENT_QUERIES["power"]:
-            emb = _get_embedder().embed(query)
-            match = best_match(embedded_intents, emb, threshold=0.0)
-            assert match is not None, f"No match for '{query}'"
-            assert match.name == "power", f"Expected 'power' for '{query}', got '{match.name}'"
+    @pytest.mark.parametrize("query", ON_QUERIES, ids=ON_QUERIES)
+    def test_on_regex(self, query: str) -> None:
+        assert INTENTS[1].pattern.search(query.lower())
