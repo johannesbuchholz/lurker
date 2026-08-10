@@ -1,6 +1,6 @@
 import json
 from http.client import HTTPResponse
-from typing import Collection, Any, Match
+from typing import Collection, Any
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
@@ -55,34 +55,6 @@ class HueClient(ActionHandler):
         self.actions_path = kwargs["lurker_home"] + "/actions"
 
         self.lights = {}
-
-    def _save_current_lights_as_action(self, key_match: Match) -> int:
-        try:
-            action_key = key_match.group(1)
-        except IndexError as e:
-            self._logger.warning(f"Unable to save current light state: Could not extract group '1' in match {key_match}: {e}")
-            return 1
-
-        if len(action_key) < 1:
-            self._logger.warning(f"Unable to save current light state: Extracted action key is empty: key_match={key_match}")
-            return 1
-
-        file_name_suffix = action_key.replace(" ", "_").lower()
-        self.lights = self._retrieve_lights()
-        if len(self.lights) < 1:
-            self._logger.warning("No light ids available. Abort saving current light settings.")
-            return 1
-
-        light_action_dict = {
-            light_id: light.state.to_dict()
-            for light_id, light in _map_to_lights(self.lights).items()
-        }
-        action_dict = {"keys": [action_key], "command": light_action_dict}
-        file_path = self.actions_path + f"/{self.__class__.__name__}_saved_{file_name_suffix}.json"
-        with open(file_path, "w") as file_handle:
-            json.dump(action_dict, file_handle, indent=2)
-        self._logger.info(f"Wrote action to {file_path}: {action_dict}")
-        return 0
 
     def _retrieve_lights(self) -> dict[str, Any]:
         url = f"http://{self.host}/api/{self.user}/lights"
