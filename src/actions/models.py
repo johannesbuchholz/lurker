@@ -3,8 +3,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from src.handlers.lights import LightState
-
 
 @dataclass(frozen=True, slots=True)
 class Describable:
@@ -33,41 +31,6 @@ class Scene(Describable):
     CALM
     SLEEPING
     """
-
-
-@dataclass(frozen=True, slots=True)
-class Light(Describable):
-    id: str
-    state: LightState
-
-
-def as_lights(list_states: list[LightState]) -> list[Light]:
-    result = []
-    for state in list_states:
-        light = Light(id=state.id, name=state.name, descriptions=_generate_light_descriptions(state.name), state=state)
-        result.append(light)
-    return result
-
-
-def _generate_light_descriptions(name: str) -> tuple[str, ...]:
-    normalized = name.lower().strip()
-    descriptions = [
-        normalized,
-        f"{normalized} light",
-        f"{normalized} lamp",
-    ]
-
-    words = normalized.split()
-    if len(words) > 1:
-        reversed_name = " ".join(reversed(words))
-        descriptions.extend(
-            [
-                reversed_name,
-                f"{reversed_name} light",
-                f"{reversed_name} lamp",
-            ]
-        )
-    return tuple(dict.fromkeys(descriptions))
 
 
 OFF_PATTERN = re.compile(

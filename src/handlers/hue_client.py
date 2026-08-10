@@ -5,7 +5,7 @@ from urllib.error import URLError
 from urllib.request import urlopen, Request
 
 from src.actions.action import ActionHandler
-from src.handlers.lights import LightState, LightAction
+from src.handlers.lights import Light, LightAction, State
 
 ALL_LIGHTS_ID = "ALL"
 LIGHT_ID_STRING_DELIMITER = ","
@@ -30,12 +30,14 @@ DUMMY_RESPONSE_JSON = json.loads("""
 """)
 
 
-def _map_to_light_states(raw_lights: dict[str, Any]) -> dict[str, LightState]:
+def _map_to_lights(raw_lights: dict[str, Any]) -> dict[str, Light]:
     return {
-        light_id: LightState(
+        light_id: Light(
             id=light_id,
             name=light["name"],
-            **{k: v for k, v in light["state"].items() if k in LightState.ALLOWED_LIGHT_KEYS}
+            state=State(
+                **{k: v for k, v in light["state"].items() if k in State.ALLOWED_LIGHT_KEYS}
+            )
         )
         for light_id, light in raw_lights.items()
         if "name" in light and "state" in light
@@ -72,8 +74,8 @@ class HueClient(ActionHandler):
             return 1
 
         light_action_dict = {
-            light_id: state.to_dict()
-            for light_id, state in _map_to_light_states(self.lights).items()
+            light_id: light.state.to_dict()
+            for light_id, light in _map_to_lights(self.lights).items()
         }
         action_dict = {"keys": [action_key], "command": light_action_dict}
         file_path = self.actions_path + f"/{self.__class__.__name__}_saved_{file_name_suffix}.json"
@@ -132,12 +134,12 @@ class HueClient(ActionHandler):
             self.lights = DUMMY_RESPONSE_JSON
         else:
             self.lights = self._retrieve_lights()
-        return _map_to_light_states(self.lights)
+        return _map_to_lights(self.lights)
 
 
-def to_http_request(light_state: LightState, host: str, user: str, light_id: str) -> Request:
+def to_http_request(state: State, host: str, user: str, light_id: str) -> Request:
     url = f"http://{host}/api/{user}/lights/{light_id}/state"
-    data = light_state.to_json().encode("ascii")
+    data = state.to_json().encode("ascii")
     return Request(url, method="PUT", data=data)
 
 

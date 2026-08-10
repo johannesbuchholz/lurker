@@ -8,7 +8,7 @@ from src import log
 from src.actions import models, embedding
 from src.actions.embedding import Embedder
 from src.actions.models import Intent
-from src.handlers.lights import LightAction, LightState
+from src.handlers.lights import Light, LightAction
 
 
 class ActionGenerator:
@@ -40,7 +40,7 @@ class ActionGenerator:
 
     @staticmethod
     def _extract_light_names(state: dict[str, Any]) -> list[str]:
-        return [v.name for _, v in state.items() if isinstance(v, LightState)]
+        return [v.name for _, v in state.items() if isinstance(v, Light)]
 
 class LoadedHandlerType:
     cls: type | None = None

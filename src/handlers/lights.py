@@ -4,11 +4,9 @@ from typing import Collection
 
 
 @dataclass(frozen=True, slots=True)
-class LightState:
+class State:
     ALLOWED_LIGHT_KEYS = ["on", "sat", "bri", "hue"]
 
-    id: str
-    name: str
     on: bool | None = None
     hue: int | None = None
     sat: int | None = None
@@ -24,9 +22,19 @@ class LightState:
         return {k: v for k, v in {"on": self.on, "hue": self.hue, "sat": self.sat, "bri": self.bri}.items() if v is not None}
 
 
+@dataclass(frozen=True, slots=True)
+class Light:
+    id: str
+    name: str
+    state: State
+
+    def __str__(self):
+        return f"{self.name} ({self.id}): {self.state}"
+
+
 class LightAction:
 
-    def __init__(self, light_ids: Collection[str], state: LightState):
+    def __init__(self, light_ids: Collection[str], state: State):
         self.light_ids = light_ids
         self.state = state
 
@@ -40,7 +48,7 @@ def actions_from_json(json_str: str) -> list[LightAction]:
     data = json.loads(json_str)
     actions = []
     for light_ids_str, state_dict in data.items():
-        state = LightState(**state_dict)
+        state = State(**state_dict)
         action = LightAction(light_ids_str, state)
         actions.append(action)
     return actions
