@@ -30,14 +30,34 @@ DUMMY_RESPONSE_JSON = json.loads("""
 """)
 
 
+def _from_api_state(api: dict[str, Any]) -> State:
+    return State(
+        on=api.get("on"),
+        hue=round(api["hue"] * 360 / 65535) if "hue" in api else None,
+        sat=round(api["sat"] * 100 / 254) if "sat" in api else None,
+        bri=round(api["bri"] * 100 / 254) if "bri" in api else None,
+    )
+
+
+def _to_api_state(state: State) -> dict[str, bool | int]:
+    result = {}
+    if state.on is not None:
+        result["on"] = state.on
+    if state.hue is not None:
+        result["hue"] = round(state.hue * 65535 / 360)
+    if state.sat is not None:
+        result["sat"] = round(state.sat * 254 / 100)
+    if state.bri is not None:
+        result["bri"] = max(1, round(state.bri * 254 / 100))
+    return result
+
+
 def _map_to_lights(raw_lights: dict[str, Any]) -> dict[str, Light]:
     return {
         light_id: Light(
             id=light_id,
             name=light["name"],
-            state=State(
-                **{k: v for k, v in light["state"].items() if k in State.ALLOWED_LIGHT_KEYS}
-            )
+            state=_from_api_state(light["state"])
         )
         for light_id, light in raw_lights.items()
         if "name" in light and "state" in light
@@ -111,7 +131,7 @@ class HueClient(ActionHandler):
 
 def to_http_request(state: State, host: str, user: str, light_id: str) -> Request:
     url = f"http://{host}/api/{user}/lights/{light_id}/state"
-    data = state.to_json().encode("ascii")
+    data = json.dumps(_to_api_state(state)).encode("ascii")
     return Request(url, method="PUT", data=data)
 
 

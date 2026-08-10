@@ -12,6 +12,16 @@ class State:
     sat: int | None = None
     bri: int | None = None
 
+    def __post_init__(self):
+        if self.hue is not None and not 0 <= self.hue <= 360:
+            raise ValueError(f"hue out of range [0, 360]: {self.hue}")
+        if self.sat is not None and not 0 <= self.sat <= 100:
+            raise ValueError(f"sat out of range [0, 100]: {self.sat}")
+        if self.bri is not None and not 0 <= self.bri <= 100:
+            raise ValueError(f"bri out of range [0, 100]: {self.bri}")
+        if self.on is not None and not isinstance(self.on, bool):
+            raise TypeError(f"on must be a bool, got {type(self.on).__name__}: {self.on!r}")
+
     def __str__(self):
         return str(self.to_dict())
 

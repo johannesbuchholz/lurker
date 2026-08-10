@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import onnxruntime as ort
@@ -8,9 +8,14 @@ from numpy.typing import NDArray
 from tokenizers import Tokenizer
 
 from src import log
-from src.actions.models import Describable, Intent
+from src.actions.models import Describable
 
 LOGGER = log.new_logger(__name__)
+
+
+def normalize_query(query: str) -> str:
+    """Lowercase the query and collapse whitespace before embedding."""
+    return " ".join(query.lower().split())
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,37 +47,36 @@ class Embedder:
         return embedding[0].astype(np.float32)
 
 
-def best_match(items: list[Describable], embedder: Embedder, query: str, threshold: float = 0.5) -> Describable | None:
-    normalized = query.lower().strip()
+T = TypeVar("T", bound=Describable)
 
-    for item in items:
-        if isinstance(item, Intent) and item.pattern and item.pattern.search(normalized):
-            if item.nested:
-                return best_match(list(item.nested), embedder, query, threshold)
-            return item
 
+def best_match(
+    items: list[T],
+    embedder: Embedder,
+    query: str,
+    top_n: int = 1,
+    threshold: float = 0.0,
+) -> list[T]:
     if not items:
-        return None
+        return []
 
-    query_emb = embedder.embed(query)
-    return _best_by_embedding(items, embedder, query_emb, threshold)
-
-
-def _best_by_embedding(items: list[Describable], embedder: Embedder, query_emb: NDArray[np.float32], threshold: float) -> Describable | None:
+    query_emb = embedder.embed(normalize_query(query))
     scores = [
         (item, _score_item(item, embedder, query_emb))
         for item in items
     ]
-    best_item, best_score = max(scores, key=lambda x: x[1])
 
     if LOGGER.isEnabledFor(logging.DEBUG):
         sorted_scores = sorted(scores, reverse=True, key=lambda x: x[1])
         sorted_s = "\n".join([f"{item}: {score:.4f}" for item, score in sorted_scores])
         LOGGER.debug(f"Embedding scores:\n{sorted_s}")
 
-    if best_score < threshold:
-        return None
-    return best_item
+    above_threshold = [(item, score) for item, score in scores if score >= threshold]
+    above_threshold.sort(key=lambda x: x[1], reverse=True)
+
+    if top_n < 0:
+        return [item for item, _ in above_threshold]
+    return [item for item, _ in above_threshold[:top_n]]
 
 
 def _score_item(item: Describable, embedder: Embedder, query_emb: NDArray[np.float32]) -> float:

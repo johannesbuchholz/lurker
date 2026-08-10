@@ -1,11 +1,27 @@
-import pytest
+from pathlib import Path
+
 from onnxruntime import InferenceSession
 from tokenizers import Tokenizer
 
-from src.actions.embedding import Embedder, best_match
-from src.actions.models import INTENTS
+from src.actions.action import resolve_llm_model_path
+from src.actions.embedding import Embedder, best_match, normalize_query
+from src.actions.models import SCENES, Describable, light_descriptions
 
-MODEL_PATH = "lurker/models/onnx/intfloat.multilingual-e5-small"
+MODEL_PATH = resolve_llm_model_path(str(Path(__file__).resolve().parents[1] / "lurker"))
+
+LIGHT_NAMES = [
+    "Living Room Entry",
+    "Living Room Couch",
+    "Living Room Ceiling",
+    "Living Room Table",
+    "Living Room Desk",
+    "Kitchen",
+    "Floor 1",
+    "Floor 2",
+    "Bedroom Ceiling",
+    "Bedroom Nightstand Alex",
+    "Bedroom Nightstand Jenny",
+]
 
 
 def _make_embedder() -> Embedder:
@@ -17,47 +33,57 @@ def _make_embedder() -> Embedder:
 
 EMBEDDER: Embedder = _make_embedder()
 
-OFF_QUERIES: list[str] = [
-    "turn the lights off",
-    "light off",
-    "turn everything off",
-    "deactivate all lights",
-    "schalte alle lichter im flur aus",
-    "mach das küchenlicht aus",
-    "schalte alle lichter aus",
-    "switch off all lights",
-    "mach das licht aus",
-]
 
-ON_QUERIES: list[str] = [
-    "switch on all lights",
-    "schalte das licht im wohnzimmern an",
-    "mach die lampe auf dem nacht tisch an",
-    "turn on the lights",
-    "schalte die lichter ein",
-    "activate all lights",
-]
+def _light_items() -> list[Describable]:
+    return [Describable(name=name, descriptions=light_descriptions(name)) for name in LIGHT_NAMES]
 
 
-@pytest.mark.parametrize("query", OFF_QUERIES, ids=OFF_QUERIES)
-def test_off_intent_matches(query: str) -> None:
-    match = best_match(INTENTS, EMBEDDER, query, threshold=0.0)
-    assert match is not None, f"No match for '{query}'"
-    assert match.name == "off"
+class TestBestMatch:
+    def test_top_n_single(self) -> None:
+        matches = best_match(_light_items(), EMBEDDER, "Turn the kitchen light off", top_n=1)
+        assert [item.name for item in matches] == ["Kitchen"]
+
+    def test_top_n_negative_returns_all_above_threshold(self) -> None:
+        matches = best_match(_light_items(), EMBEDDER, "All lights on in the living room", top_n=-1, threshold=0.55)
+        names = [item.name for item in matches]
+        assert set(names) == {name for name in LIGHT_NAMES if name.startswith("Living Room")}
+
+    def test_threshold_rejects_unrelated(self) -> None:
+        matches = best_match(_light_items(), EMBEDDER, "What time is it", top_n=-1, threshold=0.55)
+        assert matches == []
+
+    def test_top_n_respects_order(self) -> None:
+        matches = best_match(_light_items(), EMBEDDER, "Dim the desk lamp", top_n=2)
+        names = [item.name for item in matches]
+        assert names[0] == "Living Room Desk"
+        assert len(names) == 2
+
+    def test_empty_items(self) -> None:
+        assert best_match([], EMBEDDER, "any query") == []
 
 
-@pytest.mark.parametrize("query", ON_QUERIES, ids=ON_QUERIES)
-def test_on_intent_matches(query: str) -> None:
-    match = best_match(INTENTS, EMBEDDER, query, threshold=0.0)
-    assert match is not None, f"No match for '{query}'"
-    assert match.name in ("on", "brightness", "color", "scene")
+class TestSceneSelection:
+    def test_movie_night(self) -> None:
+        matches = best_match(SCENES, EMBEDDER, "Movie night", top_n=1)
+        assert matches[0].name == "movie_night"
+
+    def test_unrelated_rejected_by_threshold(self) -> None:
+        candidates = [scene for scene in SCENES if scene.pattern.search("That movie was great")]
+        assert [scene.name for scene in candidates] == ["movie_night"]
+        assert best_match(candidates, EMBEDDER, "That movie was great", top_n=1, threshold=0.4) == []
 
 
-class TestOffPattern:
-    @pytest.mark.parametrize("query", OFF_QUERIES, ids=OFF_QUERIES)
-    def test_off_regex(self, query: str) -> None:
-        assert INTENTS[0].pattern.search(query.lower())
+class TestNormalizeQuery:
+    def test_lowercases(self) -> None:
+        assert normalize_query("Turn the Kitchen Light OFF") == "turn the kitchen light off"
 
-    @pytest.mark.parametrize("query", ON_QUERIES, ids=ON_QUERIES)
-    def test_on_regex(self, query: str) -> None:
-        assert INTENTS[1].pattern.search(query.lower())
+    def test_collapses_whitespace(self) -> None:
+        assert normalize_query("  dim   the desk  lamp ") == "dim the desk lamp"
+
+
+class TestLightDescriptions:
+    def test_lowercases_name(self) -> None:
+        assert light_descriptions("Kitchen") == ("kitchen", "kitchen light")
+
+    def test_multiple_words(self) -> None:
+        assert light_descriptions("Desk Lamp") == ("desk lamp", "desk lamp light")
