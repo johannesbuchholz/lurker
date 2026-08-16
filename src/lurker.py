@@ -83,14 +83,21 @@ class Lurker:
             exit(1)
 
 
-def _resolve_speech_model(lurker_home: str, language: str) -> str:
+def _resolve_speech_model(lurker_home: str, language: str, suffix_filter: str = "") -> str:
+    """Resolve the model matching the language infix with the highest version."""
     models_dir = os.path.join(lurker_home, "models", "vosk")
     lang_infix = f"-{language.lower()}-"
-    listdir = os.listdir(models_dir)
-    for entry in listdir:
-        if lang_infix in entry:
-            return os.path.join(models_dir, entry)
-    raise ValueError(f"No model found for language '{language}' in {models_dir}: available={list(listdir)}")
+    # alphabetically ascending; since versions sort numerically within a name
+    matches = sorted(os.listdir(models_dir))
+    for entry in matches:
+        if lang_infix not in entry:
+            continue
+        if suffix_filter and not entry.endswith(suffix_filter):
+            continue
+        return os.path.join(models_dir, entry)
+    raise ValueError(
+        f"No model found for language '{language}' in {models_dir}: available={list(os.listdir(models_dir))}"
+    )
 
 
 def _load_external_handler_module(module_name: str | None) -> None:
@@ -129,7 +136,7 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     embedding_model_path = _resolve_embedding_model_path(lurker_home)
     action_generator = ActionGenerator(model_path=embedding_model_path, initial_state=handler.get_state(dummy=True))
 
-    model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE)
+    model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE, lurker_config.LURKER_SPEECH_MODEL_SUFFIX)
     keyword = Keyword(lurker_config.LURKER_KEYWORD)
 
     act_callback = _make_act_callback(action_generator, handler, lurker_config.LURKER_OUTPUT_DEVICE)

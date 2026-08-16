@@ -7,5 +7,6 @@
   "LURKER_KEYWORD": ["/john(ny)?/", "johnson", "jenkins", "dobby"],
   "LURKER_LANGUAGE": "de",
   "LURKER_LOG_LEVEL": "DEBUG",
-  "LURKER_INPUT_DEVICE": "logi"
+  "LURKER_INPUT_DEVICE": "logi",
+  "LURKER_SPEECH_MODEL_SUFFIX": ""
 }

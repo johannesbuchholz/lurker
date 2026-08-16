@@ -12,6 +12,7 @@ LURKER_LOG_FILE = "LURKER_LOG_FILE"
 LURKER_INPUT_DEVICE = "LURKER_INPUT_DEVICE"
 LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
 LURKER_LANGUAGE = "LURKER_LANGUAGE"
+LURKER_SPEECH_MODEL_SUFFIX = "LURKER_SPEECH_MODEL_SUFFIX"
 LURKER_SPEECH_CONFIG = "LURKER_SPEECH_CONFIG"
 LURKER_HANDLER_MODULE = "LURKER_HANDLER_MODULE"
 LURKER_HANDLER_CONFIG = "LURKER_HANDLER_CONFIG"
@@ -28,6 +29,7 @@ def _get_envs() -> dict[str, str]:
         LURKER_INPUT_DEVICE: os.environ.get(LURKER_INPUT_DEVICE),
         LURKER_OUTPUT_DEVICE: os.environ.get(LURKER_OUTPUT_DEVICE),
         LURKER_LANGUAGE: os.environ.get(LURKER_LANGUAGE),
+        LURKER_SPEECH_MODEL_SUFFIX: os.environ.get(LURKER_SPEECH_MODEL_SUFFIX),
         LURKER_SPEECH_CONFIG: os.environ.get(LURKER_SPEECH_CONFIG),
         LURKER_HANDLER_MODULE: os.environ.get(LURKER_HANDLER_MODULE),
         LURKER_HANDLER_CONFIG: os.environ.get(LURKER_HANDLER_CONFIG),
@@ -95,6 +97,8 @@ class LurkerConfig:
     """A word sequence upon which lurker should start recording actions."""
     LURKER_LANGUAGE: str = "en"
     """The language of the spoken words that should be transcribed by lurker. Setting this value usually improves transcription time."""
+    LURKER_SPEECH_MODEL_SUFFIX: str = ""
+    """Optional suffix to filter the model name by, e.g. ``-lgraph``. Empty string disables the filter."""
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)
     """Configuration of how Lurker handles the speech to text process."""
     LURKER_HANDLER_MODULE: str = "src.handlers.hue_client"
