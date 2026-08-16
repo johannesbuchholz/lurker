@@ -12,12 +12,6 @@ from src.actions.models import Describable
 
 LOGGER = log.new_logger(__name__)
 
-
-def normalize_query(query: str) -> str:
-    """Lowercase the query and collapse whitespace before embedding."""
-    return " ".join(query.lower().split())
-
-
 @dataclass(frozen=True, slots=True)
 class Embedder:
     tokenizer: Tokenizer
@@ -60,7 +54,7 @@ def best_match(
     if not items:
         return []
 
-    query_emb = embedder.embed(normalize_query(query))
+    query_emb = embedder.embed(" ".join(query.lower().split()))
     scores = [
         (item, _score_item(item, embedder, query_emb))
         for item in items

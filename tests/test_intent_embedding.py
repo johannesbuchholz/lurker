@@ -4,7 +4,7 @@ from onnxruntime import InferenceSession
 from tokenizers import Tokenizer
 
 from src.actions.action import resolve_llm_model_path
-from src.actions.embedding import Embedder, best_match, normalize_query
+from src.actions.embedding import Embedder, best_match
 from src.actions.models import SCENES, Describable, light_descriptions
 
 MODEL_PATH = resolve_llm_model_path(str(Path(__file__).resolve().parents[1] / "lurker"))
@@ -71,14 +71,6 @@ class TestSceneSelection:
         candidates = [scene for scene in SCENES if scene.pattern.search("That movie was great")]
         assert [scene.name for scene in candidates] == ["movie_night"]
         assert best_match(candidates, EMBEDDER, "That movie was great", top_n=1, threshold=0.4) == []
-
-
-class TestNormalizeQuery:
-    def test_lowercases(self) -> None:
-        assert normalize_query("Turn the Kitchen Light OFF") == "turn the kitchen light off"
-
-    def test_collapses_whitespace(self) -> None:
-        assert normalize_query("  dim   the desk  lamp ") == "dim the desk lamp"
 
 
 class TestLightDescriptions:
