@@ -5,7 +5,7 @@ import sys
 from typing import Callable
 
 from src import log, sound
-from src.actions.action import ActionGenerator, LoadedHandlerType, NOPHandler, ActionHandler, resolve_llm_model_path
+from src.actions.action import ActionGenerator, LoadedHandlerType, NOPHandler, ActionHandler
 from src.config import LurkerConfig
 from src.keyword import Keyword
 from src.speech import SpeechToTextListener
@@ -126,8 +126,8 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
         handler = NOPHandler()
 
     # resolve llm model
-    llm_model_path = resolve_llm_model_path(lurker_home)
-    action_generator = ActionGenerator(model_path=llm_model_path, initial_state=handler.get_state(dummy=True))
+    embedding_model_path = _resolve_embedding_model_path(lurker_home)
+    action_generator = ActionGenerator(model_path=embedding_model_path, initial_state=handler.get_state(dummy=True))
 
     model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE)
     keyword = Keyword(lurker_config.LURKER_KEYWORD)
@@ -152,3 +152,8 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE
     )
+
+
+def _resolve_embedding_model_path(lurker_home: str) -> str:
+    """A separate model for tests to call"""
+    return os.path.join(lurker_home, "models", "onnx", "paraphrase-multilingual-MiniLM-L12-v2")

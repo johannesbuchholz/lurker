@@ -1,5 +1,4 @@
 import abc
-import os
 import re
 from typing import Any, Collection
 
@@ -13,15 +12,9 @@ from src.actions.models import Describable, light_descriptions
 from src.handlers.lights import Light, LightAction
 
 LIGHT_MATCH_THRESHOLD = 0.55
-LLM_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-
-
-def resolve_llm_model_path(lurker_home: str) -> str:
-    """Resolve the default embedding model path inside a lurker home directory."""
-    return os.path.join(lurker_home, "models", "onnx", LLM_MODEL_NAME)
 
 ALL_LIGHTS_PATTERN = re.compile(
-    r"\balle(?:n)?\s+lichter\b|\balle(?:s|n)?\s*(?:ein|aus|an)\b"
+    r"\ballen?\s+lichter\b|\balle[sn]?\s*(?:ein|aus|an)\b"
     r"|\ball\s+lights?\b|\ball(?:s|es)?\b|\beverything\b",
     re.IGNORECASE,
 )

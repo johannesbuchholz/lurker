@@ -2,11 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from src.actions.action import ActionGenerator, resolve_llm_model_path
+from src.actions.action import ActionGenerator
 from src.actions.models import SCENES
 from src.handlers.lights import Light, State
+from src.lurker import _resolve_embedding_model_path
 
-MODEL_PATH = resolve_llm_model_path(str(Path(__file__).resolve().parents[1] / "lurker"))
+MODEL_PATH = _resolve_embedding_model_path(str(Path(__file__).resolve().parents[1] / "lurker"))
 
 LIGHT_NAMES = [
     "Living Room Entry",
