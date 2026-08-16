@@ -9,4 +9,9 @@ build/
 dist/
 *.egg-info/
 
-*.log
+Sandbox.py
+plan.md
+lurkerlog*
+/lurker/actions/
+/lurker/models/
+/misc/
