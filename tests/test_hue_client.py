@@ -1,5 +1,4 @@
-import json
-
+from src.handlers import hue_client
 from src.handlers.hue_client import (
     _from_api_state,
     _map_to_lights,
@@ -7,25 +6,7 @@ from src.handlers.hue_client import (
 )
 from src.handlers.lights import Light, State
 
-DUMMY_RESPONSE_JSON = json.loads("""
-{
-  "1": {
-    "state": { "on": true, "bri": 128, "hue": 8000, "sat": 200 },
-    "name": "Living Room Lamp",
-    "type": "Extended color light"
-  },
-  "2": {
-    "state": { "on": true, "bri": 254, "hue": 40000, "sat": 100 },
-    "name": "Desk Lamp",
-    "type": "Extended color light"
-  },
-  "3": {
-    "state": { "on": false, "bri": 0, "hue": 0, "sat": 0 },
-    "name": "Bedroom Light",
-    "type": "Extended color light"
-  }
-}
-""")
+DUMMY_RESPONSE_JSON: dict = hue_client._DUMMY_RESPONSE_JSON
 
 
 class TestFromApiState:
@@ -65,7 +46,7 @@ class TestRoundTrip:
 class TestMapToLights:
     def test_maps_dummy_response(self) -> None:
         lights = _map_to_lights(DUMMY_RESPONSE_JSON)
-        assert set(lights) == {"1", "2", "3"}
+        assert set(lights) == DUMMY_RESPONSE_JSON.keys()
         assert isinstance(lights["1"], Light)
         assert lights["1"].name == "Living Room Lamp"
         assert lights["1"].state == _from_api_state(DUMMY_RESPONSE_JSON["1"]["state"])
