@@ -10,6 +10,7 @@ dist/
 *.egg-info/
 
 Sandbox.py
+AGENTS.md
 plan.md
 lurkerlog*
 /lurker/actions/
