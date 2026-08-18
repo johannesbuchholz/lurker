@@ -101,8 +101,8 @@ class LurkerConfig:
     """Optional suffix to filter the model name by, e.g. ``-lgraph``. Empty string disables the filter."""
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)
     """Configuration of how Lurker handles the speech to text process."""
-    LURKER_HANDLER_MODULE: str = "src.handlers.hue_client"
-    """Module name containing a single implementation of src.action.ActionHandler to be used for acting on recorded instructions."""
+    LURKER_HANDLER_MODULE: str = "HUE"
+    """Handler to act on recorded instructions. Predefined keyword: ``NOOP`` (no-op), ``DUMMY`` (fixed example light state, logs actions), ``HUE`` (Philips Hue bridge). Unknown values fall back to ``NOOP`` with a warning."""
     LURKER_HANDLER_CONFIG: dict[str, str] = field(default_factory=dict)
     """Configuration passed to the configured ActionHandler."""
 

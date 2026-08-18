@@ -9,7 +9,7 @@ from src import log
 from src.actions.embedding import Embedder, best_match
 from src.actions.intents import apply_intent
 from src.actions.models import Describable, light_descriptions
-from src.handlers.lights import Light, LightAction
+from src.handlers.lights import Light, LightAction, State
 
 LIGHT_MATCH_THRESHOLD = 0.55
 
@@ -77,14 +77,6 @@ class ActionGenerator:
         matches = best_match(items, self._embedder, instruction, top_n=-1, threshold=LIGHT_MATCH_THRESHOLD)
         return [item.name for item in matches]
 
-class LoadedHandlerType:
-    cls: type | None = None
-
-    @staticmethod
-    def get_implementation() -> type:
-        return NOPHandler if LoadedHandlerType.cls is None else LoadedHandlerType.cls
-
-
 class ActionHandler(abc.ABC):
     """
     Baseclass to act on a specific instruction.
@@ -95,17 +87,6 @@ class ActionHandler(abc.ABC):
 
     def __init__(self, **kwargs):
         self._logger = log.new_logger(self.__class__.__name__)
-
-    def __init_subclass__(cls, **kwargs):
-        if cls.__module__ == ActionHandler.__module__:
-            # ignore implementations from this module
-            return
-        if LoadedHandlerType.cls is None:
-            LoadedHandlerType.cls = cls
-            ActionHandler._logger.debug(f"Registered action handler {cls}")
-        else:
-            raise RuntimeError(
-                f"Only one subclass may be registered and {LoadedHandlerType.cls} has already been registered.")
 
     @abc.abstractmethod
     def handle(self, action) -> int:
@@ -133,3 +114,32 @@ class NOPHandler(ActionHandler):
 
     def get_state(self) -> dict[str, Any]:
         return {}
+
+
+_DUMMY_LIGHTS: dict[str, Light] = {
+    "1": Light(id="1", name="Living Room Lamp", state=State(on=True, bri=50, hue=44, sat=79)),
+    "2": Light(id="2", name="Desk Lamp", state=State(on=True, bri=100, hue=220, sat=39)),
+    "3": Light(id="3", name="Bedroom Light", state=State(on=False, bri=0, hue=0, sat=0)),
+    "4": Light(id="4", name="Living Room Entry", state=State(on=True, bri=50, hue=44, sat=79)),
+    "5": Light(id="5", name="Living Room Couch", state=State(on=True, bri=79, hue=192, sat=59)),
+    "6": Light(id="6", name="Living Room Ceiling", state=State(on=True, bri=100, hue=220, sat=39)),
+    "7": Light(id="7", name="Living Room Table", state=State(on=True, bri=35, hue=55, sat=71)),
+    "8": Light(id="8", name="Living Room Desk", state=State(on=False, bri=0, hue=0, sat=0)),
+    "9": Light(id="9", name="Kitchen", state=State(on=True, bri=59, hue=27, sat=87)),
+    "10": Light(id="10", name="Floor 1", state=State(on=True, bri=39, hue=165, sat=51)),
+    "11": Light(id="11", name="Floor 2", state=State(on=True, bri=30, hue=110, sat=63)),
+    "12": Light(id="12", name="Bedroom Ceiling", state=State(on=False, bri=0, hue=0, sat=0)),
+    "13": Light(id="13", name="Bedroom Nightstand Alex", state=State(on=True, bri=71, hue=66, sat=35)),
+    "14": Light(id="14", name="Bedroom Nightstand Jenny", state=State(on=True, bri=87, hue=247, sat=47)),
+}
+
+
+class DummyHandler(ActionHandler):
+    """Returns a fixed example light state and logs actions without executing them."""
+
+    def handle(self, action) -> int:
+        self._logger.info(f"Logging action without executing it: {action}")
+        return 0
+
+    def get_state(self) -> dict[str, Any]:
+        return dict(_DUMMY_LIGHTS)

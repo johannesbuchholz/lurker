@@ -1,11 +1,9 @@
-import importlib
 import os
 import signal
-import sys
 from typing import Callable
 
 from src import log, sound
-from src.actions.action import ActionGenerator, LoadedHandlerType, NOPHandler, ActionHandler
+from src.actions.action import ActionGenerator, NOPHandler, DummyHandler, ActionHandler
 from src.config import LurkerConfig
 from src.keyword import Keyword
 from src.speech import SpeechToTextListener
@@ -27,7 +25,7 @@ def _make_act_callback(registry: ActionGenerator, handler: ActionHandler, output
     def act(instruction: str) -> None:
         sound.play_understood(output_device_name)
         logger.info(f"Trying to find action for instruction '{instruction}'")
-        state = handler.get_state(dummy=True)
+        state = handler.get_state()
         lights = registry.generate_lights(instruction, state=state)
         if lights is None or len(lights) < 1:
             logger.info(f"Could not find action for instruction '{instruction}'")
@@ -100,20 +98,32 @@ def _resolve_speech_model(lurker_home: str, language: str, suffix_filter: str = 
     )
 
 
-def _load_external_handler_module(module_name: str | None) -> None:
+def _resolve_handler(lurker_home: str, lurker_config: LurkerConfig) -> ActionHandler:
     """
-    If the module contains a class extending ActionHandler, that class will trigger
-    __init_subclass__ of ActionHandler and thereby be registered.
+    Resolve the configured action handler from the predefined keywords ``NOOP``, ``DUMMY`` and ``HUE``.
+    Unknown values fall back to ``NOOP`` with a warning.
     """
-    if module_name is None:
-        return
-    elif module_name in sys.modules.keys():
-        LOGGER.warning(f"Could not add dynamically loaded module {module_name} to modules: It already exists in sys.modules.keys()")
-        return
-    # load module
-    extmodule = importlib.import_module(module_name)
-    sys.modules[module_name] = extmodule
-    LOGGER.debug(f"Loaded external module {extmodule}")
+    keyword = lurker_config.LURKER_HANDLER_MODULE.strip().upper()
+    if keyword == "NOOP":
+        return NOPHandler()
+    if keyword == "DUMMY":
+        return DummyHandler()
+    if keyword == "HUE":
+        from src.handlers.hue_client import HueClient
+        handler_type = HueClient
+    else:
+        LOGGER.warning(
+            f"LURKER_HANDLER_MODULE value '{lurker_config.LURKER_HANDLER_MODULE}' is not a predefined handler keyword "
+            f"(NOOP, DUMMY, HUE); using NOPHandler instead."
+        )
+        return NOPHandler()
+    # inject lurker_home into handler configuration
+    handler_config_with_home = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
+    try:
+        return handler_type(**handler_config_with_home)
+    except Exception as e:
+        LOGGER.warning(f"Could not instantiate handler {handler_type}: {type(e)} {e} - Using NOPHandler instead.", exc_info=e)
+        return NOPHandler()
 
 
 def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
@@ -121,20 +131,11 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     Blocks this thread.
     """
 
-    _load_external_handler_module(lurker_config.LURKER_HANDLER_MODULE)
-
-    handler_type = LoadedHandlerType.get_implementation()
-    # inject lurker_home into handler configuration
-    handler_config_with_home = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
-    try:
-        handler = handler_type(**handler_config_with_home)
-    except Exception as e:
-        LOGGER.warning(f"Could not instantiate handler {handler_type}: {type(e)} {e} - Using default handler instead.", exc_info=e)
-        handler = NOPHandler()
+    handler = _resolve_handler(lurker_home, lurker_config)
 
     # resolve llm model
     embedding_model_path = _resolve_embedding_model_path(lurker_home)
-    action_generator = ActionGenerator(model_path=embedding_model_path, initial_state=handler.get_state(dummy=True))
+    action_generator = ActionGenerator(model_path=embedding_model_path, initial_state=handler.get_state())
 
     model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE, lurker_config.LURKER_SPEECH_MODEL_SUFFIX)
     keyword = Keyword(lurker_config.LURKER_KEYWORD)
