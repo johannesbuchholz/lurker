@@ -1,6 +1,6 @@
 import os
 import signal
-from typing import Callable
+from dataclasses import dataclass
 
 from src import log, sound
 from src.actions.action import ActionGenerator, NOPHandler, DummyHandler, ActionHandler
@@ -11,41 +11,38 @@ from src.transcription import Transcriber
 
 LOGGER = log.new_logger(__name__)
 
+@dataclass(frozen=True, slots=True)
+class Actor:
+    """ Bridges ASR output to action execution. """
+    registry: ActionGenerator
+    handler: ActionHandler
+    output_device_name: str | None
 
-def _make_act_callback(registry: ActionGenerator, handler: ActionHandler, output_device_name: str | None) -> Callable[[str], None]:
-    """
-    Builds the callback that bridges ASR output to action execution.
+    _logger = log.new_logger(__qualname__)
 
-    Exists as a factory (rather than a lambda in get_new) because:
-    - The returned closure captures a single logger instance, avoiding per-call logger creation.
-    - A named function provides a meaningful name in stack traces instead of <lambda>.
-    """
-    logger = log.new_logger("act")
-
-    def act(instruction: str) -> None:
-        sound.play_understood(output_device_name)
-        logger.info(f"Trying to find action for instruction '{instruction}'")
-        state = handler.get_state()
-        lights = registry.generate_lights(instruction, state=state)
+    def act_on_instruction(self, instruction: str) -> None:
+        sound.play_understood(self.output_device_name)
+        self._logger.info(f"Trying to find action for instruction '{instruction}'")
+        state = self.handler.get_state()
+        lights = self.registry.generate_lights(instruction, state=state)
         if lights is None or len(lights) < 1:
-            logger.info(f"Could not find action for instruction '{instruction}'")
-            sound.play_no(output_device_name)
+            self._logger.info(f"Could not find action for instruction '{instruction}'")
+            sound.play_no(self.output_device_name)
         else:
-            logger.debug(f"Found action for instruction {instruction}: action={lights}")
+            self._logger.debug(f"Found action for instruction {instruction}: action={lights}")
             try:
-                handler_exit_code = handler.handle(lights)
+                handler_exit_code = self.handler.handle(lights)
             except Exception as e:
-                logger.error(f"Unhandled exception when handling instruction {instruction}: {type(e)} {e}", exc_info=e)
+                self._logger.error(f"Unhandled exception when handling instruction {instruction}: {type(e)} {e}", exc_info=e)
                 handler_exit_code = 1
 
             if handler_exit_code == 0:
-                logger.info(f"Successfully acted on instruction: {instruction}")
-                sound.play_ok(output_device_name)
+                self._logger.info(f"Successfully acted on instruction: {instruction}")
+                sound.play_ok(self.output_device_name)
             else:
-                logger.info(f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
-                sound.play_no(output_device_name)
-
-    return act
+                self._logger.info(
+                    f"Could not act on instruction: instruction={instruction}, handler_exit_code={handler_exit_code}")
+                sound.play_no(self.output_device_name)
 
 
 class Lurker:
@@ -138,14 +135,14 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     model_path = _resolve_speech_model(lurker_home, lurker_config.LURKER_LANGUAGE, lurker_config.LURKER_SPEECH_MODEL_SUFFIX)
     keyword = Keyword(lurker_config.LURKER_KEYWORD)
 
-    act_callback = _make_act_callback(action_generator, handler, lurker_config.LURKER_OUTPUT_DEVICE)
+    actor = Actor(action_generator, handler, lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(
         keyword=keyword,
         model_path=model_path,
     )
     listener = SpeechToTextListener(
         transcriber=transcriber,
-        instruction_callback=act_callback,
+        instruction_callback=actor.act_on_instruction,
         input_device_name=lurker_config.LURKER_INPUT_DEVICE,
         output_device_name=lurker_config.LURKER_OUTPUT_DEVICE,
         speech_config=lurker_config.LURKER_SPEECH_CONFIG,
@@ -161,5 +158,5 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
 
 
 def _resolve_embedding_model_path(lurker_home: str) -> str:
-    """A separate model for tests to call"""
+    """A separate method for tests to call"""
     return os.path.join(lurker_home, "models", "onnx", "paraphrase-multilingual-MiniLM-L12-v2")
