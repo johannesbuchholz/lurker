@@ -18,7 +18,40 @@ ALL_LIGHTS_PATTERN = re.compile(
     r"|\ball\s+lights?\b|\ball(?:s|es)?\b|\beverything\b",
     re.IGNORECASE,
 )
-NAME_STOP_WORDS = {"light", "lights", "lamp", "lamps", "licht", "lichter", "lampe", "lampen", "room", "zimmer"}
+NAME_STOP_WORDS = {
+    "light", "lights", "lamp", "lamps", "licht", "lichter", "lampe", "lampen", "room", "zimmer",
+    "on", "in", "the", "a", "an", "of", "at", "to", "for", "with", "by",
+    "ein", "eine", "einem", "einen", "der", "die", "das", "den", "dem", "des",
+    "an", "auf", "in", "mit", "von", "zu", "bei", "nach", "über", "unter",
+}
+
+
+def _name_tokens(name: str) -> list[str]:
+    """Split a light name into significant lowercase tokens."""
+    return [
+        word
+        for word in re.split(r"\W+", name.lower())
+        if word and (len(word) >= 2 or word.isdigit()) and word not in NAME_STOP_WORDS
+    ]
+
+
+def _extract_room(instruction: str, available_lights: Collection[str]) -> tuple[bool, list[str]]:
+    """Check if the instruction mentions a room by matching light name tokens.
+
+    Ranks lights by number of token hits and returns the top-scoring group.
+
+    Returns (is_room_restricted, lights_in_room).
+    """
+    scores: list[tuple[int, str]] = []
+    for name in available_lights:
+        tokens = _name_tokens(name)
+        hits = sum(1 for t in tokens if t in instruction)
+        if hits > 0:
+            scores.append((hits, name))
+    if not scores:
+        return False, []
+    max_hits = max(h for h, _ in scores)
+    return True, [name for h, name in scores if h == max_hits]
 
 
 class ActionGenerator:
@@ -32,25 +65,6 @@ class ActionGenerator:
             tokenizer=Tokenizer.from_file(f"{model_path}/tokenizer.json"),
             session=ort.InferenceSession(f"{model_path}/model_O4.onnx", providers=["CPUExecutionProvider"])
         )
-
-    @staticmethod
-    def _name_tokens(name: str) -> list[str]:
-        """Split a light name into significant lowercase tokens (used to detect keyword matches in instructions)."""
-        return [
-            word
-            for word in re.split(r"\W+", name.lower())
-            if word and (len(word) >= 2 or word.isdigit()) and word not in NAME_STOP_WORDS
-        ]
-
-    @staticmethod
-    def _match_by_name_tokens(instruction: str, names: Collection[str]) -> list[str]:
-        """Deterministically find lights whose name tokens occur in the instruction (use before embedding-based matching)."""
-        normalized = instruction.lower()
-        return [
-            name
-            for name in names
-            if any(token in normalized for token in ActionGenerator._name_tokens(name))
-        ]
 
     def generate_lights(self, instruction: str, state: dict[str, Any]) -> list[LightAction]:
         lights = [v for v in state.values() if isinstance(v, Light)]
@@ -66,13 +80,11 @@ class ActionGenerator:
 
     def guess_lights(self, instruction: str, available_lights: Collection[str]) -> Collection[str]:
         normalized = instruction.lower()
+        is_room_restricted, room_lights = _extract_room(normalized, available_lights)
+        if is_room_restricted:
+            return room_lights
         if ALL_LIGHTS_PATTERN.search(normalized):
             return list(available_lights)
-
-        matched = ActionGenerator._match_by_name_tokens(normalized, available_lights)
-        if matched:
-            return matched
-
         items = [Describable(name=name, descriptions=light_descriptions(name)) for name in available_lights]
         matches = best_match(items, self._embedder, instruction, top_n=-1, threshold=LIGHT_MATCH_THRESHOLD)
         return [item.name for item in matches]

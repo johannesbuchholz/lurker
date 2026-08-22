@@ -11,18 +11,16 @@ SCENE_THRESHOLD = 0.4
 
 OFF_PATTERN = re.compile(
     r"\b(turn|switch)\b.*\boff\b"
-    r"|\bschalte\b.*\baus\b"
-    r"|\bmach\b.*\baus\b"
-    r"|\bmache\b.*\baus\b"
+    r"|\bschalt\w*\b.*\baus\b"
+    r"|\bmach\w*\b.*\baus\b"
     r"|\b(?:licht|lampe|light|lamp|alle[sn]?\s+(?:licht(?:er)?|lampe))\s+(?:off|aus)\b"
     r"|\b(?:deactivate|ausschalten|abschalten)\b",
     re.IGNORECASE,
 )
 ON_PATTERN = re.compile(
     r"\b(turn|switch)\b.*\bon\b"
-    r"|\bschalte\b.*\b(an|ein)\b"
-    r"|\bmach\b.*\ban\b"
-    r"|\bmache\b.*\ban\b"
+    r"|\bschalt\w*\b.*\b(an|ein)\b"
+    r"|\bmach\w*\b.*\ban\b"
     r"|\b(?:licht|lampe|light|lamp|alle[sn]?\s+(?:licht(?:er)?|lampe))\s+(?:on|an|ein)\b"
     r"|\b(?:activate|einschalten|anschalten)\b",
     re.IGNORECASE,
