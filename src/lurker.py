@@ -103,27 +103,25 @@ def _resolve_handler(lurker_home: str, lurker_config: LurkerConfig) -> ActionHan
     Resolve the configured action handler from the predefined keywords ``NOOP``, ``DUMMY`` and ``HUE``.
     Unknown values fall back to ``NOOP`` with a warning.
     """
-    keyword = lurker_config.LURKER_HANDLER_MODULE.strip().upper()
+    raw_value = lurker_config.LURKER_HANDLER_MODULE
+    keyword = raw_value.strip().upper()
     if keyword == "NOOP":
         return NOPHandler()
     if keyword == "DUMMY":
         return DummyHandler()
     if keyword == "HUE":
         from src.handlers.hue_client import HueClient
-        handler_type = HueClient
-    else:
-        LOGGER.warning(
-            f"LURKER_HANDLER_MODULE value '{lurker_config.LURKER_HANDLER_MODULE}' is not a predefined handler keyword "
-            f"(NOOP, DUMMY, HUE); using NOPHandler instead."
-        )
-        return NOPHandler()
-    # inject lurker_home into handler configuration
-    handler_config_with_home = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
-    try:
-        return handler_type(**handler_config_with_home)
-    except Exception as e:
-        LOGGER.warning(f"Could not instantiate handler {handler_type}: {type(e)} {e} - Using NOPHandler instead.", exc_info=e)
-        return NOPHandler()
+        handler_config = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
+        try:
+            return HueClient(**handler_config)
+        except Exception as e:
+            LOGGER.warning(f"Could not instantiate handler {type(HueClient)}: {type(e)} {e} - Using NOPHandler instead.",exc_info=e)
+            return NOPHandler()
+    LOGGER.warning(
+        f"LURKER_HANDLER_MODULE value '{raw_value}' is not a predefined handler keyword (NOOP, DUMMY, HUE); "
+        f"using NOPHandler instead."
+    )
+    return NOPHandler()
 
 
 def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
