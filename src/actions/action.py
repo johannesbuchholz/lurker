@@ -6,8 +6,8 @@ import onnxruntime as ort
 from tokenizers.tokenizers import Tokenizer
 
 from src import log
+from src.actions import intents
 from src.actions.embedding import Embedder, best_match
-from src.actions.intents import apply_intent
 from src.actions.models import Describable, light_descriptions
 from src.handlers.lights import Light, LightAction, State
 
@@ -35,23 +35,18 @@ def _name_tokens(name: str) -> list[str]:
     ]
 
 
-def _extract_room(instruction: str, available_lights: Collection[str]) -> tuple[bool, list[str]]:
-    """Check if the instruction mentions a room by matching light name tokens.
-
-    Ranks lights by number of token hits and returns the top-scoring group.
-
-    Returns (is_room_restricted, lights_in_room).
-    """
+def _try_room_filtering(instruction: str, available_lights: Collection[str]) -> Collection[str]:
+    instruction_words = set(instruction.split())
     scores: list[tuple[int, str]] = []
     for name in available_lights:
         tokens = _name_tokens(name)
-        hits = sum(1 for t in tokens if t in instruction)
+        hits = sum(1 for t in tokens if t in instruction_words)
         if hits > 0:
             scores.append((hits, name))
     if not scores:
-        return False, []
+        return []
     max_hits = max(h for h, _ in scores)
-    return True, [name for h, name in scores if h == max_hits]
+    return [name for h, name in scores if h == max_hits]
 
 
 class ActionGenerator:
@@ -72,19 +67,25 @@ class ActionGenerator:
         affected = [light for light in lights if light.name in names]
         if not affected:
             affected = lights
-        new_lights = apply_intent(instruction, affected, self._embedder)
+        new_lights = intents.guess_intent_and_apply(instruction, affected, self._embedder)
         if new_lights is None:
             self._logger.info(f"No intent matched for instruction: '{instruction}'")
             return []
         return [LightAction([light.id], light.state) for light in new_lights]
 
     def guess_lights(self, instruction: str, available_lights: Collection[str]) -> Collection[str]:
+        """
+        NOTE: _extract_room relies on light name tokens appearing literally in the instruction text.
+        This only works when light names and the instruction share the same language;
+        cross-language room qualifiers (e.g. German "küche" vs English light name "Kitchen") will not be detected.
+        """
         normalized = instruction.lower()
-        is_room_restricted, room_lights = _extract_room(normalized, available_lights)
-        if is_room_restricted:
+        room_lights = _try_room_filtering(normalized, available_lights)
+        if room_lights:
             return room_lights
         if ALL_LIGHTS_PATTERN.search(normalized):
             return list(available_lights)
+        # no room specified and no "all"-quantifier detected: Apply embeddings as fallback
         items = [Describable(name=name, descriptions=light_descriptions(name)) for name in available_lights]
         matches = best_match(items, self._embedder, instruction, top_n=-1, threshold=LIGHT_MATCH_THRESHOLD)
         return [item.name for item in matches]

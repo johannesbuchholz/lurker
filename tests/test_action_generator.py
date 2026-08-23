@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.actions.action import ActionGenerator, _extract_room
+from src.actions.action import ActionGenerator, _try_room_filtering
 from src.actions.models import SCENES
 from src.handlers.lights import Light, State
 from src.lurker import _resolve_embedding_model_path
@@ -38,22 +38,22 @@ def generator() -> ActionGenerator:
 
 class TestExtractRoom:
     def test_kitchen(self) -> None:
-        is_restricted, lights = _extract_room("turn the kitchen light off", LIGHT_NAMES)
+        is_restricted, lights = _try_room_filtering("turn the kitchen light off", LIGHT_NAMES)
         assert is_restricted
         assert lights == ["Kitchen"]
 
     def test_table(self) -> None:
-        is_restricted, lights = _extract_room("dim the table light", LIGHT_NAMES)
+        is_restricted, lights = _try_room_filtering("dim the table light", LIGHT_NAMES)
         assert is_restricted
         assert lights == ["Living Room Table"]
 
     def test_room(self) -> None:
-        is_restricted, lights = _extract_room("all lights on in the living room", LIGHT_NAMES)
+        is_restricted, lights = _try_room_filtering("all lights on in the living room", LIGHT_NAMES)
         assert is_restricted
         assert lights == [name for name in LIGHT_NAMES if name.startswith("Living Room")]
 
     def test_unrelated_returns_nothing(self) -> None:
-        is_restricted, lights = _extract_room("what time is it", LIGHT_NAMES)
+        is_restricted, lights = _try_room_filtering("what time is it", LIGHT_NAMES)
         assert not is_restricted
         assert lights == []
 

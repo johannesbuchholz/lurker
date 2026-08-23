@@ -2,7 +2,7 @@ import numpy as np
 
 from src.actions.intents import (
     COLOR_PATTERNS,
-    apply_intent,
+    guess_intent_and_apply,
     apply_intent_individual,
     apply_intent_off,
     apply_intent_scene,
@@ -85,17 +85,17 @@ class TestApplyIntentIndividual:
 
 class TestApplyIntent:
     def test_off_wins_over_scene(self) -> None:
-        result = apply_intent("Turn off the movie lights", AFFECTED, EMBEDDER)
+        result = guess_intent_and_apply("Turn off the movie lights", AFFECTED, EMBEDDER)
         assert _states(result) == [{"on": False}, {"on": False}]
 
     def test_scene(self) -> None:
-        result = apply_intent("Movie night", AFFECTED, EMBEDDER)
+        result = guess_intent_and_apply("Movie night", AFFECTED, EMBEDDER)
         assert result is not None
         assert result[0].state == SCENES[0].state
 
     def test_individual(self) -> None:
-        result = apply_intent("Dim the light", AFFECTED, EMBEDDER)
+        result = guess_intent_and_apply("Dim the light", AFFECTED, EMBEDDER)
         assert _states(result) == [{"on": True, "bri": 40}, {"on": True, "bri": 20}]
 
     def test_no_match_returns_none(self) -> None:
-        assert apply_intent("What time is it", AFFECTED, EMBEDDER) is None
+        assert guess_intent_and_apply("What time is it", AFFECTED, EMBEDDER) is None

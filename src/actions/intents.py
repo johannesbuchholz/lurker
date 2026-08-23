@@ -110,7 +110,7 @@ def _dimmed(state: State, factor: float) -> State:
     return State(on=True, bri=bri)
 
 
-def apply_intent(
+def guess_intent_and_apply(
     instruction: str,
     affected_lights: Collection[Light],
     embedder: Embedder,
