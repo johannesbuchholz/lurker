@@ -1,4 +1,5 @@
 import os
+import threading
 import wave
 
 import numpy as np
@@ -7,6 +8,31 @@ import sounddevice as sd
 from src import log
 
 LOGGER = log.new_logger(__name__)
+
+_samplerate = 44100
+_channels = 2
+_dtype = "int16"
+
+
+class SoundStreamFactory:
+    _stream: sd.RawOutputStream | None = None
+
+    def get_or_new(self, device: str | None) -> sd.RawOutputStream:
+        if self._stream is None or self._stream.closed:
+            _loaded_stream: sd.RawOutputStream = sd.RawOutputStream(
+                samplerate=_samplerate,
+                channels=_channels,
+                dtype=_dtype,
+                device=device,
+            )
+            _loaded_stream.start()
+            self._stream = _loaded_stream
+            return _loaded_stream
+        else:
+            return self._stream
+
+
+stream_factory = SoundStreamFactory()
 
 
 def play_ready(output_device_name: str | None) -> None:
@@ -35,11 +61,17 @@ def play_understood(output_device_name: str | None):
 
 
 def _play_sound(output_device_name: str | None, data: np.ndarray | None, blocking: bool) -> None:
-    if data is not None:
-        try:
-            sd.play(data, samplerate=44100, device=output_device_name, blocking=blocking)
-        except Exception as e:
-            LOGGER.warning(f"Could not play sound: {str(e)}")
+    if data is None:
+        return
+    try:
+        opened = stream_factory.get_or_new(device=output_device_name)
+        raw = data.tobytes()
+        if blocking:
+            opened.write(raw)
+        else:
+            threading.Thread(target=opened.write, args=(raw,), daemon=True).start()
+    except Exception as e:
+        LOGGER.warning(f"Could not play sound: {str(e)}")
 
 
 def load_sounds():

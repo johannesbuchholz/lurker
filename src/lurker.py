@@ -106,7 +106,7 @@ def _resolve_handler(lurker_home: str, lurker_config: LurkerConfig) -> ActionHan
     if keyword == "NOOP":
         return NOPHandler()
     if keyword == "DUMMY":
-        return DummyHandler()
+        return DummyHandler(language=lurker_config.LURKER_LANGUAGE)
     if keyword == "HUE":
         from src.handlers.hue_client import HueClient
         handler_config = {"lurker_home": lurker_home} | lurker_config.LURKER_HANDLER_CONFIG
