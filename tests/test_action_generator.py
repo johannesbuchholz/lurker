@@ -38,23 +38,19 @@ def generator() -> ActionGenerator:
 
 class TestExtractRoom:
     def test_kitchen(self) -> None:
-        is_restricted, lights = _try_room_filtering("turn the kitchen light off", LIGHT_NAMES)
-        assert is_restricted
+        lights = _try_room_filtering("turn the kitchen light off", LIGHT_NAMES)
         assert lights == ["Kitchen"]
 
     def test_table(self) -> None:
-        is_restricted, lights = _try_room_filtering("dim the table light", LIGHT_NAMES)
-        assert is_restricted
+        lights = _try_room_filtering("dim the table light", LIGHT_NAMES)
         assert lights == ["Living Room Table"]
 
     def test_room(self) -> None:
-        is_restricted, lights = _try_room_filtering("all lights on in the living room", LIGHT_NAMES)
-        assert is_restricted
+        lights = _try_room_filtering("all lights on in the living room", LIGHT_NAMES)
         assert lights == [name for name in LIGHT_NAMES if name.startswith("Living Room")]
 
     def test_unrelated_returns_nothing(self) -> None:
-        is_restricted, lights = _try_room_filtering("what time is it", LIGHT_NAMES)
-        assert not is_restricted
+        lights = _try_room_filtering("what time is it", LIGHT_NAMES)
         assert lights == []
 
 

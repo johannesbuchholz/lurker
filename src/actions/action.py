@@ -14,7 +14,8 @@ from src.handlers.lights import Light, LightAction, State
 LIGHT_MATCH_THRESHOLD = 0.55
 
 ALL_LIGHTS_PATTERN = re.compile(
-    r"\ballen?\s+lichter\b|\balle[sn]?\s*(?:ein|aus|an)\b"
+    r"\ballen?\s+lichter?\b"
+    r"|\balle[sn]?\s+(?:licht(?:er)?|lampe|lampen)?\s*(?:ein|aus|an)\b"
     r"|\ball\s+lights?\b|\ball(?:s|es)?\b|\beverything\b",
     re.IGNORECASE,
 )
