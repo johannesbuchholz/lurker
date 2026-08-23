@@ -21,8 +21,9 @@ class Actor:
     _logger = log.new_logger(__qualname__)
 
     def act_on_instruction(self, instruction: str) -> None:
-        sound.play_understood(self.output_device_name)
         self._logger.info(f"Trying to find action for instruction '{instruction}'")
+        sound.play_understood(self.output_device_name)
+
         state = self.handler.get_state()
         lights = self.registry.generate_lights(instruction, state=state)
         if lights is None or len(lights) < 1:
