@@ -31,7 +31,7 @@ def play_ok(output_device_name: str | None):
 
 def play_understood(output_device_name: str | None):
     entry = _LoadedSounds.sounds.get("understood.wav", None)
-    _play_sound(output_device_name, entry, True)
+    _play_sound(output_device_name, entry, False)
 
 
 def _play_sound(output_device_name: str | None, data: np.ndarray | None, blocking: bool) -> None:
