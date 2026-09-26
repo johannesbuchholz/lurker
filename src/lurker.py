@@ -81,14 +81,14 @@ class Lurker:
 
 def _resolve_speech_model(lurker_home: str, language: str, suffix_filter: str = "") -> str:
     """Resolve the model matching the language infix with the highest version."""
-    models_dir = os.path.join(lurker_home, "models", "vosk")
+    models_dir = os.path.join(lurker_home, "models", "onnx")
     lang_infix = f"-{language.lower()}-"
     # alphabetically ascending; since versions sort numerically within a name
     matches = sorted(os.listdir(models_dir))
     for entry in matches:
         if lang_infix not in entry:
             continue
-        if suffix_filter and not entry.endswith(suffix_filter):
+        if suffix_filter and not suffix_filter in entry:
             continue
         return os.path.join(models_dir, entry)
     raise ValueError(
@@ -139,7 +139,7 @@ def get_new(lurker_home: str, lurker_config: LurkerConfig) -> Lurker:
     actor = Actor(action_generator, handler, lurker_config.LURKER_OUTPUT_DEVICE)
     transcriber = Transcriber(
         keyword=keyword,
-        model_path=model_path,
+        model_dir_path=model_path,
     )
     listener = SpeechToTextListener(
         transcriber=transcriber,

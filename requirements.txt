@@ -1,6 +1,8 @@
-vosk
 sounddevice
 numpy
 webrtcvad-wheels
+# Embeddings
 onnxruntime
 tokenizers
+# ASR
+sherpa-onnx

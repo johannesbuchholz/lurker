@@ -1,8 +1,10 @@
 import logging
 from collections import deque
+from dataclasses import dataclass
 from typing import Protocol, Any, Callable
 
 import numpy as np
+import numpy.typing as npt
 import sounddevice as sd
 
 from src import log
@@ -10,11 +12,18 @@ from src.config import SpeechConfig
 from src.speech_detection import SpeechDetector
 
 LOGGER = log.new_logger(__name__)
+INPUT_STREAM_DTYPE = np.int16
+
+
+@dataclass(frozen=True)
+class AudioChunk:
+    samples: npt.NDArray[INPUT_STREAM_DTYPE]
+    sample_rate: int
+
 
 class ASRBackend(Protocol):
-    def feed_data(self, pcm_bytes: bytes) -> bool:
+    def feed_data(self, chunk: AudioChunk) -> bool:
         """
-        Push raw PCM audio into the ASR backend.
         Returns True when the backend has a final result (utterance complete).
         """
         ...
@@ -52,9 +61,11 @@ class SpeechToTextListener:
         self._gate = self.GateState.DOWN
         self._non_speech_chunk_count = 0
         self._open_gate_chunk_count = 0
-        self._max_open_gate_chunks = int(self._capture_config.max_open_gate_seconds / (self._capture_config.frame_ms / 1000))
-        self._silence_chunk_threshold = int(self._capture_config.silence_threshold_seconds / (self._capture_config.frame_ms / 1000))
-        self._prefill_chunks: deque[bytes] = deque(maxlen=self._capture_config.prefill_chunks)
+        self._max_open_gate_chunks = int(
+            self._capture_config.max_open_gate_seconds / (self._capture_config.frame_ms / 1000))
+        self._silence_chunk_threshold = int(
+            self._capture_config.silence_threshold_seconds / (self._capture_config.frame_ms / 1000))
+        self._prefill_chunks: deque[AudioChunk] = deque(maxlen=self._capture_config.prefill_chunks)
         self._audio_stream = None
         self._detector = SpeechDetector(self._capture_config.detector)
 
@@ -69,7 +80,7 @@ class SpeechToTextListener:
         self._audio_stream = sd.InputStream(
             samplerate=self._capture_config.detector.sample_rate,
             channels=1,
-            dtype="int16",
+            dtype=INPUT_STREAM_DTYPE,
             blocksize=self._capture_config.frame_samples,
             device=self._input_device_name or None,
             callback=self._process_audio_callback,
@@ -86,8 +97,14 @@ class SpeechToTextListener:
         if not self._running:
             return
 
-        incoming = indata.tobytes()
-        is_speech = self._detector.is_speech(incoming, self._gate == self.GateState.DOWN)
+        incoming = AudioChunk(
+            # reshape to mono flat chunk
+            samples=indata.reshape(-1),
+            sample_rate=self._capture_config.detector.sample_rate,
+        )
+        incoming_raw = incoming.samples.tobytes()
+
+        is_speech = self._detector.is_speech(incoming_raw, self._gate == self.GateState.DOWN)
 
         if self._gate == self.GateState.DOWN:
             if is_speech:
@@ -95,11 +112,10 @@ class SpeechToTextListener:
                 for chunk in self._prefill_chunks:
                     self._asr.feed_data(chunk)
                 self._asr.feed_data(incoming)
-                if LOGGER.isEnabledFor(log.TRACE):
-                    LOGGER.log(log.TRACE, "GATE: opened, pushed %d prefill + 1 current chunk (%d bytes total)", len(self._prefill_chunks) + 1, sum(len(c) for c in self._prefill_chunks) + len(incoming))
             else:
                 self._prefill_chunks.append(incoming)
-                LOGGER.log(log.TRACE, "PREFILL: appended %d bytes (%d chunks)", len(incoming), len(self._prefill_chunks))
+                LOGGER.log(log.TRACE, "PREFILL: appended %d bytes (%d chunks)", len(incoming_raw),
+                           len(self._prefill_chunks))
         else:
             # gate is UP
             self._open_gate_chunk_count += 1
@@ -116,7 +132,8 @@ class SpeechToTextListener:
             if self._non_speech_chunk_count > self._silence_chunk_threshold > 0:
                 # enough silence: close gate
                 if LOGGER.isEnabledFor(logging.DEBUG):
-                    LOGGER.debug("GATE: close, trailing silence exceeded (%fs)",self._capture_config.silence_threshold_seconds)
+                    LOGGER.debug("GATE: close, trailing silence exceeded (%fs)",
+                                 self._capture_config.silence_threshold_seconds)
                 self._close_gate()
             else:
                 is_final = self._asr.feed_data(incoming)
