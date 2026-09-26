@@ -88,7 +88,7 @@ class LurkerConfig:
     LURKER_LOG_LEVEL: int | str = "INFO"
     """The log level of the lurker application according to the python logging module."""
     LURKER_LOG_FILE: str | None = "lurkerlog"
-    """If specified, lurker additionally logs a file with the given name in the current working directory."""
+    """If specified, lurker additionally logs to a file with the given name. May be an absolute or relative path or a file name."""
     LURKER_INPUT_DEVICE: str | None = None
     """Name of the device that should be used for recording audio. This might also be a substring of the actual name."""
     LURKER_OUTPUT_DEVICE: str | None = None

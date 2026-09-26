@@ -17,7 +17,7 @@ def new_logger(name: str) -> Logger:
     return logging.getLogger("Lurker ({})".format(name))
 
 
-def init_global_config(global_level: str | int, file_name: str | None = None) -> None:
+def init_global_config(global_level: str | int, file_name: str | None = None, lurker_home: str | None = None) -> None:
     if type(global_level) == str and global_level.isnumeric():
         global_level = int(global_level)
 
@@ -25,7 +25,7 @@ def init_global_config(global_level: str | int, file_name: str | None = None) ->
     logging.raiseExceptions = False  # Dismiss all errors regarding logging
 
     if file_name is not None and (len(file_name) > 0):
-        log_file_path = f"{os.getcwd()}/{file_name}"
+        log_file_path = file_name if os.path.isabs(file_name) else os.path.join(lurker_home or os.getcwd(), file_name)
         handler = logging.handlers.RotatingFileHandler(filename=log_file_path, maxBytes=1000**2, backupCount=3)
         logging.root.handlers.append(handler)
 
