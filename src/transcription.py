@@ -1,3 +1,5 @@
+import re
+
 import numpy as np
 import sherpa_onnx
 from sherpa_onnx import OnlineRecognizer
@@ -5,6 +7,12 @@ from sherpa_onnx import OnlineRecognizer
 from src import log
 from src.keyword import Keyword
 from src.speech import ASRBackend, AudioChunk
+
+_PUNCTUATION = re.compile(r"[^'\w\s%-]")
+
+
+def _normalize(text: str) -> str:
+    return " ".join(_PUNCTUATION.sub(" ", text).split()).lower()
 
 
 def _pcm_to_float32(samples: np.ndarray) -> np.ndarray:
@@ -48,13 +56,19 @@ class Transcriber(ASRBackend):
         Checks accumulated transcription for keyword and fires callback if found.
         On keyword match, resets recognizer and clears transcription.
         """
-        result_to_check: str = self._recognizer.get_result(self._stream).strip()
-        keyword_end_index = self._keyword.is_in(result_to_check)
+        raw_result: str = self._recognizer.get_result(self._stream).strip()
+        result: str = _normalize(raw_result)
+
+        keyword_end_index = self._keyword.is_in(result)
         instruction = None
         has_keyword = keyword_end_index is not None
         if has_keyword:
-            instruction = result_to_check[keyword_end_index:].strip()
+            instruction = result[keyword_end_index:].strip()
             self._recognizer.reset(self._stream)
-        self._logger.debug(
-            f"Checked: has_keyword={has_keyword}, text=\"{result_to_check}\", instruction=\"{instruction}\"")
+        elif len(result) > 160:
+            # reset recognizer regardless of keyword match if it became too long
+            self._recognizer.reset(self._stream)
+
+        self._logger.debug(f"Checked: has_keyword={has_keyword}, "
+                           f"raw=\"{raw_result}\", text=\"{result}\", instruction=\"{instruction}\"")
         return instruction

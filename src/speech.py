@@ -32,6 +32,7 @@ class ASRBackend(Protocol):
         """
         Flush accumulated transcription at sentence boundary.
         Returns instruction string if keyword found, None otherwise.
+        The returned instruction is normalized: lowercase, without punctuation.
         """
         ...
 

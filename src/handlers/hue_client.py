@@ -84,6 +84,7 @@ class HueClient(ActionHandler):
         return 0
 
     def handle(self, action) -> int:
+        """Expects a collection of lights."""
         if isinstance(action, list):
             return self._handle_internal(action)
         else:
