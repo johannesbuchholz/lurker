@@ -1,7 +1,11 @@
 import json
 
+import pytest
+
 from src.actions.action import DummyHandler
+from src.handlers import hue_client
 from src.handlers.hue_client import (
+    HueClient,
     _from_api_state,
     _map_to_lights,
     _to_api_state,
@@ -148,3 +152,45 @@ class TestDummyHandler:
 
     def test_handle_logs_and_succeeds(self) -> None:
         assert DummyHandler().handle(None) == 0
+
+
+KITCHEN = Light(id="1", name="Kitchen", state=State(on=False))
+DESK = Light(id="2", name="Desk Lamp", state=State(on=True, bri=100))
+KITCHEN_URL = "http://bridge/api/user/lights/1/state"
+DESK_URL = "http://bridge/api/user/lights/2/state"
+KITCHEN_REQUEST = {KITCHEN_URL: {"on": False}}
+BOTH_REQUESTS = {KITCHEN_URL: {"on": False}, DESK_URL: {"on": True, "bri": 254}}
+
+
+class TestHandle:
+    """handle() must act on a single Light or a collection of Lights, and ignore anything else."""
+    @pytest.fixture
+    def client(self) -> HueClient:
+        client = HueClient(host="bridge", user="user", lurker_home="/tmp")
+        client.lights = {"1": {"name": "Kitchen", "state": {"on": True}}}
+        return client
+
+    @pytest.fixture
+    def dispatched(self, monkeypatch: pytest.MonkeyPatch) -> list:
+        dispatched: list = []
+        monkeypatch.setattr(hue_client, "urlopen", lambda request, timeout: dispatched.append(request))
+        return dispatched
+
+    @pytest.mark.parametrize(("action", "expected_requests"), [
+        (KITCHEN, KITCHEN_REQUEST),
+        ([KITCHEN, DESK], BOTH_REQUESTS),
+        ((KITCHEN, DESK), BOTH_REQUESTS),
+        ({KITCHEN, DESK}, BOTH_REQUESTS),
+        ([], {}),
+        ((), {}),
+        ("kitchen", {}),
+        (5, {}),
+        (None, {}),
+        ({KITCHEN.name: KITCHEN}, {}),
+        ({KITCHEN.name: KITCHEN}.keys(), {}),
+        (["kitchen"], {}),
+        ([KITCHEN, "kitchen"], {}),
+    ])
+    def test_handle_dispatches_only_lights(self, client: HueClient, dispatched: list, action, expected_requests) -> None:
+        assert client.handle(action) == 0
+        assert {request.full_url: json.loads(request.data) for request in dispatched} == expected_requests

@@ -1,6 +1,7 @@
 import json
+from collections.abc import Collection
 from http.client import HTTPResponse
-from typing import Collection, Any
+from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
@@ -84,12 +85,15 @@ class HueClient(ActionHandler):
         return 0
 
     def handle(self, action) -> int:
-        """Expects a collection of lights."""
-        if isinstance(action, list):
-            return self._handle_internal(action)
+        """Accepts a single Light or a collection of Lights."""
+        if isinstance(action, Light):
+            lights = [action]
+        elif isinstance(action, Collection) and all(isinstance(light, Light) for light in action):
+            lights = list(action)
         else:
             self._logger.info(f"Skipping non-light action: type={type(action)}, action={action}")
             return 0
+        return self._handle_internal(lights)
 
     def _handle_internal(self, lights: list[Light]) -> int:
         if len(self.lights) < 1:
