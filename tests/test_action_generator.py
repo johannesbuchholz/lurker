@@ -67,7 +67,8 @@ class TestGuessLights:
     def test_generate_lights_off(self, generator: ActionGenerator) -> None:
         actions = generator.generate_lights("Turn the kitchen light off", _initial_state())
         assert len(actions) == 1
-        assert actions[0].light_ids == ["6"]
+        assert actions[0].id == "6"
+        assert actions[0].name == "Kitchen"
         assert actions[0].state == State(on=False)
 
     def test_generic_command_targets_all_lights(self, generator: ActionGenerator) -> None:
@@ -106,12 +107,12 @@ class TestEndToEnd:
 
     def test_bedside_lamp(self, generator: ActionGenerator) -> None:
         actions = generator.generate_lights("turn on the bedside lamp", _initial_state())
-        assert {a.light_ids[0] for a in actions} == {"9", "10", "11"}
+        assert {a.id for a in actions} == {"9", "10", "11"}
         assert all(a.state == State(on=True) for a in actions)
 
     def test_cozy_reading_light(self, generator: ActionGenerator) -> None:
         actions = generator.generate_lights("Cozy reading light", _initial_state())
-        assert {a.light_ids[0] for a in actions} == {"10", "11"}
+        assert {a.id for a in actions} == {"10", "11"}
         assert all(a.state == SCENES[4].state for a in actions)
 
     def test_unrelated_noop(self, generator: ActionGenerator) -> None:

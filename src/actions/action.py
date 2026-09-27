@@ -9,7 +9,7 @@ from src import log
 from src.actions import intents
 from src.actions.embedding import Embedder, best_match
 from src.actions.models import Describable, light_descriptions
-from src.handlers.lights import Light, LightAction, State
+from src.handlers.lights import Light, State
 
 LIGHT_MATCH_THRESHOLD = 0.55
 
@@ -62,7 +62,7 @@ class ActionGenerator:
             session=ort.InferenceSession(f"{model_path}/model_O4.onnx", providers=["CPUExecutionProvider"])
         )
 
-    def generate_lights(self, instruction: str, state: dict[str, Any]) -> list[LightAction]:
+    def generate_lights(self, instruction: str, state: dict[str, Any]) -> Collection[Light]:
         lights = [v for v in state.values() if isinstance(v, Light)]
         names = self.guess_lights(instruction, [light.name for light in lights])
         affected = [light for light in lights if light.name in names]
@@ -72,7 +72,7 @@ class ActionGenerator:
         if new_lights is None:
             self._logger.info(f"No intent matched for instruction: '{instruction}'")
             return []
-        return [LightAction([light.id], light.state) for light in new_lights]
+        return list(new_lights)
 
     def guess_lights(self, instruction: str, available_lights: Collection[str]) -> Collection[str]:
         """

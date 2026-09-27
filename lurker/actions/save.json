@@ -1,4 +1,0 @@
-{
-  "keys": ["/.*speichere als (.*)$/", "/.*save as (.*)$/"],
-  "command": "SAVE"
-}
