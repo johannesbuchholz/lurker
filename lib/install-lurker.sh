@@ -64,9 +64,9 @@ echo
 echo "# Move lurker ${script_version} source code to ${install_dir}"
 cp -fr "${tmp_dir}" "${lurker_dir}"
 
-# check python version against the one declared in .python-version
+# check python version against the one declared in the downloaded .python-version
 required_version="$(cat "${install_dir}/.python-version")"
-python_version="$(python --version 2>&1)"
+python_version="$(python --version 2>&1 | cut -d' ' -f2)"
 if [ "$(echo "${python_version}" | cut -d. -f1-2)" != "$(echo "${required_version}" | cut -d. -f1-2)" ]; then
   echo "ERROR: Python $(echo "${required_version}" | cut -d. -f1-2).x is required, found ${python_version}"
   exit 1
