@@ -64,11 +64,12 @@ echo
 echo "# Move lurker ${script_version} source code to ${install_dir}"
 cp -fr "${tmp_dir}" "${lurker_dir}"
 
-# check python version against the one declared in the downloaded .python-version
-required_version="$(cat "${install_dir}/.python-version")"
-python_version="$(python --version 2>&1 | cut -d' ' -f2)"
-if [ "$(echo "${python_version}" | cut -d. -f1-2)" != "$(echo "${required_version}" | cut -d. -f1-2)" ]; then
-  echo "ERROR: Python $(echo "${required_version}" | cut -d. -f1-2).x is required, found ${python_version}"
+# check python major.minor (mm) version against the one declared in the downloaded .python-version
+req_mm="$(cut -d. -f1-2 "${install_dir}/.python-version")"
+py_full="$(python --version 2>&1 | cut -d' ' -f2)"
+py_mm="$(echo "${py_full}" | cut -d. -f1-2)"
+if [ "$(printf '%s\n%s\n' "${req_mm}" "${py_mm}" | sort -V | head -n1)" != "${req_mm}" ]; then
+  echo "ERROR: Python ${req_mm}.x or newer is required, found ${py_full}"
   exit 1
 fi
 
