@@ -31,7 +31,8 @@ echo "Lurker installer script ${script_version}"
 echo "-------------------------------------------------------------------------"
 echo
 
-required_tools="mktemp wget git envsubst python tar"
+# libportaudio2 is used by lurker
+required_tools="mktemp wget git envsubst python tar libportaudio2"
 
 echo "# Checking for required tools"
 # shellcheck disable=SC2086
@@ -74,7 +75,6 @@ if [ "$(printf '%s\n%s\n' "${req_mm}" "${py_mm}" | sort -V | head -n1)" != "${re
 fi
 
 # download models
-# NOTE: models are placed next to the configuration that lurker is started with
 models_dir="${install_dir}/lurker/models/onnx"
 mkdir -p "${models_dir}"
 

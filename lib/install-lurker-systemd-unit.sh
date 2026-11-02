@@ -17,17 +17,6 @@ if [ -z "${LURKER_STARTUP_CMD}" ]; then
   exit 1
 fi
 
-echo "# Checking for required tools"
-if ! type "systemd" "systemctl"; then
-  echo "ERROR: systemd is not available"
-  exit 1
-fi
-
-if ! (: < /dev/tty) 2>/dev/null; then
-  echo "ERROR: No terminal available to ask for confirmation"
-  exit 1
-fi
-
 echo
 echo "Continue? (y/n)"
 if ! read -r userinput </dev/tty; then
