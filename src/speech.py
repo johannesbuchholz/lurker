@@ -99,8 +99,8 @@ class SpeechToTextListener:
             return
 
         incoming = AudioChunk(
-            # reshape to mono flat chunk
-            samples=indata.reshape(-1),
+            # reshape to mono flat chunk; copy because indata is only valid during the callback
+            samples=indata.copy().reshape(-1),
             sample_rate=self._capture_config.detector.sample_rate,
         )
         incoming_raw = incoming.samples.tobytes()
