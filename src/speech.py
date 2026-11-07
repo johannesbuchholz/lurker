@@ -1,4 +1,6 @@
 import logging
+import queue
+import threading
 from collections import deque
 from dataclasses import dataclass
 from typing import Protocol, Any, Callable
@@ -68,41 +70,63 @@ class SpeechToTextListener:
             self._capture_config.silence_threshold_seconds / (self._capture_config.frame_ms / 1000))
         self._prefill_chunks: deque[AudioChunk] = deque(maxlen=self._capture_config.prefill_chunks)
         self._audio_stream = None
+        self._audio_buffer: queue.Queue[AudioChunk] = self._new_audio_buffer()
         self._detector = SpeechDetector(self._capture_config.detector)
 
-        self._running = False
+        self._is_running = False
 
     def start_listening(self):
-        if self._running:
+        """Starts audio listening and processing in background. Does not block."""
+        if self._is_running:
             return
 
-        self._running = True
+        self._is_running = True
 
+        # start audio recording
         self._audio_stream = sd.InputStream(
             samplerate=self._capture_config.detector.sample_rate,
             channels=1,
             dtype=INPUT_STREAM_DTYPE,
             blocksize=self._capture_config.frame_samples,
             device=self._input_device_name or None,
-            callback=self._process_audio_callback,
+            callback=self._buffer_audio,
         )
         self._audio_stream.start()
 
+        # start audio processing loop
+        threading.Thread(
+            target=self._start_audio_processing_loop,
+            name="lurker_audio_chunk_processing",
+            daemon=True,
+        ).start()
+
+    def _start_audio_processing_loop(self) -> None:
+        while True:
+            if not self._is_running:
+                return
+            chunk = self._audio_buffer.get()
+            self._process_audio_chunk(chunk)
+
     def stop(self):
-        self._running = False
+        self._is_running = False
         if self._audio_stream:
             self._audio_stream.stop()
             self._audio_stream.close()
 
-    def _process_audio_callback(self, indata: np.ndarray, frames: int, time: Any, status: sd.CallbackFlags):
-        if not self._running:
+    def _buffer_audio(self, indata: np.ndarray, frames: int, time: Any, status: sd.CallbackFlags):
+        if not self._is_running:
             return
-
         incoming = AudioChunk(
             # reshape to mono flat chunk; copy because indata is only valid during the callback
             samples=indata.copy().reshape(-1),
             sample_rate=self._capture_config.detector.sample_rate,
         )
+        try:
+            self._audio_buffer.put_nowait(incoming)
+        except queue.Full:
+            self._logger.warning("Audio buffer overflow! Dropping audio chunk: frames=%d", frames)
+
+    def _process_audio_chunk(self, incoming: AudioChunk):
         incoming_raw = incoming.samples.tobytes()
 
         is_speech = self._detector.is_speech(incoming_raw, self._gate == self.GateState.DOWN)
@@ -152,9 +176,9 @@ class SpeechToTextListener:
         instruction = self._asr.check_for_keyword()
         self._gate = self.GateState.DOWN
         LOGGER.debug("CLOSE GATE ○")
-        self._act_on_instruction(instruction)
-
-    def _act_on_instruction(self, instruction: str | None) -> None:
-        """Blocks until callback returns."""
         if instruction:
             self._callback(instruction)
+            self._audio_buffer = self._new_audio_buffer()
+
+    def _new_audio_buffer(self):
+        return queue.Queue(self._max_open_gate_chunks)
