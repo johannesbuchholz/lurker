@@ -40,9 +40,6 @@ class ASRBackend(Protocol):
 
 
 class SpeechToTextListener:
-    """
-    Mic → VAD (external) → Gate → ASR (abstracted backend)
-    """
 
     _logger = log.new_logger(__qualname__)
 
@@ -75,6 +72,12 @@ class SpeechToTextListener:
 
         self._is_running = False
 
+    def stop(self):
+        self._is_running = False
+        if self._audio_stream:
+            self._audio_stream.stop()
+            self._audio_stream.close()
+
     def start_listening(self):
         """Starts audio listening and processing in background. Does not block."""
         if self._is_running:
@@ -95,23 +98,21 @@ class SpeechToTextListener:
 
         # start audio processing loop
         threading.Thread(
-            target=self._start_audio_processing_loop,
+            target=self._audio_processing_loop,
             name="lurker_audio_chunk_processing",
             daemon=True,
         ).start()
 
-    def _start_audio_processing_loop(self) -> None:
+    def _audio_processing_loop(self) -> None:
+        """Blocks until listening is stopped externally."""
         while True:
             if not self._is_running:
                 return
             chunk = self._audio_buffer.get()
-            self._process_audio_chunk(chunk)
 
-    def stop(self):
-        self._is_running = False
-        if self._audio_stream:
-            self._audio_stream.stop()
-            self._audio_stream.close()
+            if self._logger.isEnabledFor(log.TRACE):
+                self._logger.log(log.TRACE, "Processing next audio chunk from buffer: remaining_chunks_in_buffer=%s", self._audio_buffer.qsize())
+            self._process_audio_chunk(chunk)
 
     def _buffer_audio(self, indata: np.ndarray, frames: int, time: Any, status: sd.CallbackFlags):
         if not self._is_running:
@@ -124,7 +125,7 @@ class SpeechToTextListener:
         try:
             self._audio_buffer.put_nowait(incoming)
         except queue.Full:
-            self._logger.warning("Audio buffer overflow! Dropping audio chunk: frames=%d", frames)
+            self._logger.warning("Audio buffer overflow! Dropping audio chunk: frames_dropped=%d, buffer_queue_size=%d", frames, self._audio_buffer.qsize())
 
     def _process_audio_chunk(self, incoming: AudioChunk):
         incoming_raw = incoming.samples.tobytes()
@@ -139,8 +140,8 @@ class SpeechToTextListener:
                 self._asr.feed_data(incoming)
             else:
                 self._prefill_chunks.append(incoming)
-                LOGGER.log(log.TRACE, "PREFILL: appended %d bytes (%d chunks)", len(incoming_raw),
-                           len(self._prefill_chunks))
+                LOGGER.log(log.TRACE, "PREFILL: appended %d bytes (%d chunks)",
+                           len(incoming_raw), len(self._prefill_chunks))
         else:
             # gate is UP
             self._open_gate_chunk_count += 1
@@ -181,4 +182,5 @@ class SpeechToTextListener:
             self._audio_buffer = self._new_audio_buffer()
 
     def _new_audio_buffer(self):
-        return queue.Queue(self._max_open_gate_chunks)
+        # At least some few times longer that the actual prefill count
+        return queue.Queue(max(4, self._capture_config.prefill_chunks * 8))

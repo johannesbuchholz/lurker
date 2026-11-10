@@ -76,7 +76,7 @@ class SpeechConfig:
     prefill_chunks: int = 4
     """Number of pre-speech audio chunks buffered while gate is DOWN, pushed to ASR when gate opens for context."""
     frame_ms: int = 20
-    max_open_gate_seconds: float = -1
+    max_open_gate_seconds: float = 6
     """Maximum time the gate stays open before force-flushing, in seconds."""
     detector: SpeechDetectorConfig = field(default_factory=SpeechDetectorConfig)
     """Configuration for speech detection (VAD + energy pre-filter)."""
