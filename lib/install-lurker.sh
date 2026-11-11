@@ -20,6 +20,8 @@ print_help() {
   - creating an entry point script
   - optionally creating a systemd unit that starts lurker at user login
 
+  Lurker also requires libportaudio2 to be available on the system.
+
   Synopsis:
     $(basename "$0")
   "
@@ -31,8 +33,7 @@ echo "Lurker installer script ${script_version}"
 echo "-------------------------------------------------------------------------"
 echo
 
-# libportaudio2 is used by lurker
-required_tools="mktemp wget git envsubst python tar libportaudio2"
+required_tools="mktemp wget git envsubst python tar"
 
 echo "# Checking for required tools"
 # shellcheck disable=SC2086
