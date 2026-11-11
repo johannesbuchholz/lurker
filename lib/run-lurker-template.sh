@@ -38,4 +38,4 @@ LURKER_HOME="${MEDIA_LURKER_HOME:-${LURKER_HOME_DEFAULT}}"
 
 echo "# Determined lurker home on host machine: ${LURKER_HOME}"
 
-${LURKER_CMD}
+${LURKER_CMD:?Command variable is missing}

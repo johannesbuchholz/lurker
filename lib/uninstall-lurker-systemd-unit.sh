@@ -12,13 +12,6 @@ echo "Lurker uninstaller script ${script_version}: SYSTEMD UNIT"
 echo "---------------------------------------------------------------"
 
 echo
-echo "# Checking for required tools"
-if ! type "systemd" "systemctl"; then
-  echo "ERROR: systemd is not available"
-  exit 1
-fi
-
-echo
 echo "Continue? (y/n)"
 read -r userinput </dev/tty
 if [ ! "${userinput}" = "y" ]; then
