@@ -2,9 +2,9 @@ import re
 from dataclasses import replace
 from typing import Collection, Sequence
 
-from src.actions.embedding import Embedder, best_match
-from src.actions.models import SCENES, Scene
-from src.handlers.lights import Light, State
+from .embedding import Embedder, best_match
+from .light import Light, State
+from .models import SCENES, Scene
 
 DEFAULT_BRIGHTNESS = 50
 SCENE_THRESHOLD = 0.4
@@ -53,8 +53,8 @@ def _apply_state(lights: Collection[Light], state: State) -> list[Light]:
 
 
 def apply_intent_off(
-    instruction: str,
-    current_state: Collection[Light] | None,
+        instruction: str,
+        current_state: Collection[Light] | None,
 ) -> Collection[Light] | None:
     if not current_state:
         return None
@@ -64,11 +64,11 @@ def apply_intent_off(
 
 
 def apply_intent_scene(
-    instruction: str,
-    current_state: Collection[Light] | None,
-    scenes: Sequence[Scene],
-    embedder: Embedder,
-    threshold: float = SCENE_THRESHOLD,
+        instruction: str,
+        current_state: Collection[Light] | None,
+        scenes: Sequence[Scene],
+        embedder: Embedder,
+        threshold: float = SCENE_THRESHOLD,
 ) -> Collection[Light] | None:
     if not current_state:
         return None
@@ -83,8 +83,8 @@ def apply_intent_scene(
 
 
 def apply_intent_individual(
-    instruction: str,
-    current_state: Collection[Light] | None,
+        instruction: str,
+        current_state: Collection[Light] | None,
 ) -> Collection[Light] | None:
     if not current_state:
         return None
@@ -111,9 +111,9 @@ def _dimmed(state: State, factor: float) -> State:
 
 
 def guess_intent_and_apply(
-    instruction: str,
-    affected_lights: Collection[Light],
-    embedder: Embedder,
+        instruction: str,
+        affected_lights: Collection[Light],
+        embedder: Embedder,
 ) -> Collection[Light] | None:
     if (result := apply_intent_off(instruction, affected_lights)) is not None:
         return result

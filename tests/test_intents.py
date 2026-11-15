@@ -1,14 +1,14 @@
 import numpy as np
 
-from src.actions.intents import (
+from lights.intents import (
     COLOR_PATTERNS,
     guess_intent_and_apply,
     apply_intent_individual,
     apply_intent_off,
     apply_intent_scene,
 )
-from src.actions.models import SCENES
-from src.handlers.lights import Light, State
+from lights.models import SCENES
+from lights.light import Light, State
 
 
 class ConstantEmbedder:

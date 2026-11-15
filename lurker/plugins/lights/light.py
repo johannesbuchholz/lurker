@@ -28,7 +28,8 @@ class State:
         return json.dumps(self.to_dict())
 
     def to_dict(self) -> dict[str, bool | int]:
-        return {k: v for k, v in {"on": self.on, "hue": self.hue, "sat": self.sat, "bri": self.bri}.items() if v is not None}
+        return {k: v for k, v in {"on": self.on, "hue": self.hue, "sat": self.sat, "bri": self.bri}.items() if
+                v is not None}
 
 
 @dataclass(frozen=True, slots=True)

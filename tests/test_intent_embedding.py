@@ -3,11 +3,11 @@ from pathlib import Path
 from onnxruntime import InferenceSession
 from tokenizers import Tokenizer
 
-from src.actions.embedding import Embedder, best_match
-from src.actions.models import SCENES, Describable, light_descriptions
-from src.lurker import _resolve_embedding_model_path
+from lights.embedding import Embedder, best_match
+from lights.models import SCENES, Describable, light_descriptions
+from lights.embedding import resolve_embedding_model_path
 
-MODEL_PATH = _resolve_embedding_model_path(str(Path(__file__).resolve().parents[1] / "lurker"))
+MODEL_PATH = resolve_embedding_model_path(str(Path(__file__).resolve().parents[1] / "lurker"))
 
 LIGHT_NAMES = [
     "Living Room Entry",

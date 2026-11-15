@@ -1,6 +1,6 @@
 import pytest
 
-from src.handlers.lights import State
+from lights.light import State
 
 
 class TestStateBounds:

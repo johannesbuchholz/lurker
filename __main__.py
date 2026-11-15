@@ -1,43 +1,48 @@
-import os
 import sys
-
-from src import log
-from src import lurker
-from src.config import load_lurker_config, LurkerConfig
 
 __version__ = "0.19.6"
 
-LOGGER = log.new_logger(__name__)
-
-
 _TITLE = r"""
-  _                   _               
- | |                 | |              
- | |     _   _  _ __ | | __ ___  _ __ 
+  _                   _
+ | |                 | |
+ | |     _   _  _ __ | | __ ___  _ __
  | |    | | | || '__|| |/ // _ \| '__|
- | |____| |_| || |   |   <|  __/| |   
- |______|\__,_||_|   |_|\_\\___||_|                                         
+ | |____| |_| || |   |   <|  __/| |
+ |______|\__,_||_|   |_|\_\\___||_|
 """
 
-def _determine_lurker_home() -> str:
-    try:
-        i = sys.argv.index("--lurker-home")
-    except ValueError:
-        i = None
-    if i is not None and i + 1 < len(sys.argv):
-        return os.path.abspath(sys.argv[i + 1])
-    else:
-        return os.getcwd() + "/lurker"
+_COMMANDS = ("run", "setup", "version")
+
+
+def banner() -> str:
+    return f"{_TITLE}\n{__version__}\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
+        return _usage()
+
+    command, remaining_args = args[0], args[1:]
+    match command:
+        case "run":
+            from src.run import main as run
+            return run(remaining_args, banner())
+        case "setup":
+            from src.setup import main as setup
+            return setup(remaining_args, banner())
+        case "version":
+            print(__version__)
+            return 0
+        case _:
+            return _usage()
+
+
+def _usage() -> int:
+    print("usage: python . <command> [options]", file=sys.stderr)
+    print(f"commands: {', '.join(_COMMANDS)}", file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":
-    lurker_home = _determine_lurker_home()
-    lurker_config: LurkerConfig = load_lurker_config(lurker_home + "/config.json")
-    log.init_global_config(lurker_config.LURKER_LOG_LEVEL, file_name=lurker_config.LURKER_LOG_FILE, lurker_home=lurker_home)
-    LOGGER.info(f"{_TITLE}\n{__version__}\n")
-
-    LOGGER.info(f"Determined lurker home: {lurker_home}")
-    LOGGER.info(f"Loaded configuration:\n{lurker_config.to_pretty_str()}")
-
-    lurker = lurker.get_new(lurker_home=lurker_home, lurker_config=lurker_config)
-    lurker.start_main_loop()
+    sys.exit(main())

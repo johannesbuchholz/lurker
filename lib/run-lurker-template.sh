@@ -5,11 +5,13 @@ print_help() {
   Script to launch lurker.
 
   At startup, lurker will look for configuration in the provided lurker home directory.
-  This script launches lurker using the lurker home directory of the installation unless option flag -m is set.
+  This script launches lurker using the lurker home directory of the installation.
+  Option flag -m additionally overlays configuration and plugins from removable media.
 
   Usage: $(basename "$0") [-m]
-    -m  Use first match of directory 'lurker' found in /media to be passed to option '--lurker-home' when starting lurker.
-        If no such directory could be found, defaults to the installation's lurker home directory.
+    -m  Additionally use the first match of directory 'lurker' found in /media as an overlay home.
+        This overlays configuration and plugins on top of the installation's lurker home.
+        If no such directory could be found, the installation's lurker home directory is used as before.
         Use this option if you want to change configuration without accessing files directly on the host machine.
 
   Version ${script_version}
@@ -24,6 +26,8 @@ set -e
 
 script_version="0.19.6"
 
+MEDIA_LURKER_HOME=""
+
 while getopts ':m' opt; do
   case "${opt}" in
     m)
@@ -34,8 +38,13 @@ while getopts ':m' opt; do
   esac
 done
 
-LURKER_HOME="${MEDIA_LURKER_HOME:-${LURKER_HOME_DEFAULT}}"
+LURKER_HOME="${LURKER_HOME_DEFAULT}"
 
 echo "# Determined lurker home on host machine: ${LURKER_HOME}"
 
-${LURKER_CMD}
+if [ -n "${MEDIA_LURKER_HOME}" ]; then
+  echo "# Determined overlay home on removable media: ${MEDIA_LURKER_HOME}"
+  ${LURKER_CMD} run --lurker-home "${LURKER_HOME}" --overlay-home "${MEDIA_LURKER_HOME}"
+else
+  ${LURKER_CMD} run --lurker-home "${LURKER_HOME}"
+fi

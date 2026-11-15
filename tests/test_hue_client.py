@@ -2,15 +2,15 @@ import json
 
 import pytest
 
-from src.actions.action import DummyHandler
-from src.handlers import hue_client
-from src.handlers.hue_client import (
-    HueClient,
+from lights import hue as hue_module
+from lights.dummy import DummyBackend
+from lights.hue import (
+    HueBackend,
     _from_api_state,
     _map_to_lights,
     _to_api_state,
 )
-from src.handlers.lights import Light, State
+from lights.light import Light, State
 from tests.test_action_generator import LIGHT_NAMES
 
 DUMMY_RESPONSE_JSON: dict = json.loads("""
@@ -145,13 +145,13 @@ class TestDummyResponseRoundTrip:
             assert _from_api_state(_to_api_state(light.state)) == light.state
 
 
-class TestDummyHandler:
+class TestDummyBackend:
     def test_get_state_contains_all_light_names(self) -> None:
-        state = DummyHandler().get_state()
+        state = DummyBackend().get_state()
         assert set(LIGHT_NAMES) <= {light.name for light in state.values()}
 
-    def test_handle_logs_and_succeeds(self) -> None:
-        assert DummyHandler().handle(None) == 0
+    def test_apply_logs_and_succeeds(self) -> None:
+        assert DummyBackend().apply([]) == 0
 
 
 KITCHEN = Light(id="1", name="Kitchen", state=State(on=False))
@@ -162,35 +162,28 @@ KITCHEN_REQUEST = {KITCHEN_URL: {"on": False}}
 BOTH_REQUESTS = {KITCHEN_URL: {"on": False}, DESK_URL: {"on": True, "bri": 254}}
 
 
-class TestHandle:
-    """handle() must act on a single Light or a collection of Lights, and ignore anything else."""
+class TestApply:
+    """apply() sends one request per light in the collection."""
     @pytest.fixture
-    def client(self) -> HueClient:
-        client = HueClient(host="bridge", user="user", lurker_home="/tmp")
-        client.lights = {"1": {"name": "Kitchen", "state": {"on": True}}}
-        return client
+    def backend(self) -> HueBackend:
+        backend = HueBackend(host="bridge", user="user")
+        backend.lights = {"1": {"name": "Kitchen", "state": {"on": True}}}
+        return backend
 
     @pytest.fixture
     def dispatched(self, monkeypatch: pytest.MonkeyPatch) -> list:
         dispatched: list = []
-        monkeypatch.setattr(hue_client, "urlopen", lambda request, timeout: dispatched.append(request))
+        monkeypatch.setattr(hue_module, "urlopen", lambda request, timeout: dispatched.append(request))
         return dispatched
 
-    @pytest.mark.parametrize(("action", "expected_requests"), [
-        (KITCHEN, KITCHEN_REQUEST),
+    @pytest.mark.parametrize(("lights", "expected_requests"), [
+        ([KITCHEN], KITCHEN_REQUEST),
         ([KITCHEN, DESK], BOTH_REQUESTS),
         ((KITCHEN, DESK), BOTH_REQUESTS),
         ({KITCHEN, DESK}, BOTH_REQUESTS),
         ([], {}),
         ((), {}),
-        ("kitchen", {}),
-        (5, {}),
-        (None, {}),
-        ({KITCHEN.name: KITCHEN}, {}),
-        ({KITCHEN.name: KITCHEN}.keys(), {}),
-        (["kitchen"], {}),
-        ([KITCHEN, "kitchen"], {}),
     ])
-    def test_handle_dispatches_only_lights(self, client: HueClient, dispatched: list, action, expected_requests) -> None:
-        assert client.handle(action) == 0
+    def test_apply_dispatches_lights(self, backend: HueBackend, dispatched: list, lights, expected_requests) -> None:
+        assert backend.apply(lights) == 0
         assert {request.full_url: json.loads(request.data) for request in dispatched} == expected_requests

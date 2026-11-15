@@ -2,8 +2,8 @@ import logging
 import os.path
 from logging import Logger, handlers
 
-
 TRACE = 5
+
 
 def _register_trace_level() -> None:
     logging.addLevelName(TRACE, "TRACE")
@@ -12,6 +12,7 @@ def _register_trace_level() -> None:
 _register_trace_level()
 
 _FORMATTER = logging.Formatter("%(asctime)s [%(levelname)8s] %(name)s: %(message)s")
+
 
 def new_logger(name: str) -> Logger:
     return logging.getLogger("Lurker ({})".format(name))
@@ -26,7 +27,7 @@ def init_global_config(global_level: str | int, file_name: str | None = None, lu
 
     if file_name is not None and (len(file_name) > 0):
         log_file_path = file_name if os.path.isabs(file_name) else os.path.join(lurker_home or os.getcwd(), file_name)
-        handler = logging.handlers.RotatingFileHandler(filename=log_file_path, maxBytes=1000**2, backupCount=3)
+        handler = logging.handlers.RotatingFileHandler(filename=log_file_path, maxBytes=1000 ** 2, backupCount=3)
         logging.root.handlers.append(handler)
 
     for handler in logging.root.handlers:

@@ -16,8 +16,8 @@ print_help() {
   The installation includes
   - downloading lurker source code
   - downloading the speech recognition models (de, en)
-  - downloading the sentence embedding model
   - creating an entry point script
+  - optionally downloading resources for the default plugins
   - optionally creating a systemd unit that starts lurker at user login
 
   Lurker also requires libportaudio2 to be available on the system.
@@ -101,21 +101,6 @@ for speech_model in ${speech_models}; do
   fi
 done
 
-embedding_model="paraphrase-multilingual-MiniLM-L12-v2"
-embedding_model_dir="${models_dir}/${embedding_model}"
-embedding_model_url="https://huggingface.co/sentence-transformers/${embedding_model}/resolve/main"
-
-echo
-echo "# Downloading sentence embedding model to ${embedding_model_dir}"
-mkdir -p "${embedding_model_dir}"
-for embedding_file in tokenizer.json onnx/model_O4.onnx; do
-  if [ -f "${embedding_model_dir}/$(basename "${embedding_file}")" ]; then
-    echo "File ${embedding_file} already exists"
-  else
-    wget -q --show-progress --progress=bar -O "${embedding_model_dir}/$(basename "${embedding_file}")" "${embedding_model_url}/${embedding_file}?download=true"
-  fi
-done
-
 # build python environment
 venv_dir="${install_dir}/venv"
 echo
@@ -123,10 +108,16 @@ echo "# Building python environment at ${venv_dir}"
 python -m venv "${venv_dir}"
 "${venv_dir}/bin/python" -m pip install -r "${install_dir}/requirements.txt"
 
+echo
+echo "Also download resources for the default plugins now? (y/N)"
+read -r setup_answer </dev/tty
+if [ "${setup_answer}" = "y" ]; then
+  "${venv_dir}/bin/python" "${install_dir}" setup --lurker-home "${install_dir}/lurker"
+fi
+
 LURKER_HOME_DEFAULT="${install_dir}/lurker"
 
-LURKER_CMD="${venv_dir}/bin/python ${install_dir} --lurker-home \${LURKER_HOME}
-"
+LURKER_CMD="${venv_dir}/bin/python ${install_dir}"
 
 startup_script_path="${install_dir}/run-lurker.sh"
 echo

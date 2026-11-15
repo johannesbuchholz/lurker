@@ -1,4 +1,5 @@
 import logging
+import os
 from dataclasses import dataclass
 from typing import TypeVar, cast
 
@@ -8,9 +9,32 @@ from numpy.typing import NDArray
 from tokenizers import Tokenizer
 
 from src import log
-from src.actions.models import Describable
+from src.assets import ensure_asset
+from .models import Describable
 
 LOGGER = log.new_logger(__name__)
+
+_EMBEDDING_MODEL_DIR = os.path.join("models", "onnx", "paraphrase-multilingual-MiniLM-L12-v2")
+_EMBEDDING_MODEL_URL = (
+    "https://huggingface.co/sentence-transformers/"
+    "paraphrase-multilingual-MiniLM-L12-v2/resolve/main"
+)
+
+
+def resolve_embedding_model_path(lurker_home: str) -> str:
+    """Return the local embedding model directory, downloading missing files once."""
+    ensure_asset(
+        lurker_home,
+        os.path.join(_EMBEDDING_MODEL_DIR, "tokenizer.json"),
+        f"{_EMBEDDING_MODEL_URL}/tokenizer.json",
+    )
+    ensure_asset(
+        lurker_home,
+        os.path.join(_EMBEDDING_MODEL_DIR, "model_O4.onnx"),
+        f"{_EMBEDDING_MODEL_URL}/onnx/model_O4.onnx",
+    )
+    return os.path.join(lurker_home, _EMBEDDING_MODEL_DIR)
+
 
 @dataclass(frozen=True, slots=True)
 class Embedder:
@@ -57,11 +81,11 @@ class _ScoredItem:
 
 
 def best_match(
-    items: list[T],
-    embedder: Embedder,
-    query: str,
-    top_n: int = 1,
-    threshold: float = 0.0,
+        items: list[T],
+        embedder: Embedder,
+        query: str,
+        top_n: int = 1,
+        threshold: float = 0.0,
 ) -> list[T]:
     if not items:
         return []

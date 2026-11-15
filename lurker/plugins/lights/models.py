@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from src.handlers.lights import State
+from .light import State
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,7 +58,8 @@ SCENES: list[Scene] = [
             "Focused lighting for working or studying. Bright practical lighting. Clear task lighting for productivity. Office-style illumination.",
         ),
         state=State(on=True, hue=200, sat=20, bri=100),
-        pattern=re.compile(r"\b(work|working|arbeiten|arbeit|stud(y|ying)|studium|lernen|konzentration)\b", re.IGNORECASE),
+        pattern=re.compile(r"\b(work|working|arbeiten|arbeit|stud(y|ying)|studium|lernen|konzentration)\b",
+                           re.IGNORECASE),
     ),
     Scene(
         name="cozy",

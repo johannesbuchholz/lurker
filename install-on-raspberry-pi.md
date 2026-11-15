@@ -56,11 +56,15 @@ systemctl start --user udieskie.service
 Use the directory `lurker/` from this repository as a starting point and create a directory on some portable media device in the following form
 ```
 lurker
-├── actions
-│        ├── all_lights_on.json
-│        └── all_lights_out.json
-└── config.json
+├── config.json
+└── plugins
+    └── config
+        └── lights.json
 ```
+
+The media home is an overlay: the installer's base home still provides the plugins and models.
+`plugins/config/lights.json` overrides the lights plugin configuration, for example
+`{"backend": "hue", "host": "<host of hue bridge>", "user": "<registered user name>"}`.
 
 Be sure to plug in a sound input device and set some unique part of its name in `config.json` under `LURKER_INPUT_DEVICE` and `LURKER_OUTPUT_DEVICE`.
 To get an idea what devices are currently plugged in, run `ls /dev/snd/by-id`. For more information about sound devices on linux, see https://wiki.archlinux.org/title/Advanced_Linux_Sound_Architecture.
@@ -89,11 +93,17 @@ Run the python installer script
 wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker.sh | sh
 ```
 
-The script creates a virtual environment, downloads the required models to `~/.local/opt/lurker/<version>/lurker/models/onnx` and asks whether to install the systemd service right away.
+The script creates a virtual environment and downloads the speech recognition models to
+`~/.local/opt/lurker/<version>/lurker/models/onnx`. It also asks whether to download resources for
+the default plugins now; answering `y` runs `setup` and fetches the embedding model. On `n`, the
+same download happens on first start. Finally, it asks whether to install the systemd service right
+away.
 
 ## Run
 The installer script created an entry-point script at `$HOME/.local/opt/lurker/<version>/run-lurker.sh`.
-Run that script to launch lurker and optionally enable option `-m` to read configuration from a device mounted at `/media`
+Run that script to launch lurker. Option `-m` additionally overlays configuration and plugins from
+the first `lurker` directory found on a device mounted at `/media`; the installation's base home
+still provides plugins and models.
 
 ## Start lurker on system startup
 You may run lurker whenever the user logs in.
@@ -107,5 +117,5 @@ where `LURKER_STARTUP_CMD` holds the command to run your lurker installation.
 
 For example, the python installation may be run with 
 ```shell
-$HOME/.local/opt/lurker/<version>/venv/bin/python $HOME/.local/opt/lurker/<version> --lurker-home $HOME/.local/opt/lurker/<version>/lurker
+$HOME/.local/opt/lurker/<version>/venv/bin/python $HOME/.local/opt/lurker/<version> run --lurker-home $HOME/.local/opt/lurker/<version>/lurker
 ```

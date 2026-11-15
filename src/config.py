@@ -14,9 +14,6 @@ LURKER_OUTPUT_DEVICE = "LURKER_OUTPUT_DEVICE"
 LURKER_LANGUAGE = "LURKER_LANGUAGE"
 LURKER_SPEECH_MODEL_SUFFIX = "LURKER_SPEECH_MODEL_SUFFIX"
 LURKER_SPEECH_CONFIG = "LURKER_SPEECH_CONFIG"
-LURKER_HANDLER_MODULE = "LURKER_HANDLER_MODULE"
-LURKER_HANDLER_CONFIG = "LURKER_HANDLER_CONFIG"
-LURKER_ACTION_REFRESH_INTERVAL = "LURKER_ACTION_REFRESH_INTERVAL"
 
 LOGGER = log.new_logger(__name__)
 
@@ -31,9 +28,6 @@ def _get_envs() -> dict[str, str]:
         LURKER_LANGUAGE: os.environ.get(LURKER_LANGUAGE),
         LURKER_SPEECH_MODEL_SUFFIX: os.environ.get(LURKER_SPEECH_MODEL_SUFFIX),
         LURKER_SPEECH_CONFIG: os.environ.get(LURKER_SPEECH_CONFIG),
-        LURKER_HANDLER_MODULE: os.environ.get(LURKER_HANDLER_MODULE),
-        LURKER_HANDLER_CONFIG: os.environ.get(LURKER_HANDLER_CONFIG),
-        LURKER_ACTION_REFRESH_INTERVAL: os.environ.get(LURKER_ACTION_REFRESH_INTERVAL),
     }
     return {key: value for key, value in envs.items() if value is not None}
 
@@ -93,7 +87,7 @@ class LurkerConfig:
     """Name of the device that should be used for recording audio. This might also be a substring of the actual name."""
     LURKER_OUTPUT_DEVICE: str | None = None
     """Name of the device that should be used for playing feedback sounds. This might also be a substring of the actual name."""
-    LURKER_KEYWORD: list[str] = field(default_factory=lambda : ["hey john"])
+    LURKER_KEYWORD: list[str] = field(default_factory=lambda: ["hey john"])
     """A word sequence upon which lurker should start recording actions."""
     LURKER_LANGUAGE: str = "en"
     """The language of the spoken words that should be transcribed by lurker. Setting this value usually improves transcription time."""
@@ -101,18 +95,17 @@ class LurkerConfig:
     """Optional suffix to filter the model name by, e.g. ``-lgraph``. Empty string disables the filter."""
     LURKER_SPEECH_CONFIG: SpeechConfig = field(default_factory=SpeechConfig)
     """Configuration of how Lurker handles the speech to text process."""
-    LURKER_HANDLER_MODULE: str = "HUE"
-    """Handler to act on recorded instructions. Predefined keyword: ``NOOP`` (no-op), ``DUMMY`` (fixed example light state, logs actions), ``HUE`` (Philips Hue bridge). Unknown values fall back to ``NOOP`` with a warning."""
-    LURKER_HANDLER_CONFIG: dict[str, str] = field(default_factory=dict)
-    """Configuration passed to the configured ActionHandler."""
 
     def to_pretty_str(self) -> str:
         key_value_strings = [f"{field_name}={value}" for field_name, value in dataclasses.asdict(self).items()]
         return "\n".join(key_value_strings)
 
 
-def load_lurker_config(config_path: str) -> LurkerConfig:
-    config_param_dict: dict = _load_config_file(config_path) | _get_envs()
+def load_lurker_config(config_path: str, overlay_config_path: str | None = None) -> LurkerConfig:
+    config_param_dict: dict = _load_config_file(config_path)
+    if overlay_config_path is not None:
+        config_param_dict = config_param_dict | _load_config_file(overlay_config_path)
+    config_param_dict = config_param_dict | _get_envs()
     if LURKER_KEYWORD in config_param_dict:
         # keyword_param_value may be str, a list from _load_config_file or a string representing a list from _get_envs
         keyword_param_value = config_param_dict[LURKER_KEYWORD]
@@ -130,13 +123,6 @@ def load_lurker_config(config_path: str) -> LurkerConfig:
             # transform param value to a string and try to load it as a dictionary
             speech_config_param_value = json.loads(str(speech_config_param_value))
         config_param_dict[LURKER_SPEECH_CONFIG] = SpeechConfig(**speech_config_param_value)
-
-    if LURKER_HANDLER_CONFIG in config_param_dict:
-        handler_config_param_value = config_param_dict[LURKER_HANDLER_CONFIG]
-        if type(handler_config_param_value) is not dict:
-            # transform param value to a string and try to load it as a dictionary
-            handler_config_param_value = json.loads(str(handler_config_param_value))
-            config_param_dict[LURKER_HANDLER_CONFIG] = handler_config_param_value
 
     return LurkerConfig(**config_param_dict)
 

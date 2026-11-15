@@ -5,8 +5,8 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
-from src.actions.action import ActionHandler
-from src.handlers.lights import Light, State
+from src import log
+from .light import Light, State
 
 
 def _from_api_state(api: dict[str, Any]) -> State:
@@ -33,25 +33,18 @@ def _to_api_state(state: State) -> dict[str, bool | int]:
 
 def _map_to_lights(raw_lights: dict[str, Any]) -> dict[str, Light]:
     return {
-        light_id: Light(
-            id=light_id,
-            name=light["name"],
-            state=_from_api_state(light["state"])
-        )
+        light_id: Light(id=light_id, name=light["name"], state=_from_api_state(light["state"]))
         for light_id, light in raw_lights.items()
         if "name" in light and "state" in light
     }
 
 
-class HueClient(ActionHandler):
+class HueBackend:
 
-    accepted_type = "hue"
-
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.host = kwargs["host"]
-        self.user = kwargs["user"]
-        self.actions_path = kwargs["lurker_home"] + "/actions"
+    def __init__(self, host: str, user: str):
+        self.host = host
+        self.user = user
+        self._logger = log.new_logger(type(self).__name__)
 
         self.lights = {}
 
@@ -66,7 +59,7 @@ class HueClient(ActionHandler):
             self._logger.warning(f"Could not retrieve lights from {self.host}: {str(e)}")
             return {}
         self._logger.debug(f"Retrieved light info: {body}")
-        light_dict:dict = json.loads(body)
+        light_dict: dict = json.loads(body)
         self._logger.info(f"Available lights: {light_dict.keys()}")
         return light_dict
 
@@ -81,21 +74,12 @@ class HueClient(ActionHandler):
             try:
                 urlopen(http_request, timeout=4.)
             except Exception as e:
-                self._logger.error(f"Could not send light request: request_data={http_request.data}, light_id={light.id}, msg={str(e)}", exc_info=e)
+                self._logger.error(
+                    f"Could not send light request: request_data={http_request.data}, light_id={light.id}, msg={str(e)}",
+                    exc_info=e)
         return 0
 
-    def handle(self, action) -> int:
-        """Accepts a single Light or a collection of Lights."""
-        if isinstance(action, Light):
-            lights = [action]
-        elif isinstance(action, Collection) and all(isinstance(light, Light) for light in action):
-            lights = list(action)
-        else:
-            self._logger.info(f"Skipping non-light action: type={type(action)}, action={action}")
-            return 0
-        return self._handle_internal(lights)
-
-    def _handle_internal(self, lights: list[Light]) -> int:
+    def apply(self, lights: Collection[Light]) -> int:
         if len(self.lights) < 1:
             self.lights = self._retrieve_lights()
         return self._light(lights)
@@ -112,10 +96,3 @@ def to_http_request(state: State, host: str, user: str, light_id: str) -> Reques
     url = f"http://{host}/api/{user}/lights/{light_id}/state"
     data = json.dumps(_to_api_state(state)).encode("ascii")
     return Request(url, method="PUT", data=data)
-
-
-
-
-
-
-

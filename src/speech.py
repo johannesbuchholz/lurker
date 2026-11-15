@@ -40,7 +40,6 @@ class ASRBackend(Protocol):
 
 
 class SpeechToTextListener:
-
     _logger = log.new_logger(__qualname__)
 
     class GateState:
@@ -71,6 +70,7 @@ class SpeechToTextListener:
         self._detector = SpeechDetector(self._capture_config.detector)
 
         self._is_running = False
+        self._audio_suspended = False
 
     def stop(self):
         self._is_running = False
@@ -111,11 +111,12 @@ class SpeechToTextListener:
             chunk = self._audio_buffer.get()
 
             if self._logger.isEnabledFor(log.TRACE):
-                self._logger.log(log.TRACE, "Processing next audio chunk from buffer: remaining_chunks_in_buffer=%s", self._audio_buffer.qsize())
+                self._logger.log(log.TRACE, "Processing next audio chunk from buffer: remaining_chunks_in_buffer=%s",
+                                 self._audio_buffer.qsize())
             self._process_audio_chunk(chunk)
 
     def _buffer_audio(self, indata: np.ndarray, frames: int, time: Any, status: sd.CallbackFlags):
-        if not self._is_running:
+        if not self._is_running or self._audio_suspended:
             return
         incoming = AudioChunk(
             # reshape to mono flat chunk; copy because indata is only valid during the callback
@@ -125,7 +126,8 @@ class SpeechToTextListener:
         try:
             self._audio_buffer.put_nowait(incoming)
         except queue.Full:
-            self._logger.warning("Audio buffer overflow! Dropping audio chunk: frames_dropped=%d, buffer_queue_size=%d", frames, self._audio_buffer.qsize())
+            self._logger.warning("Audio buffer overflow! Dropping audio chunk: frames_dropped=%d, buffer_queue_size=%d",
+                                 frames, self._audio_buffer.qsize())
 
     def _process_audio_chunk(self, incoming: AudioChunk):
         incoming_raw = incoming.samples.tobytes()
@@ -178,8 +180,16 @@ class SpeechToTextListener:
         self._gate = self.GateState.DOWN
         LOGGER.debug("CLOSE GATE ○")
         if instruction:
+            self._execute_instruction(instruction)
+
+    def _execute_instruction(self, instruction: str) -> None:
+        self._audio_suspended = True
+        try:
+            self._prefill_chunks.clear()
             self._callback(instruction)
             self._audio_buffer = self._new_audio_buffer()
+        finally:
+            self._audio_suspended = False
 
     def _new_audio_buffer(self):
         # At least some few times longer that the actual prefill count
