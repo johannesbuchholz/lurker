@@ -1,6 +1,6 @@
 import sys
 
-__version__ = "0.19.6"
+__version__ = "0.20.0"
 
 _TITLE = r"""
   _                   _
