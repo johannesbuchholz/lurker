@@ -14,10 +14,6 @@ _TITLE = r"""
 _COMMANDS = ("run", "setup", "version")
 
 
-def banner() -> str:
-    return f"{_TITLE}\n{__version__}\n"
-
-
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
@@ -27,10 +23,13 @@ def main(argv: list[str] | None = None) -> int:
     match command:
         case "run":
             from src.run import main as run
-            return run(remaining_args, banner())
+            print(_TITLE)
+            print(__version__)
+            return run(remaining_args)
         case "setup":
+            print(f"Setting up lurker... ({__version__})")
             from src.setup import main as setup
-            return setup(remaining_args, banner())
+            return setup(remaining_args)
         case "version":
             print(__version__)
             return 0

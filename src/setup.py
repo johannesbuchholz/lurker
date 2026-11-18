@@ -4,9 +4,8 @@ from src.plugins import PluginError
 LOGGER = log.new_logger(__name__)
 
 
-def main(argv: list[str], banner: str) -> int:
+def main(argv: list[str]) -> int:
     startup = bootstrap.bootstrap(argv)
-    LOGGER.info(banner)
     try:
         handlers = startup.load_handlers(strict=True)
     except PluginError as error:

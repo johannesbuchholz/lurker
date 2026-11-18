@@ -47,6 +47,15 @@ class Bootstrap:
     def load_handlers(self, *, strict: bool = False) -> list[ActionHandler]:
         return plugins.load_handlers(self.context(), self.overlay_plugin_root, raise_on_error=strict)
 
+    def __str__(self):
+        return f"""Bootstrapped lurker
+            lurker-home: {self.lurker_home}
+    overlay lurker-home: {self.overlay_home or 'none'}
+            plugin-root: {self.plugin_root}
+    overlay plugin-root: {self.overlay_plugin_root or 'none'}
+Configuration:
+{self.config.to_pretty_str()}"""
+
 
 def bootstrap(argv: list[str]) -> Bootstrap:
     """Resolve homes and configuration, then configure logging."""
@@ -71,11 +80,4 @@ def bootstrap(argv: list[str]) -> Bootstrap:
         lurker_home=lurker_home,
     )
 
-    startup = Bootstrap(lurker_home=lurker_home, overlay_home=overlay_home, config=config)
-    LOGGER.info(f"Determined lurker home: {startup.lurker_home}")
-    LOGGER.info(f"Determined overlay home: {startup.overlay_home or 'none'}")
-    LOGGER.info(f"Determined plugin root: {startup.plugin_root}")
-    LOGGER.info(f"Determined overlay plugin root: {startup.overlay_plugin_root or 'none'}")
-    LOGGER.info(f"Loaded configuration:\n{startup.config.to_pretty_str()}")
-
-    return startup
+    return Bootstrap(lurker_home=lurker_home, overlay_home=overlay_home, config=config)
