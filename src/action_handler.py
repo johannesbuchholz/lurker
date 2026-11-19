@@ -23,8 +23,9 @@ class LurkerContext:
 class ActionHandler(abc.ABC):
     key: ClassVar[str]
 
-    def __init__(self, context: LurkerContext) -> None:
+    def __init__(self, context: LurkerContext, config: dict) -> None:
         self.context = context
+        self.config = config
         self._logger = log.new_logger(type(self).__name__)
 
     @abc.abstractmethod

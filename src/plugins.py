@@ -183,6 +183,7 @@ def load_handlers(
     for plugin_dir in plugin_dirs:
         name = plugin_dir.name
         module_name = f"{PLUGIN_MODULE_PREFIX}{name}"
+        LOGGER.info(f"Loading plugin from {plugin_dir}")
         try:
             _ensure_requirements(plugin_dir, context.lurker_home)
             module = _import_plugin(plugin_dir)
@@ -202,6 +203,7 @@ def load_handlers(
             failures.append(error)
             continue
 
+        LOGGER.info(f"Finished loading plugin {plugin_dir}:{key}")
         if key in handlers_by_key:
             LOGGER.info(f"Plugin {name} overrides the handler for key '{key}'")
         handlers_by_key[key] = handler
@@ -210,7 +212,7 @@ def load_handlers(
     if not handlers:
         LOGGER.warning("No handlers loaded; lurker will not react to instructions")
     else:
-        LOGGER.info(f"Loaded handlers: {[handler.key for handler in handlers]}")
+        LOGGER.info(f"Loaded handlers ({len(handlers)}): {[handler.key for handler in handlers]}")
     if failures and raise_on_error:
         raise PluginError(f"{len(failures)} plugin(s) failed to load") from failures[0]
     return handlers
