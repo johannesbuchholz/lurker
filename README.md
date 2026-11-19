@@ -1,42 +1,22 @@
 # Lurker
 
-Lurker is a private, offline voice assistant for your home. Speak naturally, and lurker turns your
-words into actions locally, without sending audio or instructions to a cloud service.
+Lurker is a private, fully offline voice assistant for your home. Just speak naturally, and Lurker turns your words into actions — entirely on your own hardware. No audio or instructions are sent to cloud services. Everything stays local.
 
-- **Private by design.** Speech recognition runs on your own machine. No account, no cloud, and no
-  data leaving the house.
-- **Natural language.** Ask for what you want instead of memorizing rigid commands. Choose your own
-  wake phrase. Lurker currently supports English and German language.
-- **Extensible.** Plugins connect spoken instructions to lights, shutdown, and your own automations via removable media
-  - no tinkering with the host machine after installation.
-- **Runs on small hardware.** A Raspberry Pi 4B (4GB) is totally enough to run lurker in the living room without performance compromise.
+- **Private by design.** Speech recognition runs entirely on your own machine. No accounts, no cloud dependencies, and no data leaving your home.
+- **Speak naturally.** No rigid command syntax to memorize. Just say what you want, using your own configurable wake phrase. Lurker currently supports English and German.
+- **Extensible through plugins.** Connect spoken instructions to lights, system controls, and your own automations. Plugins can be installed through removable media, without having to tinker with the host machine after initial setup.
+- **Runs on modest hardware.** A Raspberry Pi 4B with 4 GB of RAM is more than enough to run Lurker in your living room without compromising performance.
 
-Lurker ships with plugins for controlling lights and for powering off the machine. It is under active
-development, so interfaces may still change.
+Lurker comes with built-in plugins for controlling lights and shutting down the host machine. The project is under active development, so APIs and interfaces may still change.
+
+## How it works
 
 A typical interaction looks like this:
 
-1. Say the wake word and the instruction in one sentence, for example
-   "Hey John, turn off all the lights".
-2. Lurker detects speech, transcribes it locally and sends the instruction to all capable handlers.
-3. Every handler that accepts the remaining instruction executes it.
-
-```text
-$ python . run
-
-  _                   _
- | |                 | |
- | |     _   _  _ __ | | __ ___  _ __
- | |    | | | || '__|| |/ // _ \| '__|
- | |____| |_| || |   |   <|  __/| |
- |______|\__,_||_|   |_|\_\\___||_|
-
-<version>
-
-... [    INFO] Lurker (src.run): Bootstrapped lurker
-... [    INFO] Lurker (src.plugins): Loaded handlers (2): ['lights', 'shutdown']
-... [    INFO] Lurker (src.lurker): Start listening...
-```
+1. **Speak.** Say your wake phrase and instruction in a single sentence, for example: *"Hey John, turn off all the lights."*
+2. **Transcribe.** Lurker detects your speech and transcribes it locally.
+3. **Dispatch.** The resulting instruction is passed to all registered plugins.
+4. **Execute.** Each plugin evaluates the instruction and executes it if it can handle the request.
 
 ## Get lurker
 
