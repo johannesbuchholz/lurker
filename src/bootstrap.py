@@ -66,13 +66,8 @@ def bootstrap(argv: list[str]) -> Bootstrap:
         else os.path.join(os.getcwd(), "lurker")
     )
     overlay_home_argument = _argument_value(argv, "--overlay-home")
-    overlay_home = (
-        os.path.abspath(overlay_home_argument) if overlay_home_argument is not None else None
-    )
-
-    overlay_config_path = (
-        os.path.join(overlay_home, "config.json") if overlay_home is not None else None
-    )
+    overlay_home = os.path.abspath(overlay_home_argument) if overlay_home_argument is not None else None
+    overlay_config_path = os.path.join(overlay_home, "config.json") if overlay_home is not None else None
     config = load_lurker_config(os.path.join(lurker_home, "config.json"), overlay_config_path)
     log.init_global_config(
         config.LURKER_LOG_LEVEL,

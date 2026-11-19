@@ -23,11 +23,11 @@ def main(argv: list[str] | None = None) -> int:
     match command:
         case "run":
             from src.run import main as run
-            print(_TITLE)
-            print(__version__)
+            print(_TITLE, flush=True)
+            print(__version__, flush=True)
             return run(remaining_args)
         case "setup":
-            print(f"Setting up lurker... ({__version__})")
+            print(f"Setting up lurker... ({__version__})", flush=True)
             from src.setup import main as setup
             return setup(remaining_args)
         case "version":
