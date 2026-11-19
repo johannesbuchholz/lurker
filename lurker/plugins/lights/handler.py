@@ -46,12 +46,10 @@ class LightsHandler(ActionHandler):
         raise ValueError(f"Unknown lights backend: {backend!r}")
 
     def _create_generator(self) -> ActionGenerator:
-        if self._generator is None:
-            self._generator = ActionGenerator(
-                model_path=resolve_embedding_model_path(self.context.lurker_home),
-                initial_state=self._backend.get_state(),
-            )
-        return self._generator
+        return ActionGenerator(
+            model_path=resolve_embedding_model_path(self.context.lurker_home),
+            initial_state=self._backend.get_state(),
+        )
 
     def ensure_resources(self) -> None:
         if not isinstance(self._backend, NoopBackend):
