@@ -1,33 +1,45 @@
-# Run lurker on a raspberry pi
-Lurker runs as a plain python program, that is, there is no container layer in between.
-The following recipe takes you through the process of adding the required system tools and installing lurker.
+# Run lurker on a Raspberry Pi
 
-Lurker requires a python version as declared in `.python-version`, for example 3.11.
+Lurker runs as a plain Python program, with no container layer in between. This guide prepares a
+Raspberry Pi running a Debian-based distribution such as
+[Raspberry Pi OS](https://www.raspberrypi.com/software/operating-systems/) with the system tools,
+audio stack, USB automounting, and media configuration that lurker needs.
 
-In the following, we assume you are running some debian distribution like [raspberri Pi OS](https://www.raspberrypi.com/software/operating-systems/) with an internet connection already set up.
+Install and run lurker with the installer script described in the
+[README](README.md#get-lurker). This guide does not repeat the installer steps.
 
 ## Installing basic tools
-Start by updating `apt` indexes.
+
+Update the `apt` indexes and install the tools required by the lurker installer and the audio stack:
 
 ```shell
 sudo apt update
+sudo apt install git wget tar gettext python3 python3-venv libportaudio2
 ```
 
-Install `git`
-```shell
-sudo apt install git
-```
+The installer uses `mktemp`, `wget`, `git`, `envsubst`, `python`, and `tar`. On Debian, `envsubst` is
+provided by `gettext`, and `python3-venv` provides `python -m venv`. Make sure the `python` command
+points to Python 3.11 or newer; install `python-is-python3` if `python` is not available.
+`libportaudio2` is required by `sounddevice`.
 
 ## Configure the system
-Install [udiskie](https://github.com/coldfix/udiskie) for automatic usb-detection.
+
+Install [udiskie](https://github.com/coldfix/udiskie) for automatic USB storage detection:
+
 ```sh
-apt install udiskie
+sudo apt install udiskie
 ```
 
-Create a systemd service unit file `~/.config/systemd/user/udieskie.service` with the following content:
- ```unit file (systemd)
+Create the configuration directories and a systemd user service at
+`~/.config/systemd/user/udiskie.service`:
+
+```sh
+mkdir -p ~/.config/systemd/user ~/.config/udiskie
+```
+
+```unit file (systemd)
 [Unit]
-Description=Automountic mounting of usb storage devices
+Description=Automount USB storage devices
 After=default.target
 
 [Service]
@@ -38,84 +50,69 @@ Restart=always
 WantedBy=default.target
 ```
 
-Configure udiskie to mount drives with read-write access by creating a configfile at `.config/udiskie/udiskie.yaml` with the following content:
+Configure udiskie to mount drives with read-write access by creating
+`~/.config/udiskie/udiskie.yaml`:
+
 ```yaml
 device_config:
-- options: [rw]
+  - options: [rw]
 ```
 
-Enable and start the service
+Enable and start the service:
+
 ```shell
 systemctl --user daemon-reload
-systemctl enable --user udieskie.service
-systemctl start --user udieskie.service
+systemctl --user enable --now udiskie.service
 ```
 
 ## Prepare lurker configuration
 
-Use the directory `lurker/` from this repository as a starting point and create a directory on some portable media device in the following form
-```
-lurker
+Use the `lurker/` directory from this repository as a starting point and create a home directory on
+portable media in this form:
+
+```text
+lurker/
 ├── config.json
-└── plugins
-    └── config
-        └── lights.json
+└── plugins/
+    └── config/
+        ├── lights.json
+        └── shutdown.json
 ```
 
-The media home is an overlay: the installer's base home still provides the plugins and models.
-`plugins/config/lights.json` overrides the lights plugin configuration, for example
-`{"backend": "hue", "host": "<host of hue bridge>", "user": "<registered user name>"}`.
+The media home is an overlay. The installation's base home still provides the models and any plugins
+that the overlay does not replace. `plugins/config/lights.json` overrides the lights plugin
+configuration, for example:
 
-Be sure to plug in a sound input device and set some unique part of its name in `config.json` under `LURKER_INPUT_DEVICE` and `LURKER_OUTPUT_DEVICE`.
-To get an idea what devices are currently plugged in, run `ls /dev/snd/by-id`. For more information about sound devices on linux, see https://wiki.archlinux.org/title/Advanced_Linux_Sound_Architecture.
+```json
+{"backend": "hue", "host": "<host of hue bridge>", "user": "<registered user name>"}
+```
+
+`plugins/config/shutdown.json` overrides the shutdown trigger, for example:
+
+```json
+{"trigger": "einfach mal abschalten"}
+```
+
+Plug the sound device into the Raspberry Pi and set a unique part of its name in `config.json` under
+`LURKER_INPUT_DEVICE` and `LURKER_OUTPUT_DEVICE`. To inspect the connected devices, run
+`ls /dev/snd/by-id` or `arecord -l`. For more information about sound devices on Linux, see the
+[ALSA documentation](https://wiki.archlinux.org/title/Advanced_Linux_Sound_Architecture).
 
 ## Install lurker
 
-The following steps take you through the manual step-by-step installation process.
-
-### Install required tools
-
-Install `pip3`
-```sh
-sudo apt install python3-pip
-```
-
-install `libportaudio2`
-```sh
-sudo apt install libportaudio2
-```
-
-### Set up the python environment
-
-Run the python installer script
-
-```shell
-wget -q -O - https://raw.githubusercontent.com/johannesbuchholz/lurker/refs/heads/main/lib/install-lurker.sh | sh
-```
-
-The script creates a virtual environment and downloads the speech recognition models to
-`~/.local/opt/lurker/<version>/lurker/models/onnx`. It also asks whether to download resources for
-the default plugins now; answering `y` runs `setup` and fetches the embedding model. On `n`, the
-same download happens on first start. Finally, it asks whether to install the systemd service right
-away.
+Install lurker with the installer script described in the [README](README.md#get-lurker).
 
 ## Run
-The installer script created an entry-point script at `$HOME/.local/opt/lurker/<version>/run-lurker.sh`.
-Run that script to launch lurker. Option `-m` additionally overlays configuration and plugins from
-the first `lurker` directory found on a device mounted at `/media`; the installation's base home
-still provides plugins and models.
+
+After installation, start lurker with the generated `run-lurker.sh` script. Option `-m` additionally
+overlays configuration and plugins from the first `lurker` directory found on a device mounted under
+`/media`. See the [README](README.md#lurker-home) for the installed paths and overlay behavior.
 
 ## Start lurker on system startup
-You may run lurker whenever the user logs in.
-Using the installer script, you are asked if you want to install the systemd service right away. 
 
-Alternatively, you may set up automatic startup by creating a systemd service unit file. For this, run the systemd-unit installer script
-```shell
-export LURKER_STARTUP_CMD && sh lib/install-lurker-systemd-unit.sh
-```
-where `LURKER_STARTUP_CMD` holds the command to run your lurker installation.
+Accept the installer's systemd prompt if you want lurker to start when the user logs in. Afterward,
+check the service with:
 
-For example, the python installation may be run with 
-```shell
-$HOME/.local/opt/lurker/<version>/venv/bin/python $HOME/.local/opt/lurker/<version> run --lurker-home $HOME/.local/opt/lurker/<version>/lurker
+```sh
+systemctl --user status lurker.service
 ```
