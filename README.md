@@ -176,3 +176,15 @@ To accept light instructions without acting on them, use:
 
 The first non-noop action downloads the embedding model into
 `<lurker-home>/models/onnx/paraphrase-multilingual-MiniLM-L12-v2` unless it is already present.
+
+### Shutdown plugin
+The shipped `shutdown` plugin at `lurker/plugins/shutdown/` shuts down the machine when the
+instruction contains `lorem ipsum` (case-insensitive). The trigger can be changed in
+`<lurker-home>/plugins/config/shutdown.json`:
+
+```json
+{"trigger": "lorem ipsum"}
+```
+
+It schedules `poweroff` in the background after 3 seconds so the OK sound can still play.
+The user running lurker must be allowed to shut down the machine.
