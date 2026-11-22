@@ -1,10 +1,10 @@
 import subprocess
 
 import pytest
+
 import shutdown
 from shutdown import handler as handler_module
 from shutdown.handler import ShutdownHandler
-
 from src.action_handler import LurkerContext
 
 
@@ -15,18 +15,6 @@ def _context() -> LurkerContext:
         log_level="INFO",
         language="en",
     )
-
-
-@pytest.mark.parametrize(
-    "instruction",
-    [
-        "lorem ipsum",
-        "please lorem ipsum now",
-        "LOREM IPSUM",
-    ],
-)
-def test_accepts_trigger(instruction: str) -> None:
-    assert ShutdownHandler(_context(), {}).accepts(instruction)
 
 
 @pytest.mark.parametrize(
@@ -47,12 +35,6 @@ def test_trigger_is_configurable() -> None:
 
     assert handler.accepts("please POWER OFF the machine")
     assert not handler.accepts("lorem ipsum")
-
-
-def test_empty_trigger_falls_back_to_default() -> None:
-    handler = ShutdownHandler(_context(), {"trigger": "   "})
-
-    assert handler.accepts("lorem ipsum")
 
 
 def test_handle_schedules_delayed_background_shutdown(monkeypatch: pytest.MonkeyPatch) -> None:

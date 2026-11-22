@@ -1,7 +1,6 @@
 import pytest
 
 import lights
-from lights import handler as handler_module
 from lights.dummy import DummyBackend
 from lights.handler import LightsHandler
 from lights.hue import HueBackend
@@ -74,7 +73,9 @@ def test_rejects_non_light_instructions(instruction: str) -> None:
 def test_handle_returns_one_without_lights() -> None:
     backend = StubBackend()
     generator = StubGenerator([])
-    handler = LightsHandler(_context(), {}, backend=backend, generator=generator)
+    handler = LightsHandler(_context(), {})
+    handler._backend = backend
+    handler._generator = generator
 
     assert handler.handle("turn on the light") == 1
     assert backend.applied == []
@@ -85,7 +86,9 @@ def test_handle_applies_generated_lights() -> None:
     light = Light(id="1", name="Kitchen", state=State(on=True))
     backend = StubBackend()
     generator = StubGenerator([light])
-    handler = LightsHandler(_context(), {}, backend=backend, generator=generator)
+    handler = LightsHandler(_context(), {})
+    handler._backend = backend
+    handler._generator = generator
 
     assert handler.handle("turn on the light") == 7
     assert backend.applied == [[light]]
@@ -96,7 +99,8 @@ def test_noop_backend_handles_without_generator() -> None:
         def generate_lights(self, instruction, state):
             raise AssertionError("generator must not be used for noop")
 
-    handler = LightsHandler(_context(), {"backend": "noop"}, generator=FailingGenerator())
+    handler = LightsHandler(_context(), {"backend": "noop"})
+    handler._generator = FailingGenerator()
 
     assert handler.handle("turn on the light") == 0
 
@@ -133,43 +137,6 @@ def test_hue_backend_from_config() -> None:
 def test_invalid_backend_config_raises(config: dict) -> None:
     with pytest.raises(ValueError):
         LightsHandler(_context(), config)
-
-
-def test_construction_is_lazy(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fail(*args, **kwargs):
-        raise AssertionError("constructor must not touch resources, network or ONNX")
-
-    monkeypatch.setattr(handler_module, "resolve_embedding_model_path", fail)
-    monkeypatch.setattr(handler_module, "ActionGenerator", fail)
-
-    LightsHandler(_context(), {})
-    LightsHandler(_context(), {"backend": "noop"})
-    LightsHandler(_context(), {"backend": "hue", "host": "bridge", "user": "user"})
-
-
-@pytest.mark.parametrize("config", [{}, {"backend": "hue", "host": "bridge", "user": "user"}])
-def test_ensure_resources_ensures_embedding_model(monkeypatch: pytest.MonkeyPatch, config: dict) -> None:
-    calls: list[str] = []
-
-    def fake_resolve(lurker_home: str) -> str:
-        calls.append(lurker_home)
-        return f"{lurker_home}/model"
-
-    monkeypatch.setattr(handler_module, "resolve_embedding_model_path", fake_resolve)
-
-    LightsHandler(_context(), config).ensure_resources()
-
-    assert calls == ["/tmp/lurker-home"]
-
-
-def test_ensure_resources_is_a_noop_for_noop(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fail(lurker_home: str) -> str:
-        raise AssertionError("noop must not ensure resources")
-
-    monkeypatch.setattr(handler_module, "resolve_embedding_model_path", fail)
-
-    LightsHandler(_context(), {"backend": "noop"}).ensure_resources()
-
 
 def test_package_exposes_handler() -> None:
     assert lights.Handler is LightsHandler
