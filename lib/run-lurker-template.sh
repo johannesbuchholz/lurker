@@ -24,7 +24,7 @@ find_lurker_home_in_media() {
 
 set -e
 
-script_version="0.20.7"
+script_version="0.21.0"
 
 MEDIA_LURKER_HOME=""
 

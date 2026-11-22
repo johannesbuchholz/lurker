@@ -1,6 +1,6 @@
 import sys
 
-__version__ = "0.20.7"
+__version__ = "0.21.0"
 
 
 def main(argv: list[str] | None = None) -> int:
