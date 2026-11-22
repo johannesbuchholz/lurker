@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from lights.intents import (
     COLOR_PATTERNS,
@@ -7,8 +8,8 @@ from lights.intents import (
     apply_intent_off,
     apply_intent_scene,
 )
-from lights.models import SCENES
 from lights.light import Light, State
+from lights.models import SCENES
 
 
 class ConstantEmbedder:
@@ -64,6 +65,51 @@ class TestApplyIntentIndividual:
         result = apply_intent_individual("Dim the light", lights)
         assert result[0].state.bri == 25
 
+    @pytest.mark.parametrize(
+        "instruction",
+        [
+            "Turn the kitchen light to 60 percent",
+            "Set the brightness to 60 %",
+            "Dim the light to 60%",
+            "Dim the light to 60 percent",
+            "Dim the light to sixty percent",
+            "Dimme das Licht auf 60 Prozent",
+            "Dimme das Licht auf sechzig Prozent",
+            "Schalte das Licht auf 60 %",
+            "Stelle die Helligkeit auf 60 %",
+            "Helligkeit auf 60 Prozent",
+        ],
+    )
+    def test_dim_absolute(self, instruction: str) -> None:
+        result = apply_intent_individual(instruction, AFFECTED)
+        assert _states(result) == [{"on": True, "bri": 60}, {"on": True, "bri": 60}]
+
+    @pytest.mark.parametrize(
+        ("instruction", "bri"),
+        [
+            ("Dim the light to sixty-five percent", 65),
+            ("Turn the light to twenty five percent", 25),
+            ("Turn the light to zero percent", 0),
+            ("Turn the light to one hundred percent", 100),
+            ("Dimme das Licht auf fünfundzwanzig Prozent", 25),
+            ("Schalte das Licht auf null Prozent", 0),
+        ],
+    )
+    def test_dim_absolute_number_words(self, instruction: str, bri: int) -> None:
+        result = apply_intent_individual(instruction, AFFECTED)
+        assert _states(result) == [{"on": bri > 0, "bri": bri}, {"on": bri > 0, "bri": bri}]
+
+    def test_dim_absolute_clamps_to_100(self) -> None:
+        result = apply_intent_individual("Turn the light to 150%", AFFECTED)
+        assert _states(result) == [{"on": True, "bri": 100}, {"on": True, "bri": 100}]
+
+    def test_dim_absolute_zero_turns_off(self) -> None:
+        result = apply_intent_individual("Turn the light to 0%", AFFECTED)
+        assert _states(result) == [{"on": False, "bri": 0}, {"on": False, "bri": 0}]
+
+    def test_percent_without_dim_context_is_ignored(self) -> None:
+        assert apply_intent_individual("The battery is at 70%", AFFECTED) is None
+
     def test_color(self) -> None:
         result = apply_intent_individual("Make the light blue", AFFECTED)
         assert _states(result) == [{"on": True, "hue": 240, "sat": 100, "bri": 70}] * 2
@@ -96,6 +142,10 @@ class TestApplyIntent:
     def test_individual(self) -> None:
         result = guess_intent_and_apply("Dim the light", AFFECTED, EMBEDDER)
         assert _states(result) == [{"on": True, "bri": 40}, {"on": True, "bri": 20}]
+
+    def test_absolute_brightness(self) -> None:
+        result = guess_intent_and_apply("Turn the light to 60 percent", AFFECTED, EMBEDDER)
+        assert _states(result) == [{"on": True, "bri": 60}, {"on": True, "bri": 60}]
 
     def test_no_match_returns_none(self) -> None:
         assert guess_intent_and_apply("What time is it", AFFECTED, EMBEDDER) is None

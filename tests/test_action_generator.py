@@ -3,9 +3,9 @@ from pathlib import Path
 import pytest
 
 from lights.action import ActionGenerator, _try_room_filtering
-from lights.models import SCENES
-from lights.light import Light, State
 from lights.embedding import resolve_embedding_model_path
+from lights.light import Light, State
+from lights.models import SCENES
 
 MODEL_PATH = resolve_embedding_model_path(str(Path(__file__).resolve().parents[1] / "lurker"))
 
@@ -86,6 +86,17 @@ class TestEndToEnd:
         actions = generator.generate_lights("Make it brighter", _initial_state())
         assert len(actions) == len(LIGHT_NAMES)
         assert all(a.state == State(on=True, bri=75) for a in actions)
+
+    def test_absolute_brightness_kitchen(self, generator: ActionGenerator) -> None:
+        actions = generator.generate_lights("Turn the kitchen light to 60 percent", _initial_state())
+        assert len(actions) == 1
+        assert actions[0].name == "Kitchen"
+        assert actions[0].state == State(on=True, bri=60)
+
+    def test_absolute_brightness_all(self, generator: ActionGenerator) -> None:
+        actions = generator.generate_lights("Turn all lights to 35%", _initial_state())
+        assert len(actions) == len(LIGHT_NAMES)
+        assert all(a.state == State(on=True, bri=35) for a in actions)
 
     def test_blue_all(self, generator: ActionGenerator) -> None:
         actions = generator.generate_lights("Make the light blue", _initial_state())

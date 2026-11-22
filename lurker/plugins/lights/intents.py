@@ -3,6 +3,7 @@ from dataclasses import replace
 from typing import Collection, Sequence
 
 from .embedding import Embedder, best_match
+from .etc import word_as_number
 from .light import Light, State
 from .models import SCENES, Scene
 
@@ -33,6 +34,12 @@ DIM_UP_PATTERN = re.compile(
     r"\b(bright|brighter|heller|mehr|more|increase|aufhellen)\b",
     re.IGNORECASE,
 )
+DIM_ABSOLUTE_PATTERN = re.compile(
+    r"(?=.*\b(?:turn|switch|set|dim|dimme|dimmen|dimm|stelle|setze|schalte(t)?|regle|regelt|dreh(e)?|adjust|brightness|helligkeit)\b)"
+    r".*?\b(?P<bri>\d{1,3}|[a-zäöüß]+(?:[-\s][a-zäöüß]+)?)\s*"
+    r"(?:%|(?:percent|per\s+cent|prozent)\b)",
+    re.IGNORECASE,
+)
 
 COLOR_PATTERNS: tuple[tuple[re.Pattern, State], ...] = (
     (re.compile(r"\b(red|rot)\b", re.IGNORECASE), State(on=True, hue=0, sat=100, bri=80)),
@@ -50,6 +57,17 @@ COLOR_PATTERNS: tuple[tuple[re.Pattern, State], ...] = (
 
 def _apply_state(lights: Collection[Light], state: State) -> list[Light]:
     return [replace(light, state=state) for light in lights]
+
+
+def _brightness_value(value: str) -> int | None:
+    if value.isdigit():
+        return int(value)
+    tokens = value.split()
+    for index in range(len(tokens)):
+        number = word_as_number(" ".join(tokens[index:]))
+        if number is not None:
+            return number
+    return None
 
 
 def apply_intent_off(
@@ -89,6 +107,11 @@ def apply_intent_individual(
     if not current_state:
         return None
     normalized = instruction.lower()
+    if (match := DIM_ABSOLUTE_PATTERN.search(normalized)) is not None:
+        bri = _brightness_value(match.group("bri"))
+        if bri is not None:
+            bri = min(100, max(0, bri))
+            return _apply_state(current_state, State(on=bri > 0, bri=bri))
     if DIM_DOWN_PATTERN.search(normalized):
         return [replace(light, state=_dimmed(light.state, factor=0.5)) for light in current_state]
     if DIM_UP_PATTERN.search(normalized):
