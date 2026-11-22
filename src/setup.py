@@ -1,3 +1,4 @@
+from __main__ import __version__
 from src import bootstrap, log
 from src.plugins import PluginError
 
@@ -5,6 +6,7 @@ LOGGER = log.new_logger(__name__)
 
 
 def main(argv: list[str]) -> int:
+    LOGGER.info(f"Setting up lurker... ({__version__})")
     startup = bootstrap.bootstrap(argv)
     try:
         handlers = startup.load_handlers(strict=True)

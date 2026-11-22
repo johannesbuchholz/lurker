@@ -2,17 +2,6 @@ import sys
 
 __version__ = "0.20.7"
 
-_TITLE = r"""
-  _                   _
- | |                 | |
- | |     _   _  _ __ | | __ ___  _ __
- | |    | | | || '__|| |/ // _ \| '__|
- | |____| |_| || |   |   <|  __/| |
- |______|\__,_||_|   |_|\_\\___||_|
-"""
-
-_COMMANDS = ("run", "setup", "version")
-
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
@@ -23,14 +12,11 @@ def main(argv: list[str] | None = None) -> int:
     match command:
         case "run":
             from src.run import main as run
-            print(_TITLE, flush=True)
-            print(__version__, flush=True)
             return run(remaining_args)
         case "setup":
-            print(f"Setting up lurker... ({__version__})", flush=True)
             from src.setup import main as setup
             return setup(remaining_args)
-        case "version":
+        case "version", "--version":
             print(__version__)
             return 0
         case _:
@@ -39,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _usage() -> int:
     print("usage: python . <command> [options]", file=sys.stderr)
-    print(f"commands: {', '.join(_COMMANDS)}", file=sys.stderr)
+    print(f"commands: run, setup, version", file=sys.stderr)
     return 2
 
 
