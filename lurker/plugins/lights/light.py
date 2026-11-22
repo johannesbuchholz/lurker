@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class State:
-    ALLOWED_LIGHT_KEYS = ["on", "sat", "bri", "hue"]
 
     on: bool | None = None
     hue: int | None = None

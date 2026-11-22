@@ -153,6 +153,36 @@ class TestDummyBackend:
     def test_apply_logs_and_succeeds(self) -> None:
         assert DummyBackend().apply([]) == 0
 
+    def test_apply_updates_reported_state(self) -> None:
+        backend = DummyBackend()
+
+        assert backend.apply([Light(id="1", name="Living Room Lamp", state=State(on=True, bri=25))]) == 0
+        assert backend.get_state()["1"].state == State(on=True, bri=25, hue=44, sat=79)
+
+    def test_apply_merges_partial_state(self) -> None:
+        backend = DummyBackend()
+
+        backend.apply([Light(id="2", name="Desk Lamp", state=State(on=False))])
+
+        assert backend.get_state()["2"].state == State(on=False, bri=100, hue=220, sat=39)
+
+    def test_instances_keep_independent_state(self) -> None:
+        first, second = DummyBackend(), DummyBackend()
+
+        first.apply([Light(id="1", name="Living Room Lamp", state=State(on=False))])
+
+        assert first.get_state()["1"].state.on is False
+        assert second.get_state()["1"].state.on is True
+
+    def test_german_backend_updates_german_lights(self) -> None:
+        backend = DummyBackend(language="de")
+
+        backend.apply([Light(id="1", name="Wohnzimmer Lampe", state=State(bri=20))])
+
+        state = backend.get_state()["1"]
+        assert state.name == "Wohnzimmer Lampe"
+        assert state.state == State(on=True, bri=20, hue=44, sat=79)
+
 
 KITCHEN = Light(id="1", name="Kitchen", state=State(on=False))
 DESK = Light(id="2", name="Desk Lamp", state=State(on=True, bri=100))

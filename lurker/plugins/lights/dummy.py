@@ -1,3 +1,4 @@
+import dataclasses as dc
 from collections.abc import Collection
 
 from src import log
@@ -39,17 +40,29 @@ _DUMMY_LIGHTS_DE: dict[str, Light] = {
 
 
 class DummyBackend:
-    """Returns a fixed example light state and logs actions without executing them."""
+    """Keeps an in-memory light state."""
 
     def __init__(self, language: str = "en"):
         self._language = language
         self._logger = log.new_logger(type(self).__name__)
+        self._lights = self._initial_lights()
 
-    def get_state(self) -> dict[str, Light]:
+    def _initial_lights(self) -> dict[str, Light]:
         if self._language == "de":
             return dict(_DUMMY_LIGHTS_DE)
         return dict(_DUMMY_LIGHTS_EN)
 
+    def get_state(self) -> dict[str, Light]:
+        return dict(self._lights)
+
     def apply(self, lights: Collection[Light]) -> int:
-        self._logger.info(f"Logging action without executing it: {lights}")
+        self._logger.info(f"Received new light state: {lights}")
+        for light in lights:
+            current = self._lights.get(light.id)
+            if current is None:
+                self._lights[light.id] = light
+            else:
+                self._lights[light.id] = dc.replace(
+                    current,
+                    state=dc.replace(current.state, **light.state.to_dict()))
         return 0
